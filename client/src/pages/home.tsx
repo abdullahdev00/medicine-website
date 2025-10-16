@@ -4,7 +4,7 @@ import { useQuery } from "@tanstack/react-query";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
-import { Search, ChevronRight } from "lucide-react";
+import { Search, ChevronRight, ShoppingCart } from "lucide-react";
 import { ProductCard } from "@/components/ProductCard";
 import { CategoryCard } from "@/components/CategoryCard";
 import { BottomNav } from "@/components/BottomNav";
@@ -30,15 +30,25 @@ export default function Home() {
   return (
     <div className="min-h-screen bg-background pb-24">
       <div className="max-w-7xl mx-auto px-4 space-y-8 pt-6">
-        <div className="relative">
-          <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground" />
-          <Input
-            placeholder="Search medicines..."
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            className="pl-12 rounded-full shadow-md border-none h-12 bg-card"
-            data-testid="input-search"
-          />
+        <div className="relative flex items-center gap-3">
+          <div className="relative flex-1">
+            <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground" />
+            <Input
+              placeholder="Search medicines..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className="pl-12 rounded-full shadow-md border-none h-12 bg-card"
+              data-testid="input-search"
+            />
+          </div>
+          <Button
+            size="icon"
+            className="rounded-full w-12 h-12 flex-shrink-0"
+            onClick={() => setLocation("/cart")}
+            data-testid="button-cart"
+          >
+            <ShoppingCart className="w-5 h-5" />
+          </Button>
         </div>
         <motion.div
           initial={{ opacity: 0, y: 20 }}

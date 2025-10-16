@@ -2,9 +2,8 @@ import { useState } from "react";
 import { useLocation, useParams } from "wouter";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
 import { Card } from "@/components/ui/card";
-import { ArrowLeft, Heart, Star, Minus, Plus, ShoppingCart } from "lucide-react";
+import { ArrowLeft, Heart, Star, ShoppingCart } from "lucide-react";
 import { BottomNav } from "@/components/BottomNav";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest, queryClient } from "@/lib/queryClient";
@@ -16,10 +15,9 @@ export default function ProductDetail() {
   const { id } = useParams();
   const [, setLocation] = useLocation();
   const { toast } = useToast();
-  const [quantity, setQuantity] = useState(1);
   const [selectedPackage, setSelectedPackage] = useState(0);
   const [isWishlisted, setIsWishlisted] = useState(false);
-  const [showFullDescription, setShowFullDescription] = useState(false);
+  const [currentImageIndex, setCurrentImageIndex] = useState(0);
 
   const { data: product, isLoading } = useQuery<Product>({
     queryKey: ["/api/products", id],
@@ -31,7 +29,7 @@ export default function ProductDetail() {
       return await apiRequest("POST", "/api/cart", {
         userId: MOCK_USER_ID,
         productId: id,
-        quantity,
+        quantity: 1,
         selectedPackage: product?.packageOptions?.[selectedPackage],
       });
     },
@@ -54,8 +52,10 @@ export default function ProductDetail() {
   if (isLoading) {
     return (
       <div className="min-h-screen bg-background pb-24">
-        <div className="max-w-7xl mx-auto px-4 py-6">
-          <Card className="h-96 animate-pulse bg-muted rounded-2xl" />
+        <div className="aspect-square bg-muted animate-pulse" />
+        <div className="p-4 space-y-4">
+          <div className="h-8 bg-muted rounded animate-pulse" />
+          <div className="h-4 bg-muted rounded animate-pulse w-3/4" />
         </div>
         <BottomNav cartCount={0} wishlistCount={0} />
       </div>
@@ -76,149 +76,137 @@ export default function ProductDetail() {
   }
 
   const rating = parseFloat(product.rating || "0");
+  const images = [product.imageUrl];
+  
+  const getPriceForSize = (index: number) => {
+    const basePrice = parseFloat(product.price);
+    if (index === 0) return basePrice;
+    if (index === 1) return basePrice * 1.5;
+    return basePrice * 2;
+  };
+
+  const currentPrice = getPriceForSize(selectedPackage);
 
   return (
     <div className="min-h-screen bg-background pb-24">
-      <div className="sticky top-0 bg-background/95 backdrop-blur-sm border-b z-40 shadow-sm">
-        <div className="max-w-7xl mx-auto px-4 py-4 flex items-center justify-between">
-          <Button
-            variant="ghost"
-            size="icon"
+      <div className="relative">
+        <div className="aspect-square relative overflow-hidden">
+          <img
+            src={images[currentImageIndex]}
+            alt={product.name}
+            className="w-full h-full object-cover"
+            data-testid="img-product-detail"
+          />
+          
+          <button
+            className="absolute top-4 left-4 w-10 h-10 rounded-full bg-white/20 backdrop-blur-md border border-white/30 flex items-center justify-center hover:bg-white/30 transition-all shadow-lg"
             onClick={() => setLocation("/products")}
-            className="rounded-full"
             data-testid="button-back"
           >
-            <ArrowLeft className="w-5 h-5" />
-          </Button>
-          <Button
-            variant="ghost"
-            size="icon"
+            <ArrowLeft className="w-5 h-5 text-white" />
+          </button>
+
+          <button
+            className="absolute top-4 right-4 w-10 h-10 rounded-full bg-white/20 backdrop-blur-md border border-white/30 flex items-center justify-center hover:bg-white/30 transition-all shadow-lg"
             onClick={() => setIsWishlisted(!isWishlisted)}
-            className="rounded-full"
             data-testid="button-wishlist-toggle"
           >
-            <Heart className={`w-5 h-5 ${isWishlisted ? "fill-primary text-primary" : ""}`} />
-          </Button>
+            <Heart className={`w-5 h-5 ${isWishlisted ? "fill-red-500 text-red-500" : "text-white"}`} />
+          </button>
+
+          {images.length > 1 && (
+            <div className="absolute bottom-4 left-0 right-0 flex justify-center gap-2">
+              {images.map((_, index) => (
+                <button
+                  key={index}
+                  className={`w-2 h-2 rounded-full transition-all ${
+                    index === currentImageIndex ? "bg-white w-6" : "bg-white/50"
+                  }`}
+                  onClick={() => setCurrentImageIndex(index)}
+                />
+              ))}
+            </div>
+          )}
+        </div>
+
+        <div className="absolute -bottom-6 left-4 right-4">
+          <Card className="p-4 rounded-3xl shadow-xl">
+            <div className="space-y-1">
+              <h1 className="font-serif text-2xl font-bold" data-testid="text-product-name">
+                {product.name}
+              </h1>
+              
+              <div className="flex items-center gap-2">
+                <div className="flex items-center gap-1">
+                  {[...Array(5)].map((_, i) => (
+                    <Star
+                      key={i}
+                      className={`w-3 h-3 ${
+                        i < Math.floor(rating)
+                          ? "fill-yellow-400 text-yellow-400"
+                          : "fill-muted text-muted"
+                      }`}
+                    />
+                  ))}
+                </div>
+                <span className="text-sm text-muted-foreground">({rating} rating)</span>
+              </div>
+            </div>
+          </Card>
         </div>
       </div>
 
-      <div className="max-w-7xl mx-auto px-4 py-6 space-y-6">
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.5 }}
-          className="bg-accent/30 rounded-2xl p-8 flex items-center justify-center aspect-square max-w-md mx-auto"
-        >
-          <img
-            src={product.imageUrl}
-            alt={product.name}
-            className="w-full h-full object-contain"
-            data-testid="img-product-detail"
-          />
-        </motion.div>
-
-        <div className="space-y-6">
-          <div className="space-y-2">
-            <h1 className="font-serif text-3xl md:text-4xl font-bold" data-testid="text-product-name">
-              {product.name}
-            </h1>
-            
-            <div className="flex items-center gap-2">
-              <div className="flex items-center gap-1">
-                {[...Array(5)].map((_, i) => (
-                  <Star
-                    key={i}
-                    className={`w-4 h-4 ${
-                      i < Math.floor(rating)
-                        ? "fill-yellow-400 text-yellow-400"
-                        : "fill-muted text-muted"
-                    }`}
-                  />
-                ))}
-              </div>
-              <span className="text-sm text-muted-foreground">({rating} rating)</span>
-            </div>
-          </div>
-
-          <div className="flex items-baseline gap-2">
-            <p className="font-serif text-4xl font-bold text-primary" data-testid="text-price">
-              PKR {parseFloat(product.price).toFixed(0)}
-            </p>
-          </div>
-
-          {product.packageOptions && product.packageOptions.length > 0 && (
-            <div className="space-y-3">
-              <h3 className="font-semibold text-lg">Package Size</h3>
-              <div className="flex flex-wrap gap-3">
-                {product.packageOptions.map((option, index) => (
-                  <Button
-                    key={index}
-                    variant={selectedPackage === index ? "default" : "outline"}
-                    className="rounded-xl"
-                    onClick={() => setSelectedPackage(index)}
-                    data-testid={`button-package-${index}`}
-                  >
-                    {option}
-                  </Button>
-                ))}
-              </div>
-            </div>
-          )}
-
-          <div className="space-y-3">
-            <h3 className="font-semibold text-lg">Description</h3>
-            <p className={`text-muted-foreground leading-relaxed ${!showFullDescription ? "line-clamp-3" : ""}`}>
-              {product.description}
-            </p>
-            <Button
-              variant="link"
-              className="p-0 h-auto text-primary"
-              onClick={() => setShowFullDescription(!showFullDescription)}
-              data-testid="button-read-more"
-            >
-              {showFullDescription ? "Read Less" : "Read More"}
-            </Button>
-          </div>
-
-          <div className="space-y-3">
-            <h3 className="font-semibold text-lg">Quantity</h3>
-            <div className="flex items-center gap-4">
-              <Button
-                variant="outline"
-                size="icon"
-                className="rounded-full w-12 h-12"
-                onClick={() => setQuantity(Math.max(1, quantity - 1))}
-                disabled={quantity <= 1}
-                data-testid="button-decrease-quantity"
-              >
-                <Minus className="w-4 h-4" />
-              </Button>
-              <span className="text-2xl font-semibold w-12 text-center" data-testid="text-quantity">
-                {quantity}
-              </span>
-              <Button
-                variant="outline"
-                size="icon"
-                className="rounded-full w-12 h-12"
-                onClick={() => setQuantity(quantity + 1)}
-                data-testid="button-increase-quantity"
-              >
-                <Plus className="w-4 h-4" />
-              </Button>
-            </div>
-          </div>
-
-          <Button
-            size="lg"
-            className="w-full rounded-xl py-6 text-lg"
-            onClick={() => addToCartMutation.mutate()}
-            disabled={!product.inStock || addToCartMutation.isPending}
-            data-testid="button-add-to-cart"
-          >
-            <ShoppingCart className="w-5 h-5 mr-2" />
-            {addToCartMutation.isPending ? "Adding..." : `Add to Cart - PKR ${(parseFloat(product.price) * quantity).toFixed(0)}`}
-          </Button>
+      <div className="px-4 pt-12 space-y-6">
+        <div className="flex items-baseline gap-2">
+          <p className="font-serif text-4xl font-bold text-primary" data-testid="text-price">
+            Rs {currentPrice.toFixed(0)}
+          </p>
         </div>
+
+        {product.packageOptions && product.packageOptions.length > 0 && (
+          <div className="space-y-3">
+            <h3 className="font-semibold text-lg">Package Size</h3>
+            <div className="flex flex-wrap gap-3">
+              {product.packageOptions.map((option, index) => (
+                <Button
+                  key={index}
+                  variant={selectedPackage === index ? "default" : "outline"}
+                  className="rounded-xl"
+                  onClick={() => setSelectedPackage(index)}
+                  data-testid={`button-package-${index}`}
+                >
+                  {option}
+                </Button>
+              ))}
+            </div>
+          </div>
+        )}
+
+        <div className="space-y-3">
+          <h3 className="font-semibold text-lg">Description</h3>
+          <p className="text-muted-foreground leading-relaxed">
+            {product.description}
+          </p>
+        </div>
+
+        <Button
+          size="lg"
+          className="w-full rounded-xl h-14 flex items-center justify-between px-6 gap-4"
+          onClick={() => addToCartMutation.mutate()}
+          disabled={!product.inStock || addToCartMutation.isPending}
+          data-testid="button-add-to-cart"
+        >
+          <div className="flex items-center gap-2 flex-shrink-0">
+            <ShoppingCart className="w-5 h-5" />
+            <span>Add to Cart</span>
+          </div>
+          <div className="flex items-center gap-3 flex-shrink-0">
+            <div className="h-6 w-px bg-primary-foreground/30" />
+            <span className="text-xl font-bold font-mono tabular-nums">
+              {currentPrice.toFixed(0)}
+            </span>
+          </div>
+        </Button>
       </div>
 
       <BottomNav cartCount={0} wishlistCount={0} />
