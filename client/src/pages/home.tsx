@@ -151,7 +151,7 @@ export default function Home() {
         </div>
       </div>
 
-      <BottomNav cartCount={0} wishlistCount={0} />
+      <BottomNav cartCount={0} />
     </div>
   );
 }

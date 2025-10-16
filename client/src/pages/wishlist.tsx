@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { useLocation } from "wouter";
 import { Button } from "@/components/ui/button";
-import { Heart } from "lucide-react";
+import { Heart, ArrowLeft } from "lucide-react";
 import { ProductCard } from "@/components/ProductCard";
 import { BottomNav } from "@/components/BottomNav";
 import { useToast } from "@/hooks/use-toast";
@@ -28,16 +28,19 @@ export default function Wishlist() {
   };
 
   return (
-    <div className="min-h-screen bg-background pb-24">
+    <div className="min-h-screen bg-background pb-32">
       <div className="bg-gradient-to-br from-primary/10 to-accent/20 border-b">
         <div className="max-w-7xl mx-auto px-4 py-8">
           <div className="flex items-center gap-3">
-            <div className="w-12 h-12 rounded-full bg-primary/20 flex items-center justify-center">
-              <Heart className="w-6 h-6 text-primary" />
-            </div>
+            <button
+              className="w-12 h-12 rounded-full bg-card shadow-lg flex items-center justify-center hover:bg-accent transition-all"
+              onClick={() => setLocation("/home")}
+              data-testid="button-back"
+            >
+              <ArrowLeft className="w-6 h-6 text-primary" />
+            </button>
             <div>
               <h1 className="font-serif text-2xl font-bold">My Wishlist</h1>
-              <p className="text-muted-foreground">{wishlistItems.length} items saved</p>
             </div>
           </div>
         </div>
@@ -80,7 +83,7 @@ export default function Wishlist() {
         )}
       </div>
 
-      <BottomNav cartCount={0} wishlistCount={wishlistItems.length} />
+      <BottomNav cartCount={0} />
     </div>
   );
 }

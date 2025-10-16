@@ -136,7 +136,7 @@ export default function Products() {
         onClearFilters={handleClearFilters}
       />
 
-      <BottomNav cartCount={0} wishlistCount={0} />
+      <BottomNav cartCount={0} />
     </div>
   );
 }

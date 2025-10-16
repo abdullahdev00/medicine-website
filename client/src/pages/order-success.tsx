@@ -39,21 +39,23 @@ export default function OrderSuccess() {
           </p>
         </div>
 
-        <Card className="shadow-xl rounded-2xl">
-          <CardContent className="p-6 space-y-4">
-            <div className="flex items-center gap-4 p-4 bg-accent/30 rounded-xl">
-              <Package className="w-8 h-8 text-primary" />
+        <Card className="shadow-2xl rounded-3xl border-none overflow-hidden">
+          <CardContent className="p-8 space-y-6">
+            <div className="flex items-center gap-4 p-5 bg-gradient-to-br from-primary/10 to-accent/20 rounded-2xl">
+              <div className="w-14 h-14 rounded-full bg-primary/20 flex items-center justify-center flex-shrink-0">
+                <Package className="w-7 h-7 text-primary" />
+              </div>
               <div className="flex-1">
-                <p className="text-sm text-muted-foreground">Order ID</p>
-                <p className="font-mono font-semibold" data-testid="text-order-id">
+                <p className="text-sm text-muted-foreground mb-1">Order ID</p>
+                <p className="font-mono font-bold text-lg" data-testid="text-order-id">
                   {orderId}
                 </p>
               </div>
             </div>
 
-            <div className="space-y-2">
+            <div className="space-y-2 p-5 bg-accent/30 rounded-2xl">
               <p className="text-sm text-muted-foreground">Expected Delivery</p>
-              <p className="font-semibold text-lg" data-testid="text-expected-delivery">
+              <p className="font-bold text-xl text-primary" data-testid="text-expected-delivery">
                 {expectedDelivery.toLocaleDateString('en-US', {
                   weekday: 'long',
                   year: 'numeric',
@@ -63,9 +65,9 @@ export default function OrderSuccess() {
               </p>
             </div>
 
-            <div className="pt-4 space-y-3">
+            <div className="pt-2 space-y-3">
               <Button
-                className="w-full rounded-xl"
+                className="w-full rounded-full h-14 text-base font-semibold shadow-lg"
                 onClick={() => setLocation("/profile")}
                 data-testid="button-view-orders"
               >
@@ -73,7 +75,7 @@ export default function OrderSuccess() {
               </Button>
               <Button
                 variant="outline"
-                className="w-full rounded-xl"
+                className="w-full rounded-full h-14 text-base font-semibold border-2"
                 onClick={() => setLocation("/home")}
                 data-testid="button-continue-shopping"
               >

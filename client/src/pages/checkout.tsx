@@ -28,17 +28,17 @@ export default function Checkout() {
       <div className="max-w-3xl mx-auto px-4 py-6">
         <div className="flex items-center gap-4 mb-6">
           <button
-            className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center hover:bg-primary/20 transition-all"
+            className="w-12 h-12 rounded-full bg-card shadow-lg flex items-center justify-center hover:bg-accent transition-all"
             onClick={() => setLocation("/cart")}
             data-testid="button-back"
           >
-            <ArrowLeft className="w-5 h-5" />
+            <ArrowLeft className="w-6 h-6 text-primary" />
           </button>
           <h1 className="font-serif text-2xl font-bold">Checkout</h1>
         </div>
 
         <form onSubmit={handleSubmit} className="space-y-6">
-          <Card className="shadow-md rounded-3xl">
+          <Card className="shadow-lg rounded-3xl border-none">
             <CardHeader>
               <CardTitle>Delivery Address</CardTitle>
             </CardHeader>
@@ -98,7 +98,7 @@ export default function Checkout() {
             </CardContent>
           </Card>
 
-          <Card className="shadow-md rounded-3xl">
+          <Card className="shadow-lg rounded-3xl border-none">
             <CardHeader>
               <CardTitle>Payment Method</CardTitle>
             </CardHeader>
@@ -129,7 +129,7 @@ export default function Checkout() {
             </CardContent>
           </Card>
 
-          <Card className="shadow-md rounded-3xl">
+          <Card className="shadow-lg rounded-3xl border-none">
             <CardHeader>
               <CardTitle>Order Summary</CardTitle>
             </CardHeader>
@@ -155,7 +155,7 @@ export default function Checkout() {
           <Button
             type="submit"
             size="lg"
-            className="w-full rounded-2xl h-14"
+            className="w-full rounded-full h-14 text-base font-semibold shadow-lg"
             disabled={isProcessing}
             data-testid="button-place-order"
           >

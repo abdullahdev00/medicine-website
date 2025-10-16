@@ -58,7 +58,7 @@ export default function ProductDetail() {
           <div className="h-8 bg-muted rounded animate-pulse" />
           <div className="h-4 bg-muted rounded animate-pulse w-3/4" />
         </div>
-        <BottomNav cartCount={0} wishlistCount={0} />
+        <BottomNav cartCount={0} />
       </div>
     );
   }
@@ -239,7 +239,7 @@ export default function ProductDetail() {
         </Button>
       </div>
 
-      <BottomNav cartCount={0} wishlistCount={0} />
+      <BottomNav cartCount={0} />
     </div>
   );
 }

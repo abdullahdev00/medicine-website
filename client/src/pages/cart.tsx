@@ -61,15 +61,15 @@ export default function Cart() {
   const total = subtotal + deliveryCharges;
 
   return (
-    <div className="min-h-screen bg-background pb-32">
+    <div className="min-h-screen bg-background pb-40">
       <div className="max-w-7xl mx-auto px-4 py-6">
         <div className="flex items-center gap-4 mb-6">
           <button
-            className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center hover:bg-primary/20 transition-all"
+            className="w-12 h-12 rounded-full bg-card shadow-lg flex items-center justify-center hover:bg-accent transition-all"
             onClick={() => setLocation("/home")}
             data-testid="button-back"
           >
-            <ArrowLeft className="w-5 h-5" />
+            <ArrowLeft className="w-6 h-6 text-primary" />
           </button>
           <h1 className="font-serif text-2xl font-bold">Shopping Cart</h1>
         </div>
@@ -78,17 +78,17 @@ export default function Cart() {
           {cartItems.length === 0 ? (
             <div className="text-center py-16">
               <p className="text-muted-foreground mb-4">Your cart is empty</p>
-              <Button onClick={() => setLocation("/home")} className="rounded-xl">
+              <Button onClick={() => setLocation("/home")} className="rounded-full px-8">
                 Start Shopping
               </Button>
             </div>
           ) : (
             <>
               {cartItems.map((item) => (
-                <Card key={item.id} className="shadow-sm rounded-2xl">
-                  <CardContent className="p-4">
+                <Card key={item.id} className="shadow-lg rounded-3xl border-none overflow-hidden">
+                  <CardContent className="p-5">
                     <div className="flex gap-4">
-                      <div className="w-24 h-24 bg-accent/30 rounded-xl flex items-center justify-center flex-shrink-0">
+                      <div className="w-24 h-24 bg-gradient-to-br from-primary/10 to-accent/20 rounded-2xl flex items-center justify-center flex-shrink-0">
                         <img
                           src={item.imageUrl}
                           alt={item.name}
@@ -96,18 +96,18 @@ export default function Cart() {
                           data-testid={`img-cart-item-${item.id}`}
                         />
                       </div>
-                      <div className="flex-1 space-y-2">
+                      <div className="flex-1 space-y-3">
                         <div className="flex justify-between gap-2">
                           <div>
-                            <h3 className="font-semibold" data-testid={`text-cart-item-name-${item.id}`}>
+                            <h3 className="font-semibold text-base" data-testid={`text-cart-item-name-${item.id}`}>
                               {item.name}
                             </h3>
-                            <p className="text-sm text-muted-foreground">{item.selectedPackage}</p>
+                            <p className="text-sm text-muted-foreground mt-1">{item.selectedPackage}</p>
                           </div>
                           <Button
                             variant="ghost"
                             size="icon"
-                            className="rounded-full h-8 w-8 text-destructive"
+                            className="rounded-full h-9 w-9 text-destructive hover:bg-destructive/10"
                             onClick={() => removeItem(item.id)}
                             data-testid={`button-remove-${item.id}`}
                           >
@@ -115,31 +115,31 @@ export default function Cart() {
                           </Button>
                         </div>
                         <div className="flex items-center justify-between">
-                          <div className="flex items-center gap-2">
+                          <div className="flex items-center gap-3 bg-accent/50 rounded-full p-1">
                             <Button
-                              variant="outline"
+                              variant="ghost"
                               size="icon"
-                              className="rounded-full h-8 w-8"
+                              className="rounded-full h-8 w-8 hover:bg-background"
                               onClick={() => updateQuantity(item.id, -1)}
                               disabled={item.quantity <= 1}
                               data-testid={`button-decrease-${item.id}`}
                             >
                               <Minus className="w-3 h-3" />
                             </Button>
-                            <span className="w-8 text-center font-semibold" data-testid={`text-quantity-${item.id}`}>
+                            <span className="w-8 text-center font-bold" data-testid={`text-quantity-${item.id}`}>
                               {item.quantity}
                             </span>
                             <Button
-                              variant="outline"
+                              variant="ghost"
                               size="icon"
-                              className="rounded-full h-8 w-8"
+                              className="rounded-full h-8 w-8 hover:bg-background"
                               onClick={() => updateQuantity(item.id, 1)}
                               data-testid={`button-increase-${item.id}`}
                             >
                               <Plus className="w-3 h-3" />
                             </Button>
                           </div>
-                          <div className="font-bold text-primary" data-testid={`text-price-${item.id}`}>
+                          <div className="font-bold text-lg text-primary" data-testid={`text-price-${item.id}`}>
                             Rs {(parseFloat(item.price) * item.quantity).toFixed(0)}
                           </div>
                         </div>
@@ -154,36 +154,40 @@ export default function Cart() {
       </div>
 
       {cartItems.length > 0 && (
-        <div className="fixed bottom-20 left-0 right-0 bg-background/95 backdrop-blur-sm border-t shadow-lg">
-          <div className="max-w-7xl mx-auto px-4 py-4 space-y-3">
-            <div className="space-y-2">
-              <div className="flex justify-between text-sm">
-                <span className="text-muted-foreground">Subtotal</span>
-                <span className="font-semibold">Rs {subtotal.toFixed(0)}</span>
-              </div>
-              <div className="flex justify-between text-sm">
-                <span className="text-muted-foreground">Delivery Charges</span>
-                <span className="font-semibold">Rs {deliveryCharges}</span>
-              </div>
-              <div className="h-px bg-border" />
-              <div className="flex justify-between">
-                <span className="font-bold text-lg">Total</span>
-                <span className="font-bold text-lg text-primary">Rs {total.toFixed(0)}</span>
-              </div>
-            </div>
-            <Button
-              size="lg"
-              className="w-full rounded-xl h-14"
-              onClick={() => setLocation("/checkout")}
-              data-testid="button-checkout"
-            >
-              Proceed to Checkout
-            </Button>
+        <div className="fixed bottom-28 left-0 right-0 bg-background z-40">
+          <div className="max-w-7xl mx-auto px-6 py-4">
+            <Card className="shadow-2xl rounded-3xl border-none bg-gradient-to-br from-card to-card/80 backdrop-blur-sm">
+              <CardContent className="p-6 space-y-4">
+                <div className="space-y-3">
+                  <div className="flex justify-between items-center">
+                    <span className="text-muted-foreground">Subtotal</span>
+                    <span className="font-semibold text-base">Rs {subtotal.toFixed(0)}</span>
+                  </div>
+                  <div className="flex justify-between items-center">
+                    <span className="text-muted-foreground">Delivery Charges</span>
+                    <span className="font-semibold text-base">Rs {deliveryCharges}</span>
+                  </div>
+                  <div className="h-px bg-border" />
+                  <div className="flex justify-between items-center">
+                    <span className="font-bold text-xl">Total</span>
+                    <span className="font-bold text-xl text-primary">Rs {total.toFixed(0)}</span>
+                  </div>
+                </div>
+                <Button
+                  size="lg"
+                  className="w-full rounded-full h-14 text-base font-semibold shadow-lg"
+                  onClick={() => setLocation("/checkout")}
+                  data-testid="button-checkout"
+                >
+                  Proceed to Checkout
+                </Button>
+              </CardContent>
+            </Card>
           </div>
         </div>
       )}
 
-      <BottomNav cartCount={cartItems.length} wishlistCount={0} />
+      <BottomNav cartCount={cartItems.length} />
     </div>
   );
 }
