@@ -1,7 +1,8 @@
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Heart, ShoppingCart, Star } from "lucide-react";
+import { ShoppingCart, Star } from "lucide-react";
 import { motion } from "framer-motion";
+import { FavoriteButton } from "@/components/FavoriteButton";
 import type { Product } from "@shared/schema";
 
 interface ProductCardProps {
@@ -27,18 +28,14 @@ export function ProductCard({ product, onAddToCart, onToggleWishlist, isWishlist
             className="w-full h-full object-cover"
             data-testid={`img-product-${product.id}`}
           />
-          <button
-            className="absolute top-3 right-3 w-9 h-9 rounded-full bg-white/20 backdrop-blur-md border border-white/30 flex items-center justify-center hover:bg-white/30 transition-all shadow-lg"
+          <FavoriteButton
+            isWishlisted={isWishlisted}
             onClick={(e) => {
               e.stopPropagation();
               onToggleWishlist?.();
             }}
-            data-testid={`button-wishlist-${product.id}`}
-          >
-            <Heart
-              className={`w-4 h-4 ${isWishlisted ? "fill-red-500 text-red-500" : "text-white"}`}
-            />
-          </button>
+            testId={`button-wishlist-${product.id}`}
+          />
           {!product.inStock && (
             <div className="absolute inset-0 bg-background/80 flex items-center justify-center">
               <span className="text-sm font-semibold text-destructive">Out of Stock</span>

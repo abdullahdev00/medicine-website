@@ -1,18 +1,24 @@
 import { useState } from "react";
 import { useLocation } from "wouter";
 import { useQuery } from "@tanstack/react-query";
-import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { ArrowLeft } from "lucide-react";
+import { ArrowLeft, SlidersHorizontal } from "lucide-react";
 import { ProductCard } from "@/components/ProductCard";
 import { BottomNav } from "@/components/BottomNav";
+import { CircularButton } from "@/components/CircularButton";
+import { FilterSidebar } from "@/components/FilterSidebar";
 import type { Product, Category } from "@shared/schema";
 
 export default function Products() {
   const [, setLocation] = useLocation();
+  const [filterOpen, setFilterOpen] = useState(false);
+  
+  // Filter states
+  const [selectedCategories, setSelectedCategories] = useState<string[]>([]);
+  const [priceRange, setPriceRange] = useState<[number, number]>([0, 3000]);
+  const [minRating, setMinRating] = useState(0);
+  const [showInStock, setShowInStock] = useState(false);
   const [sortBy, setSortBy] = useState("default");
-  const [filterCategory, setFilterCategory] = useState("all");
 
   const { data: products = [], isLoading: productsLoading } = useQuery<Product[]>({
     queryKey: ["/api/products"],
@@ -22,67 +28,74 @@ export default function Products() {
     queryKey: ["/api/categories"],
   });
 
-  const filteredProducts = products.filter(
-    (p) => filterCategory === "all" || p.categoryId === filterCategory
-  );
+  // Apply filters
+  const filteredProducts = products.filter((p) => {
+    // Category filter
+    if (selectedCategories.length > 0 && !selectedCategories.includes(p.categoryId)) {
+      return false;
+    }
+    
+    // Price filter
+    const price = parseFloat(p.price);
+    if (price < priceRange[0] || price > priceRange[1]) {
+      return false;
+    }
+    
+    // Rating filter
+    const rating = parseFloat(p.rating || "0");
+    if (rating < minRating) {
+      return false;
+    }
+    
+    // Stock filter
+    if (showInStock && !p.inStock) {
+      return false;
+    }
+    
+    return true;
+  });
 
+  // Apply sorting
   const sortedProducts = [...filteredProducts].sort((a, b) => {
     if (sortBy === "price-asc") return parseFloat(a.price) - parseFloat(b.price);
     if (sortBy === "price-desc") return parseFloat(b.price) - parseFloat(a.price);
     if (sortBy === "rating") return parseFloat(b.rating || "0") - parseFloat(a.rating || "0");
+    if (sortBy === "name") return a.name.localeCompare(b.name);
     return 0;
   });
 
+  const handleClearFilters = () => {
+    setSelectedCategories([]);
+    setPriceRange([0, 3000]);
+    setMinRating(0);
+    setShowInStock(false);
+    setSortBy("default");
+  };
+
   return (
     <div className="min-h-screen bg-background pb-24">
+      {/* Redesigned Header */}
       <div className="sticky top-0 bg-background/95 backdrop-blur-sm border-b z-40 shadow-sm">
         <div className="max-w-7xl mx-auto px-4 py-4">
-          <div className="flex items-center gap-4 mb-4">
-            <Button
-              variant="ghost"
-              size="icon"
+          <div className="flex items-center justify-between">
+            <CircularButton
+              icon={ArrowLeft}
               onClick={() => setLocation("/home")}
-              className="rounded-full"
-              data-testid="button-back"
-            >
-              <ArrowLeft className="w-5 h-5" />
-            </Button>
-            <div>
-              <h1 className="font-serif text-2xl font-bold">All Products</h1>
-              <p className="text-sm text-muted-foreground">{sortedProducts.length} medicines available</p>
-            </div>
-          </div>
-
-          <div className="flex gap-3 overflow-x-auto pb-2">
-            <Select value={filterCategory} onValueChange={setFilterCategory}>
-              <SelectTrigger className="w-[180px] rounded-xl" data-testid="select-category">
-                <SelectValue placeholder="Category" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">All Categories</SelectItem>
-                {categories.map((cat) => (
-                  <SelectItem key={cat.id} value={cat.id}>
-                    {cat.name}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-
-            <Select value={sortBy} onValueChange={setSortBy}>
-              <SelectTrigger className="w-[180px] rounded-xl" data-testid="select-sort">
-                <SelectValue placeholder="Sort by" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="default">Default</SelectItem>
-                <SelectItem value="price-asc">Price: Low to High</SelectItem>
-                <SelectItem value="price-desc">Price: High to Low</SelectItem>
-                <SelectItem value="rating">Highest Rated</SelectItem>
-              </SelectContent>
-            </Select>
+              testId="button-back"
+            />
+            
+            <h1 className="font-serif text-2xl font-bold">All Products</h1>
+            
+            <CircularButton
+              icon={SlidersHorizontal}
+              onClick={() => setFilterOpen(true)}
+              testId="button-filter"
+            />
           </div>
         </div>
       </div>
 
+      {/* Products Grid */}
       <div className="max-w-7xl mx-auto px-4 py-6">
         {productsLoading ? (
           <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
@@ -110,6 +123,24 @@ export default function Products() {
           </div>
         )}
       </div>
+
+      {/* Filter Sidebar */}
+      <FilterSidebar
+        open={filterOpen}
+        onOpenChange={setFilterOpen}
+        categories={categories}
+        selectedCategories={selectedCategories}
+        onCategoriesChange={setSelectedCategories}
+        priceRange={priceRange}
+        onPriceRangeChange={setPriceRange}
+        minRating={minRating}
+        onMinRatingChange={setMinRating}
+        showInStock={showInStock}
+        onShowInStockChange={setShowInStock}
+        sortBy={sortBy}
+        onSortByChange={setSortBy}
+        onClearFilters={handleClearFilters}
+      />
 
       <BottomNav cartCount={0} wishlistCount={0} />
     </div>
