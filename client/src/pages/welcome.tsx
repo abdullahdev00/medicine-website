@@ -50,7 +50,7 @@ export default function Welcome() {
           <Button
             size="lg"
             className="rounded-xl px-12 py-6 text-lg font-semibold shadow-lg hover:shadow-xl transition-all"
-            onClick={() => setLocation("/auth")}
+            onClick={() => setLocation("/login")}
             data-testid="button-get-started"
           >
             Get Started
