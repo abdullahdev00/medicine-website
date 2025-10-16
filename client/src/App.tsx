@@ -17,6 +17,9 @@ import Profile from "@/pages/profile";
 import EditProfile from "@/pages/edit-profile";
 import MyOrders from "@/pages/my-orders";
 import MyAddresses from "@/pages/my-addresses";
+import WalletPage from "@/pages/wallet";
+import AffiliatePage from "@/pages/affiliate";
+import BecomePartnerPage from "@/pages/become-partner";
 import Wishlist from "@/pages/wishlist";
 import NotFound from "@/pages/not-found";
 
@@ -36,6 +39,9 @@ function Router() {
       <Route path="/edit-profile" component={EditProfile} />
       <Route path="/my-orders" component={MyOrders} />
       <Route path="/my-addresses" component={MyAddresses} />
+      <Route path="/wallet" component={WalletPage} />
+      <Route path="/affiliate" component={AffiliatePage} />
+      <Route path="/become-partner" component={BecomePartnerPage} />
       <Route path="/wishlist" component={Wishlist} />
       <Route component={NotFound} />
     </Switch>

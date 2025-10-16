@@ -1,7 +1,7 @@
 import { useLocation } from "wouter";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
-import { User, LogOut, Package, MapPin, Edit2, ChevronRight } from "lucide-react";
+import { User, LogOut, Package, MapPin, Edit2, ChevronRight, Wallet, Users, Briefcase } from "lucide-react";
 import { BottomNav } from "@/components/BottomNav";
 import { useToast } from "@/hooks/use-toast";
 import { motion } from "framer-motion";
@@ -30,6 +30,16 @@ export default function Profile() {
       iconColor: "text-primary",
     },
     {
+      id: "wallet",
+      title: "My Wallet",
+      description: "View your balance & transactions",
+      icon: Wallet,
+      route: "/wallet",
+      testId: "button-wallet",
+      color: "from-chart-4/20 to-chart-4/10",
+      iconColor: "text-chart-4",
+    },
+    {
       id: "my-orders",
       title: "My Orders",
       description: "Track your order history",
@@ -40,6 +50,16 @@ export default function Profile() {
       iconColor: "text-chart-2",
     },
     {
+      id: "affiliate",
+      title: "Affiliate Program",
+      description: "Earn with your referral code",
+      icon: Users,
+      route: "/affiliate",
+      testId: "button-affiliate",
+      color: "from-chart-5/20 to-chart-5/10",
+      iconColor: "text-chart-5",
+    },
+    {
       id: "addresses",
       title: "Delivery Addresses",
       description: "Manage your addresses",
@@ -48,6 +68,16 @@ export default function Profile() {
       testId: "button-addresses",
       color: "from-chart-3/20 to-chart-3/10",
       iconColor: "text-chart-3",
+    },
+    {
+      id: "become-partner",
+      title: "Become a Partner",
+      description: "Apply for wholesale rates",
+      icon: Briefcase,
+      route: "/become-partner",
+      testId: "button-become-partner",
+      color: "from-primary/30 to-primary/20",
+      iconColor: "text-primary",
     },
   ];
 
