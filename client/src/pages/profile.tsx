@@ -1,7 +1,7 @@
 import { useLocation } from "wouter";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
-import { User, LogOut, Package, MapPin, Edit2, ChevronRight, Wallet, Users, Briefcase } from "lucide-react";
+import { User, LogOut, Package, MapPin, Edit2, ChevronRight, Wallet, Users, Briefcase, Heart } from "lucide-react";
 import { BottomNav } from "@/components/BottomNav";
 import { useToast } from "@/hooks/use-toast";
 import { motion } from "framer-motion";
@@ -48,6 +48,16 @@ export default function Profile() {
       testId: "button-my-orders",
       color: "from-chart-2/20 to-chart-2/10",
       iconColor: "text-chart-2",
+    },
+    {
+      id: "favorites",
+      title: "My Favorites",
+      description: "View your saved items",
+      icon: Heart,
+      route: "/wishlist",
+      testId: "button-favorites",
+      color: "from-red-500/20 to-red-500/10",
+      iconColor: "text-red-500",
     },
     {
       id: "affiliate",

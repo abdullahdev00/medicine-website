@@ -6,7 +6,7 @@ import { ArrowLeft, SlidersHorizontal } from "lucide-react";
 import { ProductCard } from "@/components/ProductCard";
 import { BottomNav } from "@/components/BottomNav";
 import { CircularButton } from "@/components/CircularButton";
-import { FilterSidebar } from "@/components/FilterSidebar";
+import { FilterBottomSheet } from "@/components/FilterBottomSheet";
 import type { Product, Category } from "@shared/schema";
 
 export default function Products() {
@@ -124,8 +124,8 @@ export default function Products() {
         )}
       </div>
 
-      {/* Filter Sidebar */}
-      <FilterSidebar
+      {/* Filter Bottom Sheet */}
+      <FilterBottomSheet
         open={filterOpen}
         onOpenChange={setFilterOpen}
         categories={categories}
@@ -133,12 +133,6 @@ export default function Products() {
         onCategoriesChange={setSelectedCategories}
         priceRange={priceRange}
         onPriceRangeChange={setPriceRange}
-        minRating={minRating}
-        onMinRatingChange={setMinRating}
-        showInStock={showInStock}
-        onShowInStockChange={setShowInStock}
-        sortBy={sortBy}
-        onSortByChange={setSortBy}
         onClearFilters={handleClearFilters}
       />
 

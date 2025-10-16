@@ -10,6 +10,28 @@ Preferred communication style: Simple, everyday language.
 
 ## Recent Changes (October 16, 2025)
 
+### Profile Section Enhancements
+- **New Features Added to Profile**:
+  1. **My Wallet Page** (`/wallet`) - View balance, add money, and track transactions (credit/debit)
+  2. **Affiliate Program Page** (`/affiliate`) - 6-digit referral code (MED789), earnings tracking, referral orders
+  3. **Become a Partner Page** (`/become-partner`) - Wholesale application with status tracking and MOQ requirements
+  4. **My Favorites Button** - Quick access to saved/wishlist items with red heart icon
+- **Profile Page Design**: 7 total sections displayed as individual gradient cards with circular icons
+- **Modern Theme**: All profile pages follow consistent design - circular/rounded elements, gradient cards, spacious layouts
+
+### Filter System Redesign - Bottom Sheet
+- **Removed Sidebar**: Replaced filter sidebar with modern bottom sheet design
+- **Circular Category Buttons**: Categories displayed as rounded pill buttons for multi-selection
+- **Enhanced Design**:
+  - Bottom sheet slides up from bottom (85vh height)
+  - Circular/rounded design throughout
+  - Gradient buttons for selected categories (primary color)
+  - Price range slider with gradient track and improved thumbs
+  - Min/Max price displayed in gradient cards
+  - Clean header with filter count
+  - Clear All and Apply Filters buttons
+- **User Experience**: Matches profile page theme - modern, clean, no emojis
+
 ### PWA (Progressive Web App) Implementation
 - **App Installability**: MediSwift is now a fully-functional PWA that can be installed on mobile devices and desktops
 - **Offline Support**: Implemented service worker with network-first caching strategy for offline functionality
@@ -20,13 +42,6 @@ Preferred communication style: Simple, everyday language.
 ### Products Page Header Redesign
 - **Clean Header Layout**: Removed "14 medicines available" text and dropdown filters
 - **Circular Button Components**: Created reusable CircularButton component for back and filter actions
-- **Comprehensive Filter Sidebar**: Implemented slide-out sidebar with advanced filtering:
-  - Category multi-select with checkboxes
-  - Price range slider (PKR 0-3000)
-  - Minimum rating filter (4⭐ & up, 3⭐ & up, etc.)
-  - Stock availability toggle
-  - Multiple sort options (Price, Rating, Name A-Z)
-  - Clear all filters functionality
 - **Brand-Colored Favorites**: Updated FavoriteButton to use primary brand color (cyan #009CA6) instead of red
 
 ### Design System Updates
