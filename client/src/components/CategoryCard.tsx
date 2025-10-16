@@ -18,15 +18,15 @@ export function CategoryCard({ name, icon, onClick }: CategoryCardProps) {
       transition={{ duration: 0.2 }}
     >
       <Card
-        className="cursor-pointer border-2 hover:border-primary/50 transition-all rounded-xl hover-elevate active-elevate-2"
+        className="cursor-pointer border-2 hover:border-primary/50 transition-all rounded-2xl hover-elevate active-elevate-2 min-w-[110px]"
         onClick={onClick}
         data-testid={`card-category-${name.toLowerCase().replace(/\s+/g, '-')}`}
       >
-        <CardContent className="p-6 flex flex-col items-center gap-3 text-center">
-          <div className="w-12 h-12 rounded-full bg-primary/10 flex items-center justify-center">
-            <IconComponent className="w-6 h-6 text-primary" />
+        <CardContent className="p-4 flex flex-col items-center gap-2 text-center">
+          <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center">
+            <IconComponent className="w-5 h-5 text-primary" />
           </div>
-          <p className="font-semibold text-sm leading-tight">{name}</p>
+          <p className="font-semibold text-xs leading-tight">{name}</p>
         </CardContent>
       </Card>
     </motion.div>

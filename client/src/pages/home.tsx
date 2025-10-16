@@ -90,13 +90,13 @@ export default function Home() {
             <h2 className="font-serif text-2xl font-semibold">Top Categories</h2>
           </div>
           {categoriesLoading ? (
-            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4">
+            <div className="flex gap-3 overflow-x-auto">
               {[...Array(5)].map((_, i) => (
-                <Card key={i} className="h-32 animate-pulse bg-muted" />
+                <Card key={i} className="h-24 min-w-[110px] animate-pulse bg-muted rounded-2xl" />
               ))}
             </div>
           ) : (
-            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4">
+            <div className="flex gap-3 overflow-x-auto">
               {categories.map((category) => (
                 <CategoryCard
                   key={category.id}
