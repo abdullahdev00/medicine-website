@@ -20,17 +20,17 @@ export function ProductCard({ product, onAddToCart, onToggleWishlist, isWishlist
       transition={{ duration: 0.2 }}
     >
       <Card className="overflow-hidden border-none shadow-md hover:shadow-xl transition-all rounded-2xl group">
-        <div className="relative bg-accent/30 aspect-square p-4">
+        <div className="relative aspect-square">
           <img
             src={product.imageUrl}
             alt={product.name}
-            className="w-full h-full object-contain"
+            className="w-full h-full object-cover"
             data-testid={`img-product-${product.id}`}
           />
           <Button
             size="icon"
             variant="secondary"
-            className="absolute top-2 right-2 rounded-full w-9 h-9"
+            className="absolute top-3 right-3 rounded-full w-9 h-9 shadow-lg"
             onClick={(e) => {
               e.stopPropagation();
               onToggleWishlist?.();
@@ -71,23 +71,23 @@ export function ProductCard({ product, onAddToCart, onToggleWishlist, isWishlist
             <span className="text-xs text-muted-foreground ml-1">({rating.toFixed(1)})</span>
           </div>
 
-          <div className="flex items-center justify-between pt-2">
-            <div>
-              <p className="text-2xl font-bold font-serif text-foreground" data-testid={`text-price-${product.id}`}>
-                PKR {parseFloat(product.price).toFixed(0)}
-              </p>
+          <Button
+            className="w-full rounded-xl h-11 flex items-center justify-between px-4"
+            onClick={onAddToCart}
+            disabled={!product.inStock}
+            data-testid={`button-add-to-cart-${product.id}`}
+          >
+            <div className="flex items-center gap-2">
+              <ShoppingCart className="w-4 h-4" />
+              <span>Add</span>
             </div>
-            <Button
-              size="sm"
-              className="rounded-xl"
-              onClick={onAddToCart}
-              disabled={!product.inStock}
-              data-testid={`button-add-to-cart-${product.id}`}
-            >
-              <ShoppingCart className="w-4 h-4 mr-1" />
-              Add
-            </Button>
-          </div>
+            <div className="flex items-center gap-2">
+              <div className="h-6 w-px bg-primary-foreground/20" />
+              <span className="text-lg font-bold font-mono" data-testid={`text-price-${product.id}`}>
+                Rs {parseFloat(product.price).toFixed(0)}
+              </span>
+            </div>
+          </Button>
         </CardContent>
       </Card>
     </motion.div>
