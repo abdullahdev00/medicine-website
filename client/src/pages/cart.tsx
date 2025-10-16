@@ -10,26 +10,7 @@ import { EmptyState } from "@/components/EmptyState";
 import paracetamolImg from "@assets/generated_images/Paracetamol_tablet_product_photo_f970b2f0.png";
 import vitaminCImg from "@assets/generated_images/Vitamin_C_supplement_bottle_d4b69c6b.png";
 
-const mockCartItems = [
-  {
-    id: "1",
-    productId: "1",
-    name: "Paracetamol 500mg",
-    price: "120",
-    quantity: 2,
-    imageUrl: paracetamolImg,
-    selectedPackage: "20 Tablets",
-  },
-  {
-    id: "2",
-    productId: "2",
-    name: "Vitamin C 1000mg",
-    price: "890",
-    quantity: 1,
-    imageUrl: vitaminCImg,
-    selectedPackage: "60 Tablets",
-  },
-];
+const mockCartItems: any[] = [];
 
 export default function Cart() {
   const [, setLocation] = useLocation();
@@ -62,7 +43,7 @@ export default function Cart() {
   const total = subtotal + deliveryCharges;
 
   return (
-    <div className="min-h-screen bg-background pb-40">
+    <div className="min-h-screen bg-background pb-32">
       <div className="max-w-7xl mx-auto px-4 py-6">
         <div className="flex items-center gap-4 mb-6">
           <button
@@ -157,7 +138,7 @@ export default function Cart() {
       </div>
 
       {cartItems.length > 0 && (
-        <div className="fixed bottom-28 left-0 right-0 bg-background z-40">
+        <div className="fixed bottom-20 left-0 right-0 bg-background z-40">
           <div className="max-w-7xl mx-auto px-6 py-4">
             <Card className="shadow-2xl rounded-3xl border-none bg-gradient-to-br from-card to-card/80 backdrop-blur-sm">
               <CardContent className="p-6 space-y-4">

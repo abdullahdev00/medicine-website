@@ -9,10 +9,7 @@ import { EmptyState } from "@/components/EmptyState";
 import vitaminCImg from "@assets/generated_images/Vitamin_C_supplement_bottle_d4b69c6b.png";
 import omega3Img from "@assets/generated_images/Omega-3_supplement_bottle_photo_3989ddc4.png";
 
-const mockWishlist = [
-  { id: "2", name: "Vitamin C 1000mg", category: "Vitamins", price: "890", imageUrl: vitaminCImg, rating: "4.8", inStock: true },
-  { id: "6", name: "Omega-3 Fish Oil", category: "Vitamins", price: "1250", imageUrl: omega3Img, rating: "4.9", inStock: true },
-];
+const mockWishlist: any[] = [];
 
 export default function Wishlist() {
   const [, setLocation] = useLocation();
@@ -28,7 +25,7 @@ export default function Wishlist() {
   };
 
   return (
-    <div className="min-h-screen bg-background pb-32">
+    <div className="min-h-screen bg-background pb-24">
       <div className="bg-gradient-to-br from-primary/10 to-accent/20 border-b">
         <div className="max-w-7xl mx-auto px-4 py-8">
           <div className="flex items-center gap-3">
