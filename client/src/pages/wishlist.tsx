@@ -6,9 +6,6 @@ import { BottomNav } from "@/components/BottomNav";
 import { useToast } from "@/hooks/use-toast";
 import { EmptyState } from "@/components/EmptyState";
 
-import vitaminCImg from "@assets/generated_images/Vitamin_C_supplement_bottle_d4b69c6b.png";
-import omega3Img from "@assets/generated_images/Omega-3_supplement_bottle_photo_3989ddc4.png";
-
 const mockWishlist: any[] = [];
 
 export default function Wishlist() {
