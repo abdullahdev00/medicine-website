@@ -29,22 +29,17 @@ export default function Home() {
 
   return (
     <div className="min-h-screen bg-background pb-24">
-      <div className="sticky top-0 bg-background/95 backdrop-blur-sm border-b z-40 shadow-sm">
-        <div className="max-w-7xl mx-auto px-4 py-4">
-          <div className="relative">
-            <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground" />
-            <Input
-              placeholder="Search medicines..."
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              className="pl-12 rounded-full shadow-md border-none h-12 bg-card"
-              data-testid="input-search"
-            />
-          </div>
+      <div className="max-w-7xl mx-auto px-4 space-y-8 pt-6">
+        <div className="relative">
+          <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground" />
+          <Input
+            placeholder="Search medicines..."
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            className="pl-12 rounded-full shadow-md border-none h-12 bg-card"
+            data-testid="input-search"
+          />
         </div>
-      </div>
-
-      <div className="max-w-7xl mx-auto px-4 space-y-8 mt-6">
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
