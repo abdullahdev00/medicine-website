@@ -30,14 +30,7 @@ export default function Home() {
   return (
     <div className="min-h-screen bg-background pb-24">
       <div className="sticky top-0 bg-background/95 backdrop-blur-sm border-b z-40 shadow-sm">
-        <div className="max-w-7xl mx-auto px-4 py-4 space-y-4">
-          <div className="flex items-center justify-between">
-            <div>
-              <h1 className="font-serif text-2xl font-bold text-foreground">MediSwift</h1>
-              <p className="text-sm text-muted-foreground">Your Health, Delivered</p>
-            </div>
-          </div>
-          
+        <div className="max-w-7xl mx-auto px-4 py-4">
           <div className="relative">
             <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground" />
             <Input
