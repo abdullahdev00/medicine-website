@@ -3,7 +3,7 @@ import { useLocation, useParams } from "wouter";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
-import { ArrowLeft, Heart, Star, ShoppingCart } from "lucide-react";
+import { ArrowLeft, Heart, Star, ShoppingCart, Plus, Minus } from "lucide-react";
 import { BottomNav } from "@/components/BottomNav";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest, queryClient } from "@/lib/queryClient";
@@ -16,6 +16,7 @@ export default function ProductDetail() {
   const [, setLocation] = useLocation();
   const { toast } = useToast();
   const [selectedPackage, setSelectedPackage] = useState(0);
+  const [quantity, setQuantity] = useState(1);
   const [isWishlisted, setIsWishlisted] = useState(false);
   const [currentImageIndex, setCurrentImageIndex] = useState(0);
 
@@ -29,7 +30,7 @@ export default function ProductDetail() {
       return await apiRequest("POST", "/api/cart", {
         userId: MOCK_USER_ID,
         productId: id,
-        quantity: 1,
+        quantity: quantity,
         selectedPackage: product?.packageOptions?.[selectedPackage],
       });
     },
@@ -52,7 +53,7 @@ export default function ProductDetail() {
   if (isLoading) {
     return (
       <div className="min-h-screen bg-background pb-24">
-        <div className="aspect-square bg-muted animate-pulse" />
+        <div className="aspect-square bg-muted animate-pulse rounded-b-3xl" />
         <div className="p-4 space-y-4">
           <div className="h-8 bg-muted rounded animate-pulse" />
           <div className="h-4 bg-muted rounded animate-pulse w-3/4" />
@@ -85,12 +86,13 @@ export default function ProductDetail() {
     return basePrice * 2;
   };
 
-  const currentPrice = getPriceForSize(selectedPackage);
+  const unitPrice = getPriceForSize(selectedPackage);
+  const totalPrice = unitPrice * quantity;
 
   return (
     <div className="min-h-screen bg-background pb-24">
       <div className="relative">
-        <div className="aspect-square relative overflow-hidden">
+        <div className="aspect-square relative overflow-hidden rounded-b-3xl">
           <img
             src={images[currentImageIndex]}
             alt={product.name}
@@ -130,7 +132,7 @@ export default function ProductDetail() {
         </div>
 
         <div className="absolute -bottom-6 left-4 right-4">
-          <Card className="p-4 rounded-3xl shadow-xl">
+          <Card className="p-4 rounded-3xl shadow-xl bg-card">
             <div className="space-y-1">
               <h1 className="font-serif text-2xl font-bold" data-testid="text-product-name">
                 {product.name}
@@ -159,7 +161,7 @@ export default function ProductDetail() {
       <div className="px-4 pt-12 space-y-6">
         <div className="flex items-baseline gap-2">
           <p className="font-serif text-4xl font-bold text-primary" data-testid="text-price">
-            Rs {currentPrice.toFixed(0)}
+            Rs {unitPrice.toFixed(0)}
           </p>
         </div>
 
@@ -183,6 +185,34 @@ export default function ProductDetail() {
         )}
 
         <div className="space-y-3">
+          <h3 className="font-semibold text-lg">Quantity</h3>
+          <div className="flex items-center gap-4">
+            <Button
+              variant="outline"
+              size="icon"
+              className="rounded-full h-10 w-10"
+              onClick={() => setQuantity(Math.max(1, quantity - 1))}
+              disabled={quantity <= 1}
+              data-testid="button-decrease-quantity"
+            >
+              <Minus className="w-4 h-4" />
+            </Button>
+            <span className="text-2xl font-bold w-12 text-center" data-testid="text-quantity">
+              {quantity}
+            </span>
+            <Button
+              variant="outline"
+              size="icon"
+              className="rounded-full h-10 w-10"
+              onClick={() => setQuantity(quantity + 1)}
+              data-testid="button-increase-quantity"
+            >
+              <Plus className="w-4 h-4" />
+            </Button>
+          </div>
+        </div>
+
+        <div className="space-y-3">
           <h3 className="font-semibold text-lg">Description</h3>
           <p className="text-muted-foreground leading-relaxed">
             {product.description}
@@ -203,7 +233,7 @@ export default function ProductDetail() {
           <div className="flex items-center gap-3 flex-shrink-0">
             <div className="h-6 w-px bg-primary-foreground/30" />
             <span className="text-xl font-bold font-mono tabular-nums">
-              {currentPrice.toFixed(0)}
+              {totalPrice.toFixed(0)}
             </span>
           </div>
         </Button>
