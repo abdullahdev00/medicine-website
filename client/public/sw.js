@@ -1,12 +1,12 @@
 const CACHE_NAME = 'mediswift-v1';
 const urlsToCache = [
   '/',
-  '/index.html',
-  '/src/main.tsx',
-  '/src/index.css'
+  '/manifest.json',
+  '/icon-192.png',
+  '/icon-512.png'
 ];
 
-// Install event - cache assets
+// Install event - cache essential assets
 self.addEventListener('install', (event) => {
   event.waitUntil(
     caches.open(CACHE_NAME)
@@ -21,32 +21,49 @@ self.addEventListener('install', (event) => {
   self.skipWaiting();
 });
 
-// Fetch event - serve from cache, fallback to network
+// Fetch event - network first, fallback to cache
 self.addEventListener('fetch', (event) => {
   event.respondWith(
-    caches.match(event.request)
+    fetch(event.request)
       .then((response) => {
-        // Cache hit - return response
-        if (response) {
+        // Check if valid response
+        if (!response || response.status !== 200) {
           return response;
         }
-        
-        return fetch(event.request).then((response) => {
-          // Check if valid response
-          if (!response || response.status !== 200 || response.type !== 'basic') {
-            return response;
-          }
 
-          // Clone the response
-          const responseToCache = response.clone();
+        // Clone the response
+        const responseToCache = response.clone();
 
-          caches.open(CACHE_NAME)
-            .then((cache) => {
-              cache.put(event.request, responseToCache);
+        // Cache successful responses
+        caches.open(CACHE_NAME)
+          .then((cache) => {
+            cache.put(event.request, responseToCache);
+          });
+
+        return response;
+      })
+      .catch(() => {
+        // Network failed, try cache
+        return caches.match(event.request)
+          .then((response) => {
+            if (response) {
+              return response;
+            }
+            
+            // For navigation requests, return cached root
+            if (event.request.mode === 'navigate') {
+              return caches.match('/');
+            }
+            
+            // For other requests, return a basic response
+            return new Response('Offline - content not available', {
+              status: 503,
+              statusText: 'Service Unavailable',
+              headers: new Headers({
+                'Content-Type': 'text/plain'
+              })
             });
-
-          return response;
-        });
+          });
       })
   );
 });
