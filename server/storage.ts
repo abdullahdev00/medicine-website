@@ -50,7 +50,8 @@ export class DatabaseStorage implements IStorage {
   }
 
   async createUser(insertUser: InsertUser): Promise<User> {
-    const result = await db.insert(users).values(insertUser).returning();
+    const affiliateCode = Math.random().toString(36).substring(2, 10).toUpperCase();
+    const result = await db.insert(users).values({ ...insertUser, affiliateCode }).returning();
     return result[0];
   }
 
@@ -120,8 +121,9 @@ export class DatabaseStorage implements IStorage {
       .limit(1);
 
     if (existing.length > 0) {
+      const newQuantity = (existing[0].quantity || 0) + (item.quantity || 1);
       const updated = await db.update(cartItems)
-        .set({ quantity: existing[0].quantity + item.quantity })
+        .set({ quantity: newQuantity })
         .where(eq(cartItems.id, existing[0].id))
         .returning();
       return updated[0];
