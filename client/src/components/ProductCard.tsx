@@ -67,14 +67,14 @@ export function ProductCard({ product, onAddToCart, onToggleWishlist, isWishlist
           </div>
 
           <Button
-            className="w-full rounded-xl h-11 flex items-center justify-between px-4 gap-3"
+            className="w-full rounded-full h-12 flex items-center justify-between px-5 gap-3 shadow-lg"
             onClick={onAddToCart}
             disabled={!product.inStock}
             data-testid={`button-add-to-cart-${product.id}`}
           >
             <div className="flex items-center gap-2 flex-shrink-0">
               <ShoppingCart className="w-4 h-4" />
-              <span>Add</span>
+              <span className="font-semibold">Add</span>
             </div>
             <div className="flex items-center gap-3 flex-shrink-0">
               <div className="h-6 w-px bg-primary-foreground/30" />

@@ -146,7 +146,7 @@ export default function Signup() {
                       required
                       value={signupData.fullName}
                       onChange={(e) => updateSignupData("fullName", e.target.value)}
-                      className="rounded-2xl h-12"
+                      className="rounded-full h-14 px-6"
                       data-testid="input-signup-name"
                     />
                   </div>
@@ -159,7 +159,7 @@ export default function Signup() {
                       required
                       value={signupData.email}
                       onChange={(e) => updateSignupData("email", e.target.value)}
-                      className="rounded-2xl h-12"
+                      className="rounded-full h-14 px-6"
                       data-testid="input-signup-email"
                     />
                   </div>
@@ -172,13 +172,13 @@ export default function Signup() {
                       required
                       value={signupData.password}
                       onChange={(e) => updateSignupData("password", e.target.value)}
-                      className="rounded-2xl h-12"
+                      className="rounded-full h-14 px-6"
                       data-testid="input-signup-password"
                     />
                   </div>
                   <Button
                     type="submit"
-                    className="w-full rounded-2xl h-12 text-base"
+                    className="w-full rounded-full h-14 shadow-lg font-semibold px-6 text-base"
                     data-testid="button-step1-next"
                   >
                     Next
@@ -214,7 +214,7 @@ export default function Signup() {
                         <Button
                           onClick={handleCheckVerification}
                           disabled={isVerifying}
-                          className="w-full rounded-2xl h-12 text-base"
+                          className="w-full rounded-full h-14 shadow-lg font-semibold px-6 text-base"
                           data-testid="button-check-verification"
                         >
                           {isVerifying ? (
@@ -240,7 +240,7 @@ export default function Signup() {
                         </div>
                         <Button
                           onClick={handleNextStep}
-                          className="w-full rounded-2xl h-12 text-base"
+                          className="w-full rounded-full h-14 shadow-lg font-semibold px-6 text-base"
                           data-testid="button-step2-next"
                         >
                           Continue
@@ -252,7 +252,7 @@ export default function Signup() {
                   <Button
                     onClick={handlePreviousStep}
                     variant="outline"
-                    className="w-full rounded-2xl h-12"
+                    className="w-full rounded-full h-14 shadow-lg font-semibold px-6"
                     data-testid="button-step2-back"
                   >
                     <ArrowLeft className="mr-2 w-4 h-4" />
@@ -280,7 +280,7 @@ export default function Signup() {
                       placeholder="+92 300 1234567"
                       value={signupData.phoneNumber}
                       onChange={(e) => updateSignupData("phoneNumber", e.target.value)}
-                      className="rounded-2xl h-12"
+                      className="rounded-full h-14 px-6"
                       data-testid="input-signup-phone"
                     />
                   </div>
@@ -291,7 +291,7 @@ export default function Signup() {
                       placeholder="+92 300 1234567"
                       value={signupData.whatsappNumber}
                       onChange={(e) => updateSignupData("whatsappNumber", e.target.value)}
-                      className="rounded-2xl h-12"
+                      className="rounded-full h-14 px-6"
                       data-testid="input-signup-whatsapp"
                     />
                   </div>
@@ -300,7 +300,7 @@ export default function Signup() {
                       type="button"
                       onClick={handlePreviousStep}
                       variant="outline"
-                      className="flex-1 rounded-2xl h-12"
+                      className="flex-1 rounded-full h-14 shadow-md px-6"
                       data-testid="button-step3-back"
                     >
                       <ArrowLeft className="mr-2 w-4 h-4" />
@@ -308,7 +308,7 @@ export default function Signup() {
                     </Button>
                     <Button
                       type="submit"
-                      className="flex-1 rounded-2xl h-12 text-base"
+                      className="flex-1 rounded-full h-14 shadow-md px-6 text-base"
                       data-testid="button-step3-next"
                     >
                       Next
@@ -334,7 +334,7 @@ export default function Signup() {
                       placeholder="House 123, Street 4, Area"
                       value={signupData.address}
                       onChange={(e) => updateSignupData("address", e.target.value)}
-                      className="rounded-2xl h-12"
+                      className="rounded-full h-14 px-6"
                       data-testid="input-signup-address"
                     />
                   </div>
@@ -345,7 +345,7 @@ export default function Signup() {
                       placeholder="Karachi"
                       value={signupData.city}
                       onChange={(e) => updateSignupData("city", e.target.value)}
-                      className="rounded-2xl h-12"
+                      className="rounded-full h-14 px-6"
                       data-testid="input-signup-city"
                     />
                   </div>
@@ -356,7 +356,7 @@ export default function Signup() {
                       placeholder="Sindh"
                       value={signupData.province}
                       onChange={(e) => updateSignupData("province", e.target.value)}
-                      className="rounded-2xl h-12"
+                      className="rounded-full h-14 px-6"
                       data-testid="input-signup-province"
                     />
                   </div>
@@ -365,7 +365,7 @@ export default function Signup() {
                       type="button"
                       onClick={handlePreviousStep}
                       variant="outline"
-                      className="flex-1 rounded-2xl h-12"
+                      className="flex-1 rounded-full h-14 shadow-md px-6"
                       data-testid="button-step4-back"
                     >
                       <ArrowLeft className="mr-2 w-4 h-4" />
@@ -373,7 +373,7 @@ export default function Signup() {
                     </Button>
                     <Button
                       type="submit"
-                      className="flex-1 rounded-2xl h-12 text-base"
+                      className="flex-1 rounded-full h-14 shadow-md px-6 text-base"
                       disabled={isLoading}
                       data-testid="button-signup-submit"
                     >
@@ -414,7 +414,7 @@ export default function Signup() {
           <div className="space-y-4 pt-4">
             <Button
               onClick={() => setShowVerificationDialog(false)}
-              className="w-full rounded-2xl"
+              className="w-full rounded-full"
               data-testid="button-close-verification-dialog"
             >
               Got it

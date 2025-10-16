@@ -56,7 +56,7 @@ export default function Login() {
                   type="email"
                   placeholder="your.email@example.com"
                   required
-                  className="rounded-2xl h-12"
+                  className="rounded-full h-14 px-6"
                   data-testid="input-login-email"
                 />
               </div>
@@ -67,13 +67,13 @@ export default function Login() {
                   type="password"
                   placeholder="••••••••"
                   required
-                  className="rounded-2xl h-12"
+                  className="rounded-full h-14 px-6"
                   data-testid="input-login-password"
                 />
               </div>
               <Button
                 type="submit"
-                className="w-full rounded-2xl h-12 text-base"
+                className="w-full rounded-full h-14 text-base font-semibold shadow-lg"
                 disabled={isLoading}
                 data-testid="button-login-submit"
               >
@@ -93,7 +93,7 @@ export default function Login() {
             <Button
               type="button"
               variant="outline"
-              className="w-full rounded-2xl h-12"
+              className="w-full rounded-full h-14 border-2"
               data-testid="button-google-login"
             >
               <Mail className="mr-2 h-4 w-4" />

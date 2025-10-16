@@ -35,17 +35,7 @@ export function BottomNav({ cartCount = 0 }: BottomNavProps) {
                   }`}
                   data-testid={item.testId}
                 >
-                  <div className="relative">
-                    <Icon className="w-6 h-6" strokeWidth={isActive ? 2.5 : 2} />
-                    {item.badge ? (
-                      <Badge
-                        variant="destructive"
-                        className="absolute -top-2 -right-2 w-5 h-5 flex items-center justify-center p-0 text-xs rounded-full"
-                      >
-                        {item.badge}
-                      </Badge>
-                    ) : null}
-                  </div>
+                  <Icon className="w-6 h-6" strokeWidth={isActive ? 2.5 : 2} />
                   <span className="text-xs font-semibold">{item.label}</span>
                 </button>
               );

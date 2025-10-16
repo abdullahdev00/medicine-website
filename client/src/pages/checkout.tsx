@@ -49,7 +49,7 @@ export default function Checkout() {
                   id="full-name"
                   defaultValue="Ahmad Khan"
                   required
-                  className="rounded-2xl h-12"
+                  className="rounded-full h-14 px-6"
                   data-testid="input-full-name"
                 />
               </div>
@@ -59,7 +59,7 @@ export default function Checkout() {
                   id="phone"
                   defaultValue="+92 300 1234567"
                   required
-                  className="rounded-2xl h-12"
+                  className="rounded-full h-14 px-6"
                   data-testid="input-phone"
                 />
               </div>
@@ -69,7 +69,7 @@ export default function Checkout() {
                   id="address"
                   defaultValue="House 123, Street 4, Gulshan-e-Iqbal"
                   required
-                  className="rounded-2xl h-12"
+                  className="rounded-full h-14 px-6"
                   data-testid="input-address"
                 />
               </div>
@@ -80,7 +80,7 @@ export default function Checkout() {
                     id="city"
                     defaultValue="Karachi"
                     required
-                    className="rounded-2xl h-12"
+                    className="rounded-full h-14 px-6"
                     data-testid="input-city"
                   />
                 </div>
@@ -90,7 +90,7 @@ export default function Checkout() {
                     id="province"
                     defaultValue="Sindh"
                     required
-                    className="rounded-2xl h-12"
+                    className="rounded-full h-14 px-6"
                     data-testid="input-province"
                   />
                 </div>
