@@ -10,6 +10,25 @@ Preferred communication style: Simple, everyday language.
 
 ## Recent Changes (October 16, 2025)
 
+### PWA (Progressive Web App) Implementation
+- **App Installability**: MediSwift is now a fully-functional PWA that can be installed on mobile devices and desktops
+- **Offline Support**: Implemented service worker with network-first caching strategy for offline functionality
+- **App Icons**: Generated and configured app icons (192x192 and 512x512) with brand colors
+- **Manifest Configuration**: Created PWA manifest with proper metadata, theme colors (#009CA6), and display settings
+- **Mobile Optimization**: Added Apple-specific meta tags for iOS installation and standalone mode
+
+### Products Page Header Redesign
+- **Clean Header Layout**: Removed "14 medicines available" text and dropdown filters
+- **Circular Button Components**: Created reusable CircularButton component for back and filter actions
+- **Comprehensive Filter Sidebar**: Implemented slide-out sidebar with advanced filtering:
+  - Category multi-select with checkboxes
+  - Price range slider (PKR 0-3000)
+  - Minimum rating filter (4⭐ & up, 3⭐ & up, etc.)
+  - Stock availability toggle
+  - Multiple sort options (Price, Rating, Name A-Z)
+  - Clear all filters functionality
+- **Brand-Colored Favorites**: Updated FavoriteButton to use primary brand color (cyan #009CA6) instead of red
+
 ### Design System Updates
 - **Global Scrollbar Hiding**: All scrollbars are now hidden throughout the application for a cleaner interface
 - **Rounded Design System**: Increased border radius from 0.75rem to 1rem for all inputs, buttons, and UI elements
@@ -25,8 +44,8 @@ The authentication page has been completely redesigned with a multi-step signup 
 Each step features spacious layouts, smooth animations, and proper back navigation.
 
 ### Database Population
-- Successfully seeded database with 6 product categories (First Aid, Cold & Flu, Vitamins, Personal Hygiene, Skincare, Pain Relief)
-- Added 10 sample products with proper categorization, pricing, and package options
+- Successfully seeded database with 6 product categories (Pain Relief, Vitamins & Supplements, First Aid, Personal Care, Baby Care, Diabetes Care)
+- Added 14 sample products with proper categorization, pricing, and package options
 - All data properly connected to the frontend via API endpoints
 
 ## System Architecture
