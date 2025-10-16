@@ -13,9 +13,9 @@ export function CategoryCard({ name, icon, onClick }: CategoryCardProps) {
   
   return (
     <motion.div
-      whileHover={{ scale: 1.05 }}
       whileTap={{ scale: 0.98 }}
       transition={{ duration: 0.2 }}
+      className="flex-shrink-0"
     >
       <Card
         className="cursor-pointer border-2 hover:border-primary/50 transition-all rounded-2xl hover-elevate active-elevate-2 min-w-[110px]"
