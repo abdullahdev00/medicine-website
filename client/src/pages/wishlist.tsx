@@ -1,10 +1,10 @@
 import { useState } from "react";
 import { useLocation } from "wouter";
-import { Button } from "@/components/ui/button";
 import { Heart, ArrowLeft } from "lucide-react";
 import { ProductCard } from "@/components/ProductCard";
 import { BottomNav } from "@/components/BottomNav";
 import { useToast } from "@/hooks/use-toast";
+import { EmptyState } from "@/components/EmptyState";
 
 import vitaminCImg from "@assets/generated_images/Vitamin_C_supplement_bottle_d4b69c6b.png";
 import omega3Img from "@assets/generated_images/Omega-3_supplement_bottle_photo_3989ddc4.png";
@@ -48,22 +48,14 @@ export default function Wishlist() {
 
       <div className="max-w-7xl mx-auto px-4 py-6">
         {wishlistItems.length === 0 ? (
-          <div className="text-center py-16 space-y-4">
-            <div className="w-20 h-20 rounded-full bg-muted mx-auto flex items-center justify-center">
-              <Heart className="w-10 h-10 text-muted-foreground" />
-            </div>
-            <div className="space-y-2">
-              <p className="text-lg font-medium">Your wishlist is empty</p>
-              <p className="text-muted-foreground">Save items you love for later</p>
-            </div>
-            <Button
-              onClick={() => setLocation("/home")}
-              className="rounded-xl"
-              data-testid="button-start-shopping"
-            >
-              Start Shopping
-            </Button>
-          </div>
+          <EmptyState
+            icon={Heart}
+            title="Your Wishlist is Empty"
+            description="Save your favorite medicines and health products here. Start building your wishlist to track items you love."
+            actionLabel="Browse Products"
+            onAction={() => setLocation("/home")}
+            testId="button-start-shopping"
+          />
         ) : (
           <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
             {wishlistItems.map((item) => (

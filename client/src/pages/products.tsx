@@ -2,11 +2,12 @@ import { useState } from "react";
 import { useLocation } from "wouter";
 import { useQuery } from "@tanstack/react-query";
 import { Card } from "@/components/ui/card";
-import { ArrowLeft, SlidersHorizontal } from "lucide-react";
+import { ArrowLeft, SlidersHorizontal, Package } from "lucide-react";
 import { ProductCard } from "@/components/ProductCard";
 import { BottomNav } from "@/components/BottomNav";
 import { CircularButton } from "@/components/CircularButton";
 import { FilterBottomSheet } from "@/components/FilterBottomSheet";
+import { EmptyState } from "@/components/EmptyState";
 import type { Product, Category } from "@shared/schema";
 
 export default function Products() {
@@ -118,9 +119,14 @@ export default function Products() {
         )}
 
         {!productsLoading && sortedProducts.length === 0 && (
-          <div className="text-center py-16">
-            <p className="text-muted-foreground">No products found</p>
-          </div>
+          <EmptyState
+            icon={Package}
+            title="No Products Found"
+            description="We couldn't find any products matching your filters. Try adjusting your search criteria or clear all filters."
+            actionLabel="Clear Filters"
+            onAction={handleClearFilters}
+            testId="button-clear-filters"
+          />
         )}
       </div>
 

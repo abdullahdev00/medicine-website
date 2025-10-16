@@ -4,6 +4,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { ArrowLeft, Package } from "lucide-react";
 import { motion } from "framer-motion";
+import { EmptyState } from "@/components/EmptyState";
 
 const mockOrders = [
   {
@@ -70,8 +71,19 @@ export default function MyOrders() {
       </div>
 
       <div className="max-w-7xl mx-auto px-6 py-8">
-        <div className="space-y-5">
-          {mockOrders.map((order, index) => (
+        {mockOrders.length === 0 ? (
+          <EmptyState
+            icon={Package}
+            title="No Orders Yet"
+            description="You haven't placed any orders yet. Start shopping to see your order history here."
+            actionLabel="Start Shopping"
+            onAction={() => setLocation("/home")}
+            iconColor="chart-2"
+            testId="button-start-shopping"
+          />
+        ) : (
+          <div className="space-y-5">
+            {mockOrders.map((order, index) => (
             <motion.div
               key={order.id}
               initial={{ opacity: 0, y: 20 }}
@@ -122,15 +134,7 @@ export default function MyOrders() {
               </Card>
             </motion.div>
           ))}
-        </div>
-
-        {mockOrders.length === 0 && (
-          <Card className="shadow-lg rounded-3xl border-none">
-            <CardContent className="p-16 text-center">
-              <Package className="w-16 h-16 mx-auto text-muted-foreground/50 mb-4" />
-              <p className="text-lg text-muted-foreground">No orders yet</p>
-            </CardContent>
-          </Card>
+          </div>
         )}
       </div>
     </div>

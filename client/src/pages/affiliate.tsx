@@ -3,9 +3,10 @@ import { useLocation } from "wouter";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { ArrowLeft, Users, Copy, Check, Package } from "lucide-react";
+import { ArrowLeft, Users, Copy, Check, Package, UserPlus } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { motion } from "framer-motion";
+import { EmptyState } from "@/components/EmptyState";
 
 const mockReferralOrders = [
   {
@@ -133,8 +134,19 @@ export default function AffiliatePage() {
 
           <div>
             <h3 className="font-serif text-xl font-bold mb-4">Referral Orders</h3>
-            <div className="space-y-4">
-              {mockReferralOrders.map((order, index) => (
+            {mockReferralOrders.length === 0 ? (
+              <EmptyState
+                icon={UserPlus}
+                title="No Referrals Yet"
+                description="Share your referral code with friends and family. Earn commission on every order they place through your code."
+                actionLabel="Share Code"
+                onAction={handleCopy}
+                iconColor="chart-5"
+                testId="button-share-code"
+              />
+            ) : (
+              <div className="space-y-4">
+                {mockReferralOrders.map((order, index) => (
                 <motion.div
                   key={order.id}
                   initial={{ opacity: 0, y: 20 }}
@@ -189,8 +201,9 @@ export default function AffiliatePage() {
                     </CardContent>
                   </Card>
                 </motion.div>
-              ))}
-            </div>
+                ))}
+              </div>
+            )}
           </div>
         </motion.div>
       </div>

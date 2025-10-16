@@ -1,8 +1,9 @@
 import { useLocation } from "wouter";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
-import { ArrowLeft, Wallet, ArrowDownLeft, ArrowUpRight, Plus } from "lucide-react";
+import { ArrowLeft, Wallet, ArrowDownLeft, ArrowUpRight, Plus, Receipt } from "lucide-react";
 import { motion } from "framer-motion";
+import { EmptyState } from "@/components/EmptyState";
 
 const mockTransactions = [
   {
@@ -95,8 +96,16 @@ export default function WalletPage() {
 
           <div>
             <h3 className="font-serif text-xl font-bold mb-4">Recent Transactions</h3>
-            <div className="space-y-3">
-              {mockTransactions.map((transaction, index) => (
+            {mockTransactions.length === 0 ? (
+              <EmptyState
+                icon={Receipt}
+                title="No Transactions Yet"
+                description="Your wallet transaction history will appear here. Start shopping or earn through our affiliate program."
+                iconColor="chart-4"
+              />
+            ) : (
+              <div className="space-y-3">
+                {mockTransactions.map((transaction, index) => (
                 <motion.div
                   key={transaction.id}
                   initial={{ opacity: 0, y: 20 }}
@@ -144,8 +153,9 @@ export default function WalletPage() {
                     </CardContent>
                   </Card>
                 </motion.div>
-              ))}
-            </div>
+                ))}
+              </div>
+            )}
           </div>
         </motion.div>
       </div>

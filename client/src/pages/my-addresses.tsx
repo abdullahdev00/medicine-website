@@ -7,6 +7,7 @@ import { Label } from "@/components/ui/label";
 import { ArrowLeft, MapPin, Edit2, Plus, Trash2 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { motion } from "framer-motion";
+import { EmptyState } from "@/components/EmptyState";
 
 const mockAddresses = [
   {
@@ -83,8 +84,19 @@ export default function MyAddresses() {
       </div>
 
       <div className="max-w-7xl mx-auto px-6 py-8">
-        <div className="space-y-5">
-          {mockAddresses.map((address, index) => (
+        {mockAddresses.length === 0 && !isAdding ? (
+          <EmptyState
+            icon={MapPin}
+            title="No Saved Addresses"
+            description="You haven't added any delivery addresses yet. Add your addresses for faster checkout and smooth delivery."
+            actionLabel="Add New Address"
+            onAction={() => setIsAdding(true)}
+            iconColor="chart-3"
+            testId="button-add-address-empty"
+          />
+        ) : (
+          <div className="space-y-5">
+            {mockAddresses.map((address, index) => (
             <motion.div
               key={address.id}
               initial={{ opacity: 0, y: 20 }}
@@ -129,9 +141,9 @@ export default function MyAddresses() {
                 </CardContent>
               </Card>
             </motion.div>
-          ))}
+            ))}
 
-          {isAdding && (
+            {isAdding && (
             <motion.div
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
@@ -231,9 +243,9 @@ export default function MyAddresses() {
                 </CardContent>
               </Card>
             </motion.div>
-          )}
+            )}
 
-          {!isAdding && (
+            {!isAdding && mockAddresses.length > 0 && (
             <motion.div
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
@@ -249,8 +261,9 @@ export default function MyAddresses() {
                 Add New Address
               </Button>
             </motion.div>
-          )}
-        </div>
+            )}
+          </div>
+        )}
       </div>
     </div>
   );

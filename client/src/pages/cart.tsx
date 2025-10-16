@@ -2,9 +2,10 @@ import { useState } from "react";
 import { useLocation } from "wouter";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
-import { ArrowLeft, Trash2, Minus, Plus } from "lucide-react";
+import { ArrowLeft, Trash2, Minus, Plus, ShoppingCart } from "lucide-react";
 import { BottomNav } from "@/components/BottomNav";
 import { useToast } from "@/hooks/use-toast";
+import { EmptyState } from "@/components/EmptyState";
 
 import paracetamolImg from "@assets/generated_images/Paracetamol_tablet_product_photo_f970b2f0.png";
 import vitaminCImg from "@assets/generated_images/Vitamin_C_supplement_bottle_d4b69c6b.png";
@@ -76,12 +77,14 @@ export default function Cart() {
 
         <div className="space-y-4">
           {cartItems.length === 0 ? (
-            <div className="text-center py-16">
-              <p className="text-muted-foreground mb-4">Your cart is empty</p>
-              <Button onClick={() => setLocation("/home")} className="rounded-full px-8">
-                Start Shopping
-              </Button>
-            </div>
+            <EmptyState
+              icon={ShoppingCart}
+              title="Your Cart is Empty"
+              description="Looks like you haven't added any items to your cart yet. Start shopping and discover our quality medicines and health products."
+              actionLabel="Start Shopping"
+              onAction={() => setLocation("/home")}
+              testId="button-start-shopping"
+            />
           ) : (
             <>
               {cartItems.map((item) => (
