@@ -79,7 +79,7 @@
   --font-sans: Inter, sans-serif;
   --font-serif: Poppins, serif;
   --font-mono: Menlo, monospace;
-  --radius: .75rem;
+  --radius: 1rem;
   --shadow-2xs: 0px 1px 2px 0px hsl(0 0% 0% / 0.05);
   --shadow-xs: 0px 1px 3px 0px hsl(0 0% 0% / 0.08);
   --shadow-sm: 0px 2px 4px 0px hsl(0 0% 0% / 0.06), 0px 1px 2px -1px hsl(0 0% 0% / 0.04);
@@ -212,6 +212,16 @@
 
   body {
     @apply font-sans antialiased bg-background text-foreground;
+  }
+
+  /* Hide scrollbars globally */
+  * {
+    scrollbar-width: none; /* Firefox */
+    -ms-overflow-style: none; /* IE and Edge */
+  }
+
+  *::-webkit-scrollbar {
+    display: none; /* Chrome, Safari, Opera */
   }
 }
 
