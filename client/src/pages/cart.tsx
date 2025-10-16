@@ -1,4 +1,3 @@
-import { useState } from "react";
 import { useLocation } from "wouter";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -6,37 +5,63 @@ import { ArrowLeft, Trash2, Minus, Plus, ShoppingCart } from "lucide-react";
 import { BottomNav } from "@/components/BottomNav";
 import { useToast } from "@/hooks/use-toast";
 import { EmptyState } from "@/components/EmptyState";
-
-import paracetamolImg from "@assets/generated_images/Paracetamol_tablet_product_photo_f970b2f0.png";
-import vitaminCImg from "@assets/generated_images/Vitamin_C_supplement_bottle_d4b69c6b.png";
-
-const mockCartItems: any[] = [];
+import { useAuth } from "@/contexts/AuthContext";
+import { useQuery, useMutation } from "@tanstack/react-query";
+import { apiRequest, queryClient } from "@/lib/queryClient";
 
 export default function Cart() {
   const [, setLocation] = useLocation();
   const { toast } = useToast();
-  const [cartItems, setCartItems] = useState(mockCartItems);
+  const { user, isAuthenticated } = useAuth();
+
+  const { data: cartItems = [], isLoading } = useQuery<any[]>({
+    queryKey: ["/api/cart", user?.id],
+    enabled: isAuthenticated && !!user,
+    queryFn: async () => {
+      const res = await fetch(`/api/cart?userId=${user?.id}`);
+      if (!res.ok) return [];
+      return res.json();
+    },
+  });
+
+  const updateQuantityMutation = useMutation({
+    mutationFn: async ({ id, quantity }: { id: string; quantity: number }) => {
+      const res = await apiRequest(`/api/cart/${id}`, {
+        method: "PATCH",
+        body: JSON.stringify({ quantity }),
+      });
+      if (!res.ok) throw new Error("Failed to update quantity");
+      return res.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/cart", user?.id] });
+    },
+  });
+
+  const removeItemMutation = useMutation({
+    mutationFn: async (id: string) => {
+      const res = await apiRequest(`/api/cart/${id}`, { method: "DELETE" });
+      if (!res.ok) throw new Error("Failed to remove item");
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/cart", user?.id] });
+      toast({ title: "Item removed", description: "Item has been removed from your cart." });
+    },
+  });
 
   const updateQuantity = (id: string, delta: number) => {
-    setCartItems(items =>
-      items.map(item =>
-        item.id === id
-          ? { ...item, quantity: Math.max(1, item.quantity + delta) }
-          : item
-      )
-    );
+    const item = cartItems.find((item) => item.id === id);
+    if (!item) return;
+    const newQuantity = Math.max(1, item.quantity + delta);
+    updateQuantityMutation.mutate({ id, quantity: newQuantity });
   };
 
   const removeItem = (id: string) => {
-    setCartItems(items => items.filter(item => item.id !== id));
-    toast({
-      title: "Item removed",
-      description: "Item has been removed from your cart.",
-    });
+    removeItemMutation.mutate(id);
   };
 
   const subtotal = cartItems.reduce(
-    (sum, item) => sum + parseFloat(item.price) * item.quantity,
+    (sum, item) => sum + parseFloat(item.product?.price || "0") * item.quantity,
     0
   );
   const deliveryCharges = 150;
@@ -74,8 +99,8 @@ export default function Cart() {
                     <div className="flex gap-4">
                       <div className="w-24 h-24 bg-gradient-to-br from-primary/10 to-accent/20 rounded-2xl flex items-center justify-center flex-shrink-0">
                         <img
-                          src={item.imageUrl}
-                          alt={item.name}
+                          src={item.product?.imageUrl}
+                          alt={item.product?.name}
                           className="w-full h-full object-contain p-2"
                           data-testid={`img-cart-item-${item.id}`}
                         />
@@ -84,7 +109,7 @@ export default function Cart() {
                         <div className="flex justify-between gap-2">
                           <div>
                             <h3 className="font-semibold text-base" data-testid={`text-cart-item-name-${item.id}`}>
-                              {item.name}
+                              {item.product?.name}
                             </h3>
                             <p className="text-sm text-muted-foreground mt-1">{item.selectedPackage}</p>
                           </div>
@@ -124,7 +149,7 @@ export default function Cart() {
                             </Button>
                           </div>
                           <div className="font-bold text-lg text-primary" data-testid={`text-price-${item.id}`}>
-                            Rs {(parseFloat(item.price) * item.quantity).toFixed(0)}
+                            Rs {(parseFloat(item.product?.price || "0") * item.quantity).toFixed(0)}
                           </div>
                         </div>
                       </div>

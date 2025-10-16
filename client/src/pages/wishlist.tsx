@@ -1,24 +1,51 @@
-import { useState } from "react";
 import { useLocation } from "wouter";
 import { Heart, ArrowLeft } from "lucide-react";
 import { ProductCard } from "@/components/ProductCard";
 import { BottomNav } from "@/components/BottomNav";
 import { useToast } from "@/hooks/use-toast";
 import { EmptyState } from "@/components/EmptyState";
-
-const mockWishlist: any[] = [];
+import { useAuth } from "@/contexts/AuthContext";
+import { useQuery, useMutation } from "@tanstack/react-query";
+import { apiRequest, queryClient } from "@/lib/queryClient";
 
 export default function Wishlist() {
   const [, setLocation] = useLocation();
   const { toast } = useToast();
-  const [wishlistItems, setWishlistItems] = useState(mockWishlist);
+  const { user, isAuthenticated } = useAuth();
+
+  const { data: wishlistItems = [] } = useQuery<any[]>({
+    queryKey: ["/api/wishlist", user?.id],
+    enabled: isAuthenticated && !!user,
+    queryFn: async () => {
+      const res = await fetch(`/api/wishlist?userId=${user?.id}`);
+      if (!res.ok) return [];
+      return res.json();
+    },
+  });
+
+  const { data: cartItems = [] } = useQuery<any[]>({
+    queryKey: ["/api/cart", user?.id],
+    enabled: isAuthenticated && !!user,
+    queryFn: async () => {
+      const res = await fetch(`/api/cart?userId=${user?.id}`);
+      if (!res.ok) return [];
+      return res.json();
+    },
+  });
+
+  const removeFromWishlistMutation = useMutation({
+    mutationFn: async (id: string) => {
+      const res = await apiRequest(`/api/wishlist/${id}`, { method: "DELETE" });
+      if (!res.ok) throw new Error("Failed to remove from wishlist");
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/wishlist", user?.id] });
+      toast({ title: "Removed from wishlist", description: "Item has been removed from your wishlist." });
+    },
+  });
 
   const removeFromWishlist = (id: string) => {
-    setWishlistItems(items => items.filter(item => item.id !== id));
-    toast({
-      title: "Removed from wishlist",
-      description: "Item has been removed from your wishlist.",
-    });
+    removeFromWishlistMutation.mutate(id);
   };
 
   return (
@@ -55,11 +82,11 @@ export default function Wishlist() {
             {wishlistItems.map((item) => (
               <div
                 key={item.id}
-                onClick={() => setLocation(`/product/${item.id}`)}
+                onClick={() => setLocation(`/product/${item.productId}`)}
                 className="cursor-pointer"
               >
                 <ProductCard
-                  product={item as any}
+                  product={item.product}
                   onToggleWishlist={() => removeFromWishlist(item.id)}
                   isWishlisted={true}
                 />
@@ -69,7 +96,7 @@ export default function Wishlist() {
         )}
       </div>
 
-      <BottomNav cartCount={0} />
+      <BottomNav cartCount={cartItems.length} />
     </div>
   );
 }

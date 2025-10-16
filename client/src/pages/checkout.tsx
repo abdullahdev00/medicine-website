@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useLocation } from "wouter";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -7,24 +7,111 @@ import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { ArrowLeft } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
+import { useAuth } from "@/contexts/AuthContext";
+import { AuthDialog } from "@/components/AuthDialog";
+import { useQuery } from "@tanstack/react-query";
 
 export default function Checkout() {
   const [, setLocation] = useLocation();
   const { toast } = useToast();
+  const { user, isAuthenticated } = useAuth();
   const [paymentMethod, setPaymentMethod] = useState("cod");
   const [isProcessing, setIsProcessing] = useState(false);
+  const [showAuthDialog, setShowAuthDialog] = useState(false);
 
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    setIsProcessing(true);
-    
-    setTimeout(() => {
-      setLocation("/order-success");
-    }, 1500);
+  const { data: cartItems = [] } = useQuery<any[]>({
+    queryKey: ["/api/cart", user?.id],
+    enabled: isAuthenticated && !!user,
+    queryFn: async () => {
+      const res = await fetch(`/api/cart?userId=${user?.id}`);
+      if (!res.ok) return [];
+      return res.json();
+    },
+  });
+
+  useEffect(() => {
+    if (!isAuthenticated) {
+      setShowAuthDialog(true);
+    }
+  }, [isAuthenticated]);
+
+  const handleAuthSuccess = () => {
+    setShowAuthDialog(false);
   };
 
+  const handleDialogClose = (open: boolean) => {
+    if (!open && !isAuthenticated) {
+      setLocation("/cart");
+    }
+    setShowAuthDialog(open);
+  };
+
+  const subtotal = cartItems.reduce((sum, item) => sum + parseFloat(item.product?.price || "0") * item.quantity, 0);
+  const deliveryCharges = 150;
+  const total = subtotal + deliveryCharges;
+
+  const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
+    e.preventDefault();
+    if (!user) return;
+
+    setIsProcessing(true);
+    
+    const formData = new FormData(e.currentTarget);
+    const deliveryAddress = `${formData.get("address")}, ${formData.get("city")}, ${formData.get("province")}`;
+
+    const orderData = {
+      userId: user.id,
+      products: cartItems.map((item) => ({
+        productId: item.productId,
+        name: item.product?.name || "",
+        quantity: item.quantity,
+        price: item.product?.price || "0",
+        selectedPackage: item.selectedPackage,
+      })),
+      totalPrice: total.toString(),
+      deliveryAddress,
+      paymentMethod,
+    };
+
+    try {
+      const response = await fetch("/api/orders", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(orderData),
+      });
+
+      if (!response.ok) {
+        throw new Error("Failed to place order");
+      }
+
+      setTimeout(() => {
+        setLocation("/order-success");
+      }, 500);
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: "Failed to place order. Please try again.",
+        variant: "destructive",
+      });
+      setIsProcessing(false);
+    }
+  };
+
+  if (!isAuthenticated) {
+    return (
+      <>
+        <AuthDialog open={showAuthDialog} onOpenChange={handleDialogClose} onSuccess={handleAuthSuccess} />
+        <div className="min-h-screen bg-background flex items-center justify-center">
+          <p className="text-muted-foreground">Please login to continue with checkout</p>
+        </div>
+      </>
+    );
+  }
+
   return (
-    <div className="min-h-screen bg-background pb-8">
+    <>
+      <AuthDialog open={showAuthDialog} onOpenChange={handleDialogClose} onSuccess={handleAuthSuccess} />
+      <div className="min-h-screen bg-background pb-8">
       <div className="max-w-3xl mx-auto px-4 py-6">
         <div className="flex items-center gap-4 mb-6">
           <button
@@ -137,16 +224,16 @@ export default function Checkout() {
               <div className="space-y-2">
                 <div className="flex justify-between">
                   <span className="text-muted-foreground">Subtotal</span>
-                  <span className="font-semibold">Rs 1,130</span>
+                  <span className="font-semibold">Rs {subtotal.toFixed(0)}</span>
                 </div>
                 <div className="flex justify-between">
                   <span className="text-muted-foreground">Delivery Charges</span>
-                  <span className="font-semibold">Rs 150</span>
+                  <span className="font-semibold">Rs {deliveryCharges}</span>
                 </div>
                 <div className="h-px bg-border" />
                 <div className="flex justify-between text-lg">
                   <span className="font-bold">Total</span>
-                  <span className="font-bold text-primary">Rs 1,280</span>
+                  <span className="font-bold text-primary">Rs {total.toFixed(0)}</span>
                 </div>
               </div>
             </CardContent>
@@ -164,5 +251,6 @@ export default function Checkout() {
         </form>
       </div>
     </div>
+    </>
   );
 }

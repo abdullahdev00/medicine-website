@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useLocation } from "wouter";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useMutation } from "@tanstack/react-query";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
@@ -9,11 +9,16 @@ import { ProductCard } from "@/components/ProductCard";
 import { CategoryCard } from "@/components/CategoryCard";
 import { BottomNav } from "@/components/BottomNav";
 import { motion } from "framer-motion";
+import { useAuth } from "@/contexts/AuthContext";
+import { useToast } from "@/hooks/use-toast";
+import { apiRequest, queryClient } from "@/lib/queryClient";
 import type { Product, Category } from "@shared/schema";
 
 export default function Home() {
   const [, setLocation] = useLocation();
   const [searchQuery, setSearchQuery] = useState("");
+  const { user, isAuthenticated } = useAuth();
+  const { toast } = useToast();
 
   const { data: categories = [], isLoading: categoriesLoading } = useQuery<Category[]>({
     queryKey: ["/api/categories"],
@@ -22,6 +27,102 @@ export default function Home() {
   const { data: products = [], isLoading: productsLoading } = useQuery<Product[]>({
     queryKey: ["/api/products"],
   });
+
+  const { data: wishlistItems = [] } = useQuery<any[]>({
+    queryKey: ["/api/wishlist", user?.id],
+    enabled: isAuthenticated && !!user,
+    queryFn: async () => {
+      const res = await fetch(`/api/wishlist?userId=${user?.id}`);
+      if (!res.ok) return [];
+      return res.json();
+    },
+  });
+
+  const { data: cartItems = [] } = useQuery<any[]>({
+    queryKey: ["/api/cart", user?.id],
+    enabled: isAuthenticated && !!user,
+    queryFn: async () => {
+      const res = await fetch(`/api/cart?userId=${user?.id}`);
+      if (!res.ok) return [];
+      return res.json();
+    },
+  });
+
+  const addToWishlistMutation = useMutation({
+    mutationFn: async (productId: string) => {
+      if (!user) throw new Error("Not authenticated");
+      const res = await apiRequest("/api/wishlist", {
+        method: "POST",
+        body: JSON.stringify({ userId: user.id, productId }),
+      });
+      if (!res.ok) throw new Error("Failed to add to wishlist");
+      return res.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/wishlist", user?.id] });
+      toast({ title: "Added to wishlist", description: "Product added to your wishlist." });
+    },
+  });
+
+  const removeFromWishlistMutation = useMutation({
+    mutationFn: async (wishlistItemId: string) => {
+      const res = await apiRequest(`/api/wishlist/${wishlistItemId}`, { method: "DELETE" });
+      if (!res.ok) throw new Error("Failed to remove from wishlist");
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/wishlist", user?.id] });
+      toast({ title: "Removed from wishlist" });
+    },
+  });
+
+  const addToCartMutation = useMutation({
+    mutationFn: async (productId: string) => {
+      if (!user) throw new Error("Not authenticated");
+      const res = await apiRequest("/api/cart", {
+        method: "POST",
+        body: JSON.stringify({ userId: user.id, productId, quantity: 1 }),
+      });
+      if (!res.ok) throw new Error("Failed to add to cart");
+      return res.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/cart", user?.id] });
+      toast({ title: "Added to cart", description: "Product added to your cart." });
+    },
+  });
+
+  const handleToggleWishlist = (productId: string) => {
+    if (!isAuthenticated) {
+      toast({
+        title: "Login required",
+        description: "Please login to add items to wishlist",
+        variant: "destructive",
+      });
+      setLocation("/login");
+      return;
+    }
+
+    const wishlistItem = wishlistItems.find((item) => item.productId === productId);
+    if (wishlistItem) {
+      removeFromWishlistMutation.mutate(wishlistItem.id);
+    } else {
+      addToWishlistMutation.mutate(productId);
+    }
+  };
+
+  const handleAddToCart = (productId: string) => {
+    if (!isAuthenticated) {
+      toast({
+        title: "Login required",
+        description: "Please login to add items to cart",
+        variant: "destructive",
+      });
+      setLocation("/login");
+      return;
+    }
+
+    addToCartMutation.mutate(productId);
+  };
 
   const filteredProducts = products.filter(product =>
     searchQuery === "" || product.name.toLowerCase().includes(searchQuery.toLowerCase())
@@ -132,15 +233,26 @@ export default function Home() {
             </div>
           ) : (
             <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
-              {(searchQuery ? filteredProducts : products.slice(0, 8)).map((product) => (
-                <div
-                  key={product.id}
-                  onClick={() => setLocation(`/product/${product.id}`)}
-                  className="cursor-pointer"
-                >
-                  <ProductCard product={product as any} />
-                </div>
-              ))}
+              {(searchQuery ? filteredProducts : products.slice(0, 8)).map((product) => {
+                const isWishlisted = wishlistItems.some((item) => item.productId === product.id);
+                return (
+                  <div
+                    key={product.id}
+                    onClick={() => setLocation(`/product/${product.id}`)}
+                    className="cursor-pointer"
+                  >
+                    <ProductCard
+                      product={product as any}
+                      onAddToCart={(e) => {
+                        e?.stopPropagation();
+                        handleAddToCart(product.id);
+                      }}
+                      onToggleWishlist={() => handleToggleWishlist(product.id)}
+                      isWishlisted={isWishlisted}
+                    />
+                  </div>
+                );
+              })}
             </div>
           )}
           {searchQuery && filteredProducts.length === 0 && (
@@ -151,7 +263,7 @@ export default function Home() {
         </div>
       </div>
 
-      <BottomNav cartCount={0} />
+      <BottomNav cartCount={cartItems.length} />
     </div>
   );
 }
