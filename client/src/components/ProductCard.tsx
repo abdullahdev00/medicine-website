@@ -27,10 +27,8 @@ export function ProductCard({ product, onAddToCart, onToggleWishlist, isWishlist
             className="w-full h-full object-cover"
             data-testid={`img-product-${product.id}`}
           />
-          <Button
-            size="icon"
-            variant="secondary"
-            className="absolute top-3 right-3 rounded-full w-9 h-9 shadow-lg"
+          <button
+            className="absolute top-3 right-3 w-9 h-9 rounded-full bg-white/20 backdrop-blur-md border border-white/30 flex items-center justify-center hover:bg-white/30 transition-all shadow-lg"
             onClick={(e) => {
               e.stopPropagation();
               onToggleWishlist?.();
@@ -38,9 +36,9 @@ export function ProductCard({ product, onAddToCart, onToggleWishlist, isWishlist
             data-testid={`button-wishlist-${product.id}`}
           >
             <Heart
-              className={`w-4 h-4 ${isWishlisted ? "fill-primary text-primary" : ""}`}
+              className={`w-4 h-4 ${isWishlisted ? "fill-red-500 text-red-500" : "text-white"}`}
             />
-          </Button>
+          </button>
           {!product.inStock && (
             <div className="absolute inset-0 bg-background/80 flex items-center justify-center">
               <span className="text-sm font-semibold text-destructive">Out of Stock</span>
@@ -72,19 +70,19 @@ export function ProductCard({ product, onAddToCart, onToggleWishlist, isWishlist
           </div>
 
           <Button
-            className="w-full rounded-xl h-11 flex items-center justify-between px-4"
+            className="w-full rounded-xl h-11 flex items-center justify-between px-4 gap-3"
             onClick={onAddToCart}
             disabled={!product.inStock}
             data-testid={`button-add-to-cart-${product.id}`}
           >
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-2 flex-shrink-0">
               <ShoppingCart className="w-4 h-4" />
               <span>Add</span>
             </div>
-            <div className="flex items-center gap-2">
-              <div className="h-6 w-px bg-primary-foreground/20" />
-              <span className="text-lg font-bold font-mono" data-testid={`text-price-${product.id}`}>
-                Rs {parseFloat(product.price).toFixed(0)}
+            <div className="flex items-center gap-3 flex-shrink-0">
+              <div className="h-6 w-px bg-primary-foreground/30" />
+              <span className="text-lg font-bold font-mono tabular-nums" data-testid={`text-price-${product.id}`}>
+                {parseFloat(product.price).toFixed(0)}
               </span>
             </div>
           </Button>
