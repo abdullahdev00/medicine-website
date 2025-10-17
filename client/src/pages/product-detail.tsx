@@ -184,14 +184,9 @@ export default function ProductDetail() {
   const images = [product.imageUrl];
   const isWishlisted = wishlistItems.some((item) => item.productId === id);
   
-  const getPriceForSize = (index: number) => {
-    const basePrice = parseFloat(product.price);
-    if (index === 0) return basePrice;
-    if (index === 1) return basePrice * 1.5;
-    return basePrice * 2;
-  };
-
-  const unitPrice = getPriceForSize(selectedPackage);
+  const unitPrice = product.variants && product.variants[selectedPackage] 
+    ? parseFloat(product.variants[selectedPackage].price)
+    : 0;
   const totalPrice = unitPrice * quantity;
 
   return (
@@ -280,7 +275,7 @@ export default function ProductDetail() {
                   onClick={() => setSelectedPackage(index)}
                   data-testid={`button-package-${index}`}
                 >
-                  {option}
+                  {option.name} - Rs {parseFloat(option.price).toFixed(0)}
                 </Button>
               ))}
             </div>
