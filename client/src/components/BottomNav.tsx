@@ -26,15 +26,22 @@ export function BottomNav({ cartCount = 0 }: BottomNavProps) {
             <button
               key={item.path}
               onClick={() => setLocation(item.path)}
-              className={`flex flex-col items-center gap-1.5 py-3 px-2 rounded-full transition-all ${
+              className={`flex items-center justify-center gap-2 py-3 px-3 rounded-full transition-all ${
                 isActive 
-                  ? "bg-primary text-primary-foreground shadow-lg scale-105" 
+                  ? "bg-primary text-primary-foreground shadow-lg" 
                   : "text-muted-foreground hover:bg-accent"
               }`}
               data-testid={item.testId}
             >
-              <Icon className="w-6 h-6" strokeWidth={isActive ? 2.5 : 2} />
-              <span className="text-xs font-semibold">{item.label}</span>
+              <div className="relative">
+                <Icon className="w-6 h-6" strokeWidth={isActive ? 2.5 : 2} />
+                {item.badge && item.badge > 0 ? (
+                  <Badge className="absolute -top-2 -right-2 h-5 w-5 flex items-center justify-center p-0 text-xs bg-red-500 text-white">
+                    {item.badge}
+                  </Badge>
+                ) : null}
+              </div>
+              {isActive && <span className="text-sm font-semibold">{item.label}</span>}
             </button>
           );
         })}
