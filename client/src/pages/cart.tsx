@@ -26,7 +26,7 @@ export default function Cart() {
 
   const updateQuantityMutation = useMutation({
     mutationFn: async ({ id, quantity }: { id: string; quantity: number }) => {
-      const res = await apiRequest("PATCH", `/api/cart/${id}`, { quantity });
+      const res = await apiRequest("PATCH", `/api/cart/${id}?userId=${user?.id}`, { quantity });
       return res.json();
     },
     onMutate: async ({ id, quantity }) => {
@@ -54,7 +54,7 @@ export default function Cart() {
 
   const removeItemMutation = useMutation({
     mutationFn: async (id: string) => {
-      await apiRequest("DELETE", `/api/cart/${id}`);
+      await apiRequest("DELETE", `/api/cart/${id}?userId=${user?.id}`);
     },
     onMutate: async (id) => {
       await queryClient.cancelQueries({ queryKey: ["/api/cart", user?.id] });

@@ -328,10 +328,9 @@ export default function Checkout() {
                     {addresses.map((address) => (
                       <div
                         key={address.id}
-                        className={`flex items-start space-x-3 p-4 rounded-2xl border-2 hover:bg-accent/5 cursor-pointer transition-colors ${
-                          selectedAddressId === address.id ? "border-primary bg-primary/5" : ""
+                        className={`flex items-start space-x-3 p-4 rounded-2xl border-2 hover:bg-accent/5 transition-colors ${
+                          selectedAddressId === address.id ? "border-primary bg-primary/5" : "border-border"
                         }`}
-                        onClick={() => setSelectedAddressId(address.id)}
                       >
                         <RadioGroupItem value={address.id} id={address.id} data-testid={`radio-address-${address.id}`} />
                         <Label htmlFor={address.id} className="cursor-pointer flex-1">
@@ -361,10 +360,9 @@ export default function Checkout() {
               <CardContent>
                 <RadioGroup value={paymentMethod} onValueChange={setPaymentMethod}>
                   <div
-                    className={`flex items-center space-x-3 p-4 rounded-2xl border-2 hover:bg-accent/5 cursor-pointer transition-colors ${
-                      paymentMethod === "cod" ? "border-primary bg-primary/5" : ""
+                    className={`flex items-center space-x-3 p-4 rounded-2xl border-2 hover:bg-accent/5 transition-colors ${
+                      paymentMethod === "cod" ? "border-primary bg-primary/5" : "border-border"
                     }`}
-                    onClick={() => setPaymentMethod("cod")}
                   >
                     <RadioGroupItem value="cod" id="cod" data-testid="radio-cod" />
                     <Label htmlFor="cod" className="cursor-pointer flex-1">
@@ -376,10 +374,9 @@ export default function Checkout() {
                   </div>
 
                   <div
-                    className={`flex items-center space-x-3 p-4 rounded-2xl border-2 hover:bg-accent/5 cursor-pointer transition-colors mt-3 ${
-                      paymentMethod === "online" ? "border-primary bg-primary/5" : ""
+                    className={`flex items-center space-x-3 p-4 rounded-2xl border-2 hover:bg-accent/5 transition-colors mt-3 ${
+                      paymentMethod === "online" ? "border-primary bg-primary/5" : "border-border"
                     }`}
-                    onClick={() => setPaymentMethod("online")}
                   >
                     <RadioGroupItem value="online" id="online" data-testid="radio-online" />
                     <Label htmlFor="online" className="cursor-pointer flex-1">
@@ -421,10 +418,9 @@ export default function Checkout() {
                           {paymentAccounts.map((account) => (
                             <div
                               key={account.id}
-                              className={`bg-card border rounded-xl p-3 cursor-pointer hover:border-primary transition-colors ${
-                                selectedPaymentAccount?.id === account.id ? "border-primary bg-primary/5" : ""
+                              className={`bg-card border rounded-xl p-3 hover:border-primary transition-colors ${
+                                selectedPaymentAccount?.id === account.id ? "border-primary bg-primary/5" : "border-border"
                               }`}
-                              onClick={() => setSelectedPaymentAccount(account)}
                             >
                               <div className="flex items-center justify-between">
                                 <div className="flex items-center space-x-2 flex-1">
