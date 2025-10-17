@@ -1,5 +1,5 @@
 import { db } from "../db";
-import { users, categories, products, addresses, wishlistItems, orders, walletTransactions, partners, referralStats } from "@shared/schema";
+import { users, categories, products, addresses, wishlistItems, orders, walletTransactions, partners, referralStats, paymentAccounts } from "@shared/schema";
 import bcrypt from "bcrypt";
 
 async function seed() {
@@ -520,6 +520,30 @@ async function seed() {
     ]);
 
     console.log("✅ Referral stats created");
+
+    // Create payment accounts
+    await db.insert(paymentAccounts).values([
+      {
+        method: "JazzCash",
+        accountName: "MediSwift Pharmacy",
+        accountNumber: "03001234567",
+        isActive: true,
+      },
+      {
+        method: "EasyPaisa",
+        accountName: "MediSwift Pharmacy",
+        accountNumber: "03009876543",
+        isActive: true,
+      },
+      {
+        method: "Raast (Bank Transfer)",
+        accountName: "MediSwift Pharmacy",
+        accountNumber: "PK36MEZN0001234567891234",
+        isActive: true,
+      },
+    ]);
+
+    console.log("✅ Payment accounts created");
 
     console.log("\n🎉 Database seeding completed successfully!");
     console.log("\n📝 Test Account:");

@@ -115,6 +115,30 @@ export const referralStats = pgTable("referral_stats", {
   updatedAt: timestamp("updated_at").defaultNow().notNull(),
 });
 
+export const paymentAccounts = pgTable("payment_accounts", {
+  id: uuid("id").primaryKey().default(sql`gen_random_uuid()`),
+  method: text("method").notNull(),
+  accountName: text("account_name").notNull(),
+  accountNumber: text("account_number").notNull(),
+  isActive: boolean("is_active").default(true).notNull(),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+});
+
+export const paymentRequests = pgTable("payment_requests", {
+  id: uuid("id").primaryKey().default(sql`gen_random_uuid()`),
+  userId: uuid("user_id").references(() => users.id).notNull(),
+  amount: decimal("amount", { precision: 10, scale: 2 }).notNull(),
+  paymentMethod: text("payment_method").notNull(),
+  paymentAccountId: uuid("payment_account_id").references(() => paymentAccounts.id),
+  receiptUrl: text("receipt_url"),
+  status: text("status").notNull().default("pending"),
+  orderId: uuid("order_id").references(() => orders.id),
+  orderData: jsonb("order_data"),
+  adminNotes: text("admin_notes"),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+});
+
 // Insert schemas
 export const insertUserSchema = createInsertSchema(users, {
   email: z.string().email(),
@@ -170,6 +194,17 @@ export const insertReferralStatsSchema = createInsertSchema(referralStats).omit(
   updatedAt: true,
 });
 
+export const insertPaymentAccountSchema = createInsertSchema(paymentAccounts).omit({
+  id: true,
+  createdAt: true,
+});
+
+export const insertPaymentRequestSchema = createInsertSchema(paymentRequests).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
 // Types
 export type User = typeof users.$inferSelect;
 export type InsertUser = z.infer<typeof insertUserSchema>;
@@ -197,3 +232,9 @@ export type InsertPartner = z.infer<typeof insertPartnerSchema>;
 
 export type ReferralStats = typeof referralStats.$inferSelect;
 export type InsertReferralStats = z.infer<typeof insertReferralStatsSchema>;
+
+export type PaymentAccount = typeof paymentAccounts.$inferSelect;
+export type InsertPaymentAccount = z.infer<typeof insertPaymentAccountSchema>;
+
+export type PaymentRequest = typeof paymentRequests.$inferSelect;
+export type InsertPaymentRequest = z.infer<typeof insertPaymentRequestSchema>;

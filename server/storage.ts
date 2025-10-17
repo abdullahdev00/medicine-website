@@ -1,13 +1,16 @@
 import { db } from "../db";
 import { 
   users, products, categories, wishlistItems, orders, addresses, walletTransactions,
+  paymentAccounts, paymentRequests,
   type User, type InsertUser,
   type Product, type InsertProduct,
   type Category, type InsertCategory,
   type WishlistItem, type InsertWishlistItem,
   type Order, type InsertOrder,
   type Address, type InsertAddress,
-  type WalletTransaction, type InsertWalletTransaction
+  type WalletTransaction, type InsertWalletTransaction,
+  type PaymentAccount, type InsertPaymentAccount,
+  type PaymentRequest, type InsertPaymentRequest
 } from "@shared/schema";
 import { eq, and, desc, sql } from "drizzle-orm";
 import bcrypt from "bcrypt";
@@ -40,6 +43,12 @@ export interface IStorage {
   createAddress(address: InsertAddress): Promise<Address>;
   updateAddress(id: string, updates: Partial<InsertAddress>): Promise<Address | undefined>;
   deleteAddress(id: string): Promise<void>;
+  
+  getPaymentAccounts(): Promise<PaymentAccount[]>;
+  
+  getPaymentRequests(userId: string): Promise<PaymentRequest[]>;
+  createPaymentRequest(request: InsertPaymentRequest): Promise<PaymentRequest>;
+  updatePaymentRequestStatus(id: string, status: string, adminNotes?: string): Promise<PaymentRequest | undefined>;
   
   clearCart(userId: string): Promise<void>;
 }
@@ -180,6 +189,27 @@ export class DatabaseStorage implements IStorage {
 
   async deleteAddress(id: string): Promise<void> {
     await db.delete(addresses).where(eq(addresses.id, id));
+  }
+
+  async getPaymentAccounts(): Promise<PaymentAccount[]> {
+    return await db.select().from(paymentAccounts).where(eq(paymentAccounts.isActive, true));
+  }
+
+  async getPaymentRequests(userId: string): Promise<PaymentRequest[]> {
+    return await db.select().from(paymentRequests).where(eq(paymentRequests.userId, userId)).orderBy(desc(paymentRequests.createdAt));
+  }
+
+  async createPaymentRequest(request: InsertPaymentRequest): Promise<PaymentRequest> {
+    const result = await db.insert(paymentRequests).values(request).returning();
+    return result[0];
+  }
+
+  async updatePaymentRequestStatus(id: string, status: string, adminNotes?: string): Promise<PaymentRequest | undefined> {
+    const result = await db.update(paymentRequests)
+      .set({ status, adminNotes, updatedAt: new Date() })
+      .where(eq(paymentRequests.id, id))
+      .returning();
+    return result[0];
   }
 
   async clearCart(userId: string): Promise<void> {
