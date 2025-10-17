@@ -677,6 +677,104 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Admin Dashboard Stats
+  app.get("/api/admin/stats", async (req, res) => {
+    try {
+      const stats = await storage.getAdminStats();
+      res.json(stats);
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+
+  // Admin Users Management
+  app.get("/api/admin/users", async (req, res) => {
+    try {
+      const users = await storage.getAllUsers();
+      res.json(users);
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+
+  app.patch("/api/admin/users/:id/toggle", async (req, res) => {
+    try {
+      const { isActive } = req.body;
+      await storage.toggleUserStatus(req.params.id, isActive);
+      res.json({ message: "User status updated" });
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+
+  // Admin Orders Management
+  app.get("/api/admin/orders", async (req, res) => {
+    try {
+      const orders = await storage.getAllOrders();
+      res.json(orders);
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+
+  app.patch("/api/admin/orders/:id/status", async (req, res) => {
+    try {
+      const { status } = req.body;
+      const order = await storage.updateOrderStatus(req.params.id, status);
+      res.json(order);
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+
+  // Admin Payment Requests
+  app.get("/api/admin/payment-requests", async (req, res) => {
+    try {
+      const payments = await storage.getAllPaymentRequests();
+      res.json(payments);
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+
+  app.patch("/api/admin/payment-requests/:id", async (req, res) => {
+    try {
+      const { status, rejectionReason } = req.body;
+      const payment = await storage.updatePaymentRequest(req.params.id, status, rejectionReason);
+      res.json(payment);
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+
+  // Admin Partners Management
+  app.get("/api/admin/partners", async (req, res) => {
+    try {
+      const partners = await storage.getAllPartners();
+      res.json(partners);
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+
+  // Admin Login
+  app.post("/api/admin/login", async (req, res) => {
+    try {
+      const { email, password } = req.body;
+      const admin = await storage.adminLogin(email, password);
+      if (!admin) {
+        return res.status(401).json({ message: "Invalid credentials" });
+      }
+      res.json(admin);
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+
+  app.post("/api/admin/logout", async (req, res) => {
+    res.json({ message: "Logged out successfully" });
+  });
+
   const httpServer = createServer(app);
   return httpServer;
 }

@@ -1,7 +1,7 @@
 import { db } from "../db";
 import { 
   users, products, categories, wishlistItems, orders, addresses, walletTransactions,
-  paymentAccounts, paymentRequests, userPaymentAccounts, admins, activityLogs,
+  paymentAccounts, paymentRequests, userPaymentAccounts, admins, activityLogs, partners,
   type User, type InsertUser,
   type Product, type InsertProduct,
   type Category, type InsertCategory,
@@ -13,9 +13,10 @@ import {
   type PaymentRequest, type InsertPaymentRequest,
   type UserPaymentAccount, type InsertUserPaymentAccount,
   type Admin, type InsertAdmin,
-  type ActivityLog, type InsertActivityLog
+  type ActivityLog, type InsertActivityLog,
+  type Partner
 } from "@shared/schema";
-import { eq, and, desc, sql } from "drizzle-orm";
+import { eq, and, desc, sql, count } from "drizzle-orm";
 import bcrypt from "bcrypt";
 
 export interface IStorage {
@@ -74,6 +75,12 @@ export interface IStorage {
   deleteProduct(id: string): Promise<void>;
   
   clearCart(userId: string): Promise<void>;
+  
+  getAdminStats(): Promise<any>;
+  getAllPartners(): Promise<any[]>;
+  toggleUserStatus(userId: string, isActive: boolean): Promise<void>;
+  updatePaymentRequest(id: string, status: string, rejectionReason?: string): Promise<PaymentRequest | undefined>;
+  adminLogin(email: string, password: string): Promise<Admin | null>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -368,6 +375,104 @@ export class DatabaseStorage implements IStorage {
 
   async deleteProduct(id: string): Promise<void> {
     await db.delete(products).where(eq(products.id, id));
+  }
+
+  async getAdminStats(): Promise<any> {
+    const totalUsers = await db.select({ count: count() }).from(users);
+    const totalProducts = await db.select({ count: count() }).from(products);
+    const totalOrders = await db.select({ count: count() }).from(orders);
+    const pendingOrders = await db.select({ count: count() }).from(orders).where(eq(orders.status, 'pending'));
+    const pendingPayments = await db.select({ count: count() }).from(paymentRequests).where(eq(paymentRequests.status, 'pending'));
+    const activePartners = await db.select({ count: count() }).from(partners).where(eq(partners.status, 'active'));
+
+    const revenueResult = await db.execute<{ total: string }>(
+      sql`SELECT COALESCE(SUM(total_price::numeric), 0)::text as total FROM orders WHERE status = 'delivered'`
+    );
+
+    const todayStart = new Date();
+    todayStart.setHours(0, 0, 0, 0);
+    const newUsersToday = await db.select({ count: count() }).from(users)
+      .where(sql`${users.createdAt} >= ${todayStart}`);
+
+    return {
+      totalUsers: totalUsers[0]?.count || 0,
+      totalProducts: totalProducts[0]?.count || 0,
+      totalOrders: totalOrders[0]?.count || 0,
+      pendingOrders: pendingOrders[0]?.count || 0,
+      totalRevenue: revenueResult.rows[0]?.total || '0',
+      pendingPayments: pendingPayments[0]?.count || 0,
+      activePartners: activePartners[0]?.count || 0,
+      newUsersToday: newUsersToday[0]?.count || 0,
+    };
+  }
+
+  async getAllPartners(): Promise<any[]> {
+    const result = await db.execute<any>(
+      sql`SELECT 
+        p.id::text as id,
+        p.user_id::text as "userId",
+        p.business_name as "businessName",
+        p.business_type as "businessType",
+        p.commission_rate as "commissionRate",
+        p.total_sales as "totalSales",
+        p.status,
+        p.created_at as "createdAt",
+        u.full_name,
+        u.email,
+        u.phone_number
+      FROM partners p
+      JOIN users u ON p.user_id = u.id
+      ORDER BY p.created_at DESC`
+    );
+
+    return result.rows.map(row => ({
+      id: row.id,
+      userId: row.userId,
+      businessName: row.businessName,
+      businessType: row.businessType,
+      commissionRate: row.commissionRate,
+      totalSales: row.totalSales,
+      status: row.status,
+      createdAt: row.createdAt,
+      user: {
+        fullName: row.full_name,
+        email: row.email,
+        phoneNumber: row.phone_number,
+      },
+    }));
+  }
+
+  async toggleUserStatus(userId: string, isActive: boolean): Promise<void> {
+    await db.update(users)
+      .set({ isPartner: isActive })
+      .where(eq(users.id, userId));
+  }
+
+  async updatePaymentRequest(id: string, status: string, rejectionReason?: string): Promise<PaymentRequest | undefined> {
+    const result = await db.update(paymentRequests)
+      .set({ 
+        status, 
+        rejectionReason: rejectionReason || null,
+        updatedAt: new Date()
+      })
+      .where(eq(paymentRequests.id, id))
+      .returning();
+    return result[0];
+  }
+
+  async adminLogin(email: string, password: string): Promise<Admin | null> {
+    const admin = await this.getAdminByEmail(email);
+    if (!admin) {
+      return null;
+    }
+
+    const isValid = await bcrypt.compare(password, admin.password);
+    if (!isValid) {
+      return null;
+    }
+
+    await this.updateAdminLastLogin(admin.id);
+    return admin;
   }
 }
 

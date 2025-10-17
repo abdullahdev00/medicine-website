@@ -24,6 +24,13 @@ import BecomePartnerPage from "@/pages/become-partner";
 import Wishlist from "@/pages/wishlist";
 import NotFound from "@/pages/not-found";
 
+import AdminDashboard from "@/pages/admin/dashboard";
+import AdminUsers from "@/pages/admin/users";
+import AdminProducts from "@/pages/admin/products";
+import AdminOrders from "@/pages/admin/orders";
+import AdminPayments from "@/pages/admin/payments";
+import AdminPartners from "@/pages/admin/partners";
+
 function Router() {
   return (
     <Switch>
@@ -44,6 +51,15 @@ function Router() {
       <Route path="/affiliate" component={AffiliatePage} />
       <Route path="/become-partner" component={BecomePartnerPage} />
       <Route path="/wishlist" component={Wishlist} />
+      
+      {/* Admin Routes */}
+      <Route path="/admin" component={AdminDashboard} />
+      <Route path="/admin/users" component={AdminUsers} />
+      <Route path="/admin/products" component={AdminProducts} />
+      <Route path="/admin/orders" component={AdminOrders} />
+      <Route path="/admin/payments" component={AdminPayments} />
+      <Route path="/admin/partners" component={AdminPartners} />
+      
       <Route component={NotFound} />
     </Switch>
   );
