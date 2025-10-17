@@ -89,6 +89,7 @@ export default function Checkout() {
   const deliveryCharges = 150;
   const total = subtotal + deliveryCharges;
   const walletBalance = parseFloat(user?.walletBalance || "0");
+  const canPayFromWallet = (paymentMethod === "wallet" && walletBalance >= total) || (paymentMethod === "online" && walletBalance >= total);
   const needsPaymentRequest = paymentMethod === "online" && walletBalance < total;
 
   const copyToClipboard = (text: string, accountId: string) => {
@@ -187,10 +188,21 @@ export default function Checkout() {
     const selectedAddress = addresses.find(addr => addr.id === selectedAddressId);
     if (!selectedAddress) return;
 
+    if (paymentMethod === "wallet" && walletBalance < total) {
+      toast({
+        title: "Insufficient balance",
+        description: "You don't have enough balance in your wallet. Please add funds or choose another payment method.",
+        variant: "destructive",
+      });
+      return;
+    }
+
     setIsProcessing(true);
 
     const deliveryAddress = `${selectedAddress.address}, ${selectedAddress.city}, ${selectedAddress.province} - ${selectedAddress.postalCode}`;
 
+    const paidFromWallet = canPayFromWallet ? total.toString() : "0";
+    
     const orderData = {
       userId: user.id,
       products: cartItems.map((item) => ({
@@ -203,6 +215,7 @@ export default function Checkout() {
       totalPrice: total.toString(),
       deliveryAddress,
       paymentMethod,
+      paidFromWallet,
     };
 
     if (needsPaymentRequest) {
@@ -252,6 +265,8 @@ export default function Checkout() {
           throw new Error("Failed to place order");
         }
 
+        const order = await response.json();
+
         // Fetch updated user data to refresh wallet balance
         const userResponse = await fetch(`/api/users/${user?.id}`);
         if (userResponse.ok) {
@@ -266,7 +281,7 @@ export default function Checkout() {
         queryClient.invalidateQueries({ queryKey: ["/api/cart", user?.id] });
 
         setTimeout(() => {
-          setLocation("/order-success");
+          setLocation(`/order-success?orderId=${order.id}`);
         }, 500);
       } catch (error) {
         toast({

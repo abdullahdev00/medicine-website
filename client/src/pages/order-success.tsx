@@ -1,15 +1,54 @@
+import { useEffect, useState } from "react";
 import { useLocation } from "wouter";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { CheckCircle2, Package } from "lucide-react";
 import { motion } from "framer-motion";
+import { useQuery } from "@tanstack/react-query";
+import type { Order } from "@shared/schema";
 
 export default function OrderSuccess() {
   const [, setLocation] = useLocation();
-  
-  const orderId = "MED-" + Math.random().toString(36).substr(2, 9).toUpperCase();
-  const expectedDelivery = new Date();
-  expectedDelivery.setDate(expectedDelivery.getDate() + 3);
+  const [orderId, setOrderId] = useState<string>("");
+
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const id = params.get("orderId");
+    if (id) {
+      setOrderId(id);
+    }
+  }, []);
+
+  const { data: order, isLoading } = useQuery<Order>({
+    queryKey: [`/api/orders/${orderId}`],
+    enabled: !!orderId,
+  });
+
+  if (!orderId) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-primary/5 via-background to-accent/10 flex items-center justify-center p-4">
+        <p className="text-muted-foreground">No order ID found</p>
+      </div>
+    );
+  }
+
+  if (isLoading) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-primary/5 via-background to-accent/10 flex items-center justify-center p-4">
+        <p className="text-muted-foreground">Loading order details...</p>
+      </div>
+    );
+  }
+
+  if (!order) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-primary/5 via-background to-accent/10 flex items-center justify-center p-4">
+        <p className="text-muted-foreground">Order not found</p>
+      </div>
+    );
+  }
+
+  const displayOrderId = "MED-" + order.id.slice(0, 8).toUpperCase();
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-primary/5 via-background to-accent/10 flex items-center justify-center p-4">
@@ -48,27 +87,29 @@ export default function OrderSuccess() {
               <div className="flex-1">
                 <p className="text-sm text-muted-foreground mb-1">Order ID</p>
                 <p className="font-mono font-bold text-lg" data-testid="text-order-id">
-                  {orderId}
+                  {displayOrderId}
                 </p>
               </div>
             </div>
 
-            <div className="space-y-2 p-5 bg-accent/30 rounded-2xl">
-              <p className="text-sm text-muted-foreground">Expected Delivery</p>
-              <p className="font-bold text-xl text-primary" data-testid="text-expected-delivery">
-                {expectedDelivery.toLocaleDateString('en-US', {
-                  weekday: 'long',
-                  year: 'numeric',
-                  month: 'long',
-                  day: 'numeric'
-                })}
-              </p>
-            </div>
+            {order.expectedDelivery && (
+              <div className="space-y-2 p-5 bg-accent/30 rounded-2xl">
+                <p className="text-sm text-muted-foreground">Expected Delivery</p>
+                <p className="font-bold text-xl text-primary" data-testid="text-expected-delivery">
+                  {new Date(order.expectedDelivery).toLocaleDateString('en-US', {
+                    weekday: 'long',
+                    year: 'numeric',
+                    month: 'long',
+                    day: 'numeric'
+                  })}
+                </p>
+              </div>
+            )}
 
             <div className="pt-2 space-y-3">
               <Button
                 className="w-full rounded-full h-14 text-base font-semibold shadow-lg"
-                onClick={() => setLocation("/profile")}
+                onClick={() => setLocation("/my-orders")}
                 data-testid="button-view-orders"
               >
                 View My Orders

@@ -1,16 +1,66 @@
+import { useState } from "react";
 import { useLocation } from "wouter";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
-import { User, LogOut, Package, MapPin, Edit2, ChevronRight, Wallet, Users, Briefcase, Heart } from "lucide-react";
+import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { User, LogOut, Package, MapPin, Edit2, ChevronRight, Wallet, Users, Briefcase, Heart, CreditCard, X } from "lucide-react";
 import { BottomNav } from "@/components/BottomNav";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/contexts/AuthContext";
+import { useQuery, useMutation } from "@tanstack/react-query";
+import { apiRequest, queryClient } from "@/lib/queryClient";
 import { motion } from "framer-motion";
 
 export default function Profile() {
   const [, setLocation] = useLocation();
   const { toast } = useToast();
-  const { user, logout } = useAuth();
+  const { user, logout, isAuthenticated } = useAuth();
+  const [paymentAccountOpen, setPaymentAccountOpen] = useState(false);
+  const [accountName, setAccountName] = useState("");
+  const [raastId, setRaastId] = useState("");
+
+  const { data: userPaymentAccounts = [] } = useQuery({
+    queryKey: ["/api/user-payment-accounts", user?.id],
+    enabled: isAuthenticated && !!user,
+    queryFn: async () => {
+      const res = await fetch(`/api/user-payment-accounts?userId=${user?.id}`);
+      if (!res.ok) return [];
+      return res.json();
+    },
+  });
+
+  const addPaymentAccountMutation = useMutation({
+    mutationFn: async () => {
+      if (!accountName || !raastId) throw new Error("All fields are required");
+      
+      const res = await apiRequest("POST", "/api/user-payment-accounts", {
+        userId: user?.id,
+        accountName,
+        raastId,
+        isDefault: userPaymentAccounts.length === 0,
+      });
+      return res.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/user-payment-accounts", user?.id] });
+      toast({
+        title: "Account added",
+        description: "Payment account added successfully.",
+      });
+      setPaymentAccountOpen(false);
+      setAccountName("");
+      setRaastId("");
+    },
+    onError: () => {
+      toast({
+        title: "Error",
+        description: "Failed to add payment account.",
+        variant: "destructive",
+      });
+    },
+  });
 
   const handleLogout = () => {
     logout();
@@ -83,6 +133,16 @@ export default function Profile() {
       iconColor: "text-chart-3",
     },
     {
+      id: "payment-accounts",
+      title: "Payment Accounts",
+      description: "Manage withdrawal accounts",
+      icon: CreditCard,
+      onClick: () => setPaymentAccountOpen(true),
+      testId: "button-payment-accounts",
+      color: "from-purple-500/20 to-purple-500/10",
+      iconColor: "text-purple-500",
+    },
+    {
       id: "become-partner",
       title: "Become a Partner",
       description: "Apply for wholesale rates",
@@ -125,7 +185,7 @@ export default function Profile() {
             >
               <Card
                 className="shadow-lg rounded-3xl overflow-hidden cursor-pointer hover:shadow-xl transition-all duration-300 border-none"
-                onClick={() => setLocation(item.route)}
+                onClick={() => item.onClick ? item.onClick() : setLocation(item.route)}
                 data-testid={item.testId}
               >
                 <CardContent className="p-0">
@@ -166,6 +226,94 @@ export default function Profile() {
       </div>
 
       <BottomNav cartCount={0} />
+
+      {/* Payment Account Bottom Sheet */}
+      <Sheet open={paymentAccountOpen} onOpenChange={setPaymentAccountOpen}>
+        <SheetContent side="bottom" className="h-[75vh] rounded-t-3xl p-0 border-none">
+          <div className="h-full flex flex-col">
+            <SheetHeader className="p-6 border-b">
+              <div className="flex items-center justify-between">
+                <SheetTitle className="text-2xl font-bold">Payment Accounts</SheetTitle>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  onClick={() => setPaymentAccountOpen(false)}
+                  className="rounded-full h-10 w-10"
+                >
+                  <X className="h-5 w-5" />
+                </Button>
+              </div>
+            </SheetHeader>
+
+            <div className="flex-1 overflow-y-auto p-6 space-y-6">
+              {userPaymentAccounts.length > 0 && (
+                <div className="space-y-3">
+                  <h3 className="text-base font-semibold">Your Accounts</h3>
+                  {userPaymentAccounts.map((account: any) => (
+                    <Card key={account.id} className="shadow-sm rounded-2xl border-none">
+                      <CardContent className="p-4">
+                        <div className="flex items-center justify-between">
+                          <div>
+                            <p className="font-semibold">{account.accountName}</p>
+                            <p className="text-sm text-muted-foreground font-mono">{account.raastId}</p>
+                          </div>
+                          {account.isDefault && (
+                            <span className="text-xs px-2 py-1 bg-primary/10 text-primary rounded-full">
+                              Default
+                            </span>
+                          )}
+                        </div>
+                      </CardContent>
+                    </Card>
+                  ))}
+                </div>
+              )}
+
+              <div className="space-y-4">
+                <h3 className="text-base font-semibold">Add New Account</h3>
+                <div>
+                  <Label htmlFor="account-name" className="text-sm font-medium mb-2 block">
+                    Account Name
+                  </Label>
+                  <Input
+                    id="account-name"
+                    placeholder="Enter account name"
+                    value={accountName}
+                    onChange={(e) => setAccountName(e.target.value)}
+                    className="h-12 rounded-2xl"
+                    data-testid="input-account-name"
+                  />
+                </div>
+
+                <div>
+                  <Label htmlFor="raast-id" className="text-sm font-medium mb-2 block">
+                    Raast ID
+                  </Label>
+                  <Input
+                    id="raast-id"
+                    placeholder="Enter Raast ID"
+                    value={raastId}
+                    onChange={(e) => setRaastId(e.target.value)}
+                    className="h-12 rounded-2xl"
+                    data-testid="input-raast-id"
+                  />
+                </div>
+              </div>
+            </div>
+
+            <div className="p-6 border-t">
+              <Button
+                className="w-full rounded-full h-14 text-base font-semibold"
+                disabled={!accountName || !raastId || addPaymentAccountMutation.isPending}
+                onClick={() => addPaymentAccountMutation.mutate()}
+                data-testid="button-add-payment-account"
+              >
+                {addPaymentAccountMutation.isPending ? "Adding..." : "Add Account"}
+              </Button>
+            </div>
+          </div>
+        </SheetContent>
+      </Sheet>
     </div>
   );
 }

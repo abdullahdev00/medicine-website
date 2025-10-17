@@ -124,14 +124,26 @@ export const paymentAccounts = pgTable("payment_accounts", {
   createdAt: timestamp("created_at").defaultNow().notNull(),
 });
 
+export const userPaymentAccounts = pgTable("user_payment_accounts", {
+  id: uuid("id").primaryKey().default(sql`gen_random_uuid()`),
+  userId: uuid("user_id").references(() => users.id).notNull(),
+  accountName: text("account_name").notNull(),
+  raastId: text("raast_id").notNull(),
+  isDefault: boolean("is_default").default(false).notNull(),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+});
+
 export const paymentRequests = pgTable("payment_requests", {
   id: uuid("id").primaryKey().default(sql`gen_random_uuid()`),
   userId: uuid("user_id").references(() => users.id).notNull(),
+  type: text("type").notNull(),
   amount: decimal("amount", { precision: 10, scale: 2 }).notNull(),
-  paymentMethod: text("payment_method").notNull(),
+  paymentMethod: text("payment_method"),
   paymentAccountId: uuid("payment_account_id").references(() => paymentAccounts.id),
+  userPaymentAccountId: uuid("user_payment_account_id").references(() => userPaymentAccounts.id),
   receiptUrl: text("receipt_url"),
   status: text("status").notNull().default("pending"),
+  rejectionReason: text("rejection_reason"),
   orderId: uuid("order_id").references(() => orders.id),
   orderData: jsonb("order_data"),
   adminNotes: text("admin_notes"),
@@ -199,6 +211,11 @@ export const insertPaymentAccountSchema = createInsertSchema(paymentAccounts).om
   createdAt: true,
 });
 
+export const insertUserPaymentAccountSchema = createInsertSchema(userPaymentAccounts).omit({
+  id: true,
+  createdAt: true,
+});
+
 export const insertPaymentRequestSchema = createInsertSchema(paymentRequests).omit({
   id: true,
   createdAt: true,
@@ -235,6 +252,9 @@ export type InsertReferralStats = z.infer<typeof insertReferralStatsSchema>;
 
 export type PaymentAccount = typeof paymentAccounts.$inferSelect;
 export type InsertPaymentAccount = z.infer<typeof insertPaymentAccountSchema>;
+
+export type UserPaymentAccount = typeof userPaymentAccounts.$inferSelect;
+export type InsertUserPaymentAccount = z.infer<typeof insertUserPaymentAccountSchema>;
 
 export type PaymentRequest = typeof paymentRequests.$inferSelect;
 export type InsertPaymentRequest = z.infer<typeof insertPaymentRequestSchema>;

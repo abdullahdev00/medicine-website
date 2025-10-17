@@ -1,18 +1,39 @@
-import { useState } from "react";
+import { useState, useCallback } from "react";
 import { useLocation } from "wouter";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { ArrowLeft, Wallet, ArrowDownLeft, ArrowUpRight, Plus, Receipt, Clock, CheckCircle, XCircle } from "lucide-react";
+import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
+import { ArrowLeft, Wallet, ArrowDownLeft, ArrowUpRight, Plus, Receipt, Clock, CheckCircle, XCircle, Download, Upload, X, Copy } from "lucide-react";
 import { motion } from "framer-motion";
 import { EmptyState } from "@/components/EmptyState";
 import { useAuth } from "@/contexts/AuthContext";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useMutation } from "@tanstack/react-query";
+import { apiRequest, queryClient } from "@/lib/queryClient";
+import { useToast } from "@/hooks/use-toast";
 import { format } from "date-fns";
 
 export default function WalletPage() {
   const [, setLocation] = useLocation();
-  const { user, isAuthenticated } = useAuth();
+  const { user, isAuthenticated, updateUser } = useAuth();
+  const { toast } = useToast();
+
+  const [addAmountOpen, setAddAmountOpen] = useState(false);
+  const [withdrawOpen, setWithdrawOpen] = useState(false);
+  
+  // Add Amount states
+  const [selectedPaymentAccount, setSelectedPaymentAccount] = useState<any>(null);
+  const [receiptFile, setReceiptFile] = useState<File | null>(null);
+  const [receiptPreview, setReceiptPreview] = useState<string>("");
+  const [dragActive, setDragActive] = useState(false);
+  const [copiedId, setCopiedId] = useState<string | null>(null);
+  
+  // Withdraw states
+  const [withdrawAmount, setWithdrawAmount] = useState("");
+  const [selectedWithdrawAccount, setSelectedWithdrawAccount] = useState<any>(null);
 
   const { data: userData, isLoading: loadingUser } = useQuery({
     queryKey: ["/api/users", user?.id],
@@ -44,11 +65,148 @@ export default function WalletPage() {
     },
   });
 
+  const { data: paymentAccounts = [] } = useQuery({
+    queryKey: ["/api/payment-accounts"],
+    queryFn: async () => {
+      const res = await fetch("/api/payment-accounts");
+      if (!res.ok) return [];
+      return res.json();
+    },
+  });
+
+  const { data: userPaymentAccounts = [] } = useQuery({
+    queryKey: ["/api/user-payment-accounts", user?.id],
+    enabled: isAuthenticated && !!user,
+    queryFn: async () => {
+      const res = await fetch(`/api/user-payment-accounts?userId=${user?.id}`);
+      if (!res.ok) return [];
+      return res.json();
+    },
+  });
+
   const totalBalance = userData?.walletBalance || "0";
+
+  const copyToClipboard = (text: string, accountId: string) => {
+    navigator.clipboard.writeText(text);
+    setCopiedId(accountId);
+    setTimeout(() => setCopiedId(null), 2000);
+  };
+
+  const handleDrag = useCallback((e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    if (e.type === "dragenter" || e.type === "dragover") {
+      setDragActive(true);
+    } else if (e.type === "dragleave") {
+      setDragActive(false);
+    }
+  }, []);
+
+  const handleDrop = useCallback((e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setDragActive(false);
+    
+    if (e.dataTransfer.files && e.dataTransfer.files[0]) {
+      handleFileChange(e.dataTransfer.files[0]);
+    }
+  }, []);
+
+  const handleFileChange = (file: File) => {
+    if (file && file.type.startsWith("image/")) {
+      setReceiptFile(file);
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        setReceiptPreview(reader.result as string);
+      };
+      reader.readAsDataURL(file);
+    } else {
+      toast({
+        title: "Invalid file",
+        description: "Please upload an image file",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const addAmountMutation = useMutation({
+    mutationFn: async () => {
+      if (!selectedPaymentAccount || !receiptFile) throw new Error("Missing required fields");
+      
+      const res = await apiRequest("POST", "/api/payment-requests", {
+        userId: user?.id,
+        type: "add_amount",
+        amount: "0",
+        paymentMethod: selectedPaymentAccount.method,
+        paymentAccountId: selectedPaymentAccount.id,
+        receiptUrl: receiptPreview,
+        status: "pending",
+      });
+      return res.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/payment-requests", user?.id] });
+      toast({
+        title: "Request submitted",
+        description: "Your add amount request has been submitted successfully.",
+      });
+      setAddAmountOpen(false);
+      setReceiptFile(null);
+      setReceiptPreview("");
+      setSelectedPaymentAccount(null);
+    },
+    onError: () => {
+      toast({
+        title: "Error",
+        description: "Failed to submit request. Please try again.",
+        variant: "destructive",
+      });
+    },
+  });
+
+  const withdrawMutation = useMutation({
+    mutationFn: async () => {
+      if (!withdrawAmount || !selectedWithdrawAccount) throw new Error("Missing required fields");
+      
+      const amount = parseFloat(withdrawAmount);
+      const balance = parseFloat(totalBalance);
+      
+      if (amount > balance) {
+        throw new Error("Insufficient balance");
+      }
+      
+      const res = await apiRequest("POST", "/api/payment-requests", {
+        userId: user?.id,
+        type: "withdraw",
+        amount: withdrawAmount,
+        userPaymentAccountId: selectedWithdrawAccount.id,
+        status: "pending",
+      });
+      return res.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/payment-requests", user?.id] });
+      toast({
+        title: "Request submitted",
+        description: "Your withdrawal request has been submitted successfully.",
+      });
+      setWithdrawOpen(false);
+      setWithdrawAmount("");
+      setSelectedWithdrawAccount(null);
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Error",
+        description: error.message || "Failed to submit withdrawal request.",
+        variant: "destructive",
+      });
+    },
+  });
 
   const getStatusIcon = (status: string) => {
     switch (status) {
-      case "verified":
+      case "approved":
+      case "completed":
         return <CheckCircle className="w-5 h-5 text-green-500" />;
       case "rejected":
         return <XCircle className="w-5 h-5 text-red-500" />;
@@ -59,7 +217,8 @@ export default function WalletPage() {
 
   const getStatusColor = (status: string) => {
     switch (status) {
-      case "verified":
+      case "approved":
+      case "completed":
         return "bg-green-500/10 text-green-700 dark:text-green-300";
       case "rejected":
         return "bg-red-500/10 text-red-700 dark:text-red-300";
@@ -121,6 +280,27 @@ export default function WalletPage() {
                     Rs. {parseFloat(totalBalance).toLocaleString()}
                   </h2>
                 </div>
+              </div>
+
+              <div className="grid grid-cols-2 gap-4 mt-6">
+                <Button
+                  variant="secondary"
+                  className="w-full rounded-full h-12 font-semibold bg-white text-chart-4 hover:bg-white/90"
+                  onClick={() => setAddAmountOpen(true)}
+                  data-testid="button-add-amount"
+                >
+                  <Plus className="w-5 h-5 mr-2" />
+                  Add Amount
+                </Button>
+                <Button
+                  variant="secondary"
+                  className="w-full rounded-full h-12 font-semibold bg-white/10 text-white hover:bg-white/20 border border-white/30"
+                  onClick={() => setWithdrawOpen(true)}
+                  data-testid="button-withdraw"
+                >
+                  <Download className="w-5 h-5 mr-2" />
+                  Withdraw
+                </Button>
               </div>
             </CardContent>
           </Card>
@@ -214,7 +394,7 @@ export default function WalletPage() {
                               <div className="flex items-center gap-3">
                                 {getStatusIcon(request.status)}
                                 <div>
-                                  <p className="font-semibold">Payment Request</p>
+                                  <p className="font-semibold capitalize">{request.type?.replace('_', ' ') || 'Payment Request'}</p>
                                   <p className="text-sm text-muted-foreground">
                                     {format(new Date(request.createdAt), "MMM dd, yyyy 'at' hh:mm a")}
                                   </p>
@@ -236,6 +416,12 @@ export default function WalletPage() {
                                 />
                               </div>
                             )}
+                            {request.rejectionReason && request.status === 'rejected' && (
+                              <div className="bg-red-500/10 border border-red-500/20 rounded-lg p-3">
+                                <p className="text-sm font-medium text-red-700 dark:text-red-300 mb-1">Rejection Reason:</p>
+                                <p className="text-sm text-red-600 dark:text-red-400">{request.rejectionReason}</p>
+                              </div>
+                            )}
                             {request.adminNotes && (
                               <div className="bg-muted rounded-lg p-3">
                                 <p className="text-sm font-medium mb-1">Admin Note:</p>
@@ -253,6 +439,243 @@ export default function WalletPage() {
           </Tabs>
         </motion.div>
       </div>
+
+      {/* Add Amount Bottom Sheet */}
+      <Sheet open={addAmountOpen} onOpenChange={setAddAmountOpen}>
+        <SheetContent side="bottom" className="h-[85vh] rounded-t-3xl p-0 border-none">
+          <div className="h-full flex flex-col">
+            <SheetHeader className="p-6 border-b">
+              <div className="flex items-center justify-between">
+                <SheetTitle className="text-2xl font-bold">Add Amount</SheetTitle>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  onClick={() => setAddAmountOpen(false)}
+                  className="rounded-full h-10 w-10"
+                >
+                  <X className="h-5 w-5" />
+                </Button>
+              </div>
+            </SheetHeader>
+
+            <div className="flex-1 overflow-y-auto p-6 space-y-6">
+              <div>
+                <Label className="text-base font-semibold mb-4 block">Select Payment Method</Label>
+                <RadioGroup
+                  value={selectedPaymentAccount?.id || ""}
+                  onValueChange={(value) => {
+                    const account = paymentAccounts.find((acc: any) => acc.id === value);
+                    setSelectedPaymentAccount(account);
+                  }}
+                  className="space-y-3"
+                >
+                  {paymentAccounts.map((account: any) => (
+                    <label
+                      key={account.id}
+                      className={`flex items-center gap-4 p-4 border-2 rounded-2xl cursor-pointer transition-all ${
+                        selectedPaymentAccount?.id === account.id
+                          ? "border-primary bg-primary/5"
+                          : "border-border hover:border-primary/50"
+                      }`}
+                    >
+                      <RadioGroupItem value={account.id} className="flex-shrink-0" />
+                      <div className="flex-1">
+                        <p className="font-semibold">{account.method}</p>
+                        <p className="text-sm text-muted-foreground">{account.accountName}</p>
+                        <div className="flex items-center gap-2 mt-1">
+                          <p className="text-sm font-mono">{account.accountNumber}</p>
+                          <Button
+                            type="button"
+                            variant="ghost"
+                            size="icon"
+                            className="h-6 w-6"
+                            onClick={(e) => {
+                              e.preventDefault();
+                              copyToClipboard(account.accountNumber, account.id);
+                            }}
+                          >
+                            {copiedId === account.id ? (
+                              <CheckCircle className="h-4 w-4 text-green-500" />
+                            ) : (
+                              <Copy className="h-4 w-4" />
+                            )}
+                          </Button>
+                        </div>
+                      </div>
+                    </label>
+                  ))}
+                </RadioGroup>
+              </div>
+
+              {selectedPaymentAccount && (
+                <div>
+                  <Label className="text-base font-semibold mb-4 block">Upload Payment Receipt</Label>
+                  <div
+                    onDragEnter={handleDrag}
+                    onDragLeave={handleDrag}
+                    onDragOver={handleDrag}
+                    onDrop={handleDrop}
+                    className={`relative border-2 border-dashed rounded-2xl p-8 text-center transition-colors ${
+                      dragActive ? "border-primary bg-primary/5" : "border-border"
+                    }`}
+                  >
+                    <input
+                      type="file"
+                      accept="image/*"
+                      onChange={(e) => e.target.files?.[0] && handleFileChange(e.target.files[0])}
+                      className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
+                    />
+                    {receiptPreview ? (
+                      <div className="relative">
+                        <img src={receiptPreview} alt="Receipt preview" className="max-h-48 mx-auto rounded-lg" />
+                        <Button
+                          type="button"
+                          variant="destructive"
+                          size="icon"
+                          className="absolute top-2 right-2 h-8 w-8 rounded-full"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setReceiptFile(null);
+                            setReceiptPreview("");
+                          }}
+                        >
+                          <X className="h-4 w-4" />
+                        </Button>
+                      </div>
+                    ) : (
+                      <div>
+                        <Upload className="w-12 h-12 mx-auto text-muted-foreground mb-4" />
+                        <p className="text-sm text-muted-foreground">
+                          Drag and drop your receipt here, or click to browse
+                        </p>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              )}
+            </div>
+
+            <div className="p-6 border-t">
+              <Button
+                className="w-full rounded-full h-14 text-base font-semibold"
+                disabled={!selectedPaymentAccount || !receiptFile || addAmountMutation.isPending}
+                onClick={() => addAmountMutation.mutate()}
+                data-testid="button-submit-add-amount"
+              >
+                {addAmountMutation.isPending ? "Submitting..." : "Submit Request"}
+              </Button>
+            </div>
+          </div>
+        </SheetContent>
+      </Sheet>
+
+      {/* Withdraw Bottom Sheet */}
+      <Sheet open={withdrawOpen} onOpenChange={setWithdrawOpen}>
+        <SheetContent side="bottom" className="h-[85vh] rounded-t-3xl p-0 border-none">
+          <div className="h-full flex flex-col">
+            <SheetHeader className="p-6 border-b">
+              <div className="flex items-center justify-between">
+                <SheetTitle className="text-2xl font-bold">Withdraw Funds</SheetTitle>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  onClick={() => setWithdrawOpen(false)}
+                  className="rounded-full h-10 w-10"
+                >
+                  <X className="h-5 w-5" />
+                </Button>
+              </div>
+            </SheetHeader>
+
+            <div className="flex-1 overflow-y-auto p-6 space-y-6">
+              <div>
+                <Label className="text-base font-semibold mb-2 block">Available Balance</Label>
+                <div className="bg-muted rounded-2xl p-4">
+                  <p className="text-3xl font-bold text-primary">Rs. {parseFloat(totalBalance).toLocaleString()}</p>
+                </div>
+              </div>
+
+              <div>
+                <Label htmlFor="withdraw-amount" className="text-base font-semibold mb-2 block">
+                  Withdrawal Amount
+                </Label>
+                <Input
+                  id="withdraw-amount"
+                  type="number"
+                  placeholder="Enter amount"
+                  value={withdrawAmount}
+                  onChange={(e) => setWithdrawAmount(e.target.value)}
+                  className="h-14 text-lg rounded-2xl"
+                  data-testid="input-withdraw-amount"
+                />
+              </div>
+
+              {userPaymentAccounts.length === 0 ? (
+                <div className="bg-yellow-500/10 border border-yellow-500/20 rounded-2xl p-4">
+                  <p className="text-sm text-yellow-700 dark:text-yellow-300">
+                    No payment accounts found. Please add a payment account from your profile to withdraw funds.
+                  </p>
+                  <Button
+                    variant="outline"
+                    className="mt-3 w-full rounded-full"
+                    onClick={() => {
+                      setWithdrawOpen(false);
+                      setLocation("/profile");
+                    }}
+                  >
+                    Go to Profile
+                  </Button>
+                </div>
+              ) : (
+                <div>
+                  <Label className="text-base font-semibold mb-4 block">Select Account</Label>
+                  <RadioGroup
+                    value={selectedWithdrawAccount?.id || ""}
+                    onValueChange={(value) => {
+                      const account = userPaymentAccounts.find((acc: any) => acc.id === value);
+                      setSelectedWithdrawAccount(account);
+                    }}
+                    className="space-y-3"
+                  >
+                    {userPaymentAccounts.map((account: any) => (
+                      <label
+                        key={account.id}
+                        className={`flex items-center gap-4 p-4 border-2 rounded-2xl cursor-pointer transition-all ${
+                          selectedWithdrawAccount?.id === account.id
+                            ? "border-primary bg-primary/5"
+                            : "border-border hover:border-primary/50"
+                        }`}
+                      >
+                        <RadioGroupItem value={account.id} className="flex-shrink-0" />
+                        <div className="flex-1">
+                          <p className="font-semibold">{account.accountName}</p>
+                          <p className="text-sm text-muted-foreground font-mono">{account.raastId}</p>
+                          {account.isDefault && (
+                            <span className="inline-block mt-1 text-xs px-2 py-1 bg-primary/10 text-primary rounded-full">
+                              Default
+                            </span>
+                          )}
+                        </div>
+                      </label>
+                    ))}
+                  </RadioGroup>
+                </div>
+              )}
+            </div>
+
+            <div className="p-6 border-t">
+              <Button
+                className="w-full rounded-full h-14 text-base font-semibold"
+                disabled={!withdrawAmount || !selectedWithdrawAccount || withdrawMutation.isPending}
+                onClick={() => withdrawMutation.mutate()}
+                data-testid="button-submit-withdraw"
+              >
+                {withdrawMutation.isPending ? "Submitting..." : "Submit Withdrawal"}
+              </Button>
+            </div>
+          </div>
+        </SheetContent>
+      </Sheet>
     </div>
   );
 }

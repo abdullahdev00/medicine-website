@@ -1,7 +1,7 @@
 import { db } from "../db";
 import { 
   users, products, categories, wishlistItems, orders, addresses, walletTransactions,
-  paymentAccounts, paymentRequests,
+  paymentAccounts, paymentRequests, userPaymentAccounts,
   type User, type InsertUser,
   type Product, type InsertProduct,
   type Category, type InsertCategory,
@@ -10,7 +10,8 @@ import {
   type Address, type InsertAddress,
   type WalletTransaction, type InsertWalletTransaction,
   type PaymentAccount, type InsertPaymentAccount,
-  type PaymentRequest, type InsertPaymentRequest
+  type PaymentRequest, type InsertPaymentRequest,
+  type UserPaymentAccount, type InsertUserPaymentAccount
 } from "@shared/schema";
 import { eq, and, desc, sql } from "drizzle-orm";
 import bcrypt from "bcrypt";
@@ -46,9 +47,15 @@ export interface IStorage {
   
   getPaymentAccounts(): Promise<PaymentAccount[]>;
   
+  getUserPaymentAccounts(userId: string): Promise<UserPaymentAccount[]>;
+  createUserPaymentAccount(account: InsertUserPaymentAccount): Promise<UserPaymentAccount>;
+  updateUserPaymentAccount(id: string, updates: Partial<InsertUserPaymentAccount>): Promise<UserPaymentAccount | undefined>;
+  deleteUserPaymentAccount(id: string): Promise<void>;
+  
   getPaymentRequests(userId: string): Promise<PaymentRequest[]>;
   createPaymentRequest(request: InsertPaymentRequest): Promise<PaymentRequest>;
-  updatePaymentRequestStatus(id: string, status: string, adminNotes?: string): Promise<PaymentRequest | undefined>;
+  updatePaymentRequestStatus(id: string, status: string, adminNotes?: string, rejectionReason?: string): Promise<PaymentRequest | undefined>;
+  createWalletTransaction(transaction: InsertWalletTransaction): Promise<WalletTransaction>;
   
   clearCart(userId: string): Promise<void>;
 }
@@ -205,6 +212,40 @@ export class DatabaseStorage implements IStorage {
     return await db.select().from(paymentAccounts).where(eq(paymentAccounts.isActive, true));
   }
 
+  async getUserPaymentAccounts(userId: string): Promise<UserPaymentAccount[]> {
+    return await db.select().from(userPaymentAccounts).where(eq(userPaymentAccounts.userId, userId)).orderBy(desc(userPaymentAccounts.isDefault));
+  }
+
+  async createUserPaymentAccount(account: InsertUserPaymentAccount): Promise<UserPaymentAccount> {
+    if (account.isDefault) {
+      await db.update(userPaymentAccounts)
+        .set({ isDefault: false })
+        .where(eq(userPaymentAccounts.userId, account.userId));
+    }
+    const result = await db.insert(userPaymentAccounts).values(account).returning();
+    return result[0];
+  }
+
+  async updateUserPaymentAccount(id: string, updates: Partial<InsertUserPaymentAccount>): Promise<UserPaymentAccount | undefined> {
+    if (updates.isDefault) {
+      const account = await db.select().from(userPaymentAccounts).where(eq(userPaymentAccounts.id, id)).limit(1);
+      if (account[0]) {
+        await db.update(userPaymentAccounts)
+          .set({ isDefault: false })
+          .where(eq(userPaymentAccounts.userId, account[0].userId));
+      }
+    }
+    const result = await db.update(userPaymentAccounts)
+      .set(updates)
+      .where(eq(userPaymentAccounts.id, id))
+      .returning();
+    return result[0];
+  }
+
+  async deleteUserPaymentAccount(id: string): Promise<void> {
+    await db.delete(userPaymentAccounts).where(eq(userPaymentAccounts.id, id));
+  }
+
   async getPaymentRequests(userId: string): Promise<PaymentRequest[]> {
     return await db.select().from(paymentRequests).where(eq(paymentRequests.userId, userId)).orderBy(desc(paymentRequests.createdAt));
   }
@@ -214,11 +255,16 @@ export class DatabaseStorage implements IStorage {
     return result[0];
   }
 
-  async updatePaymentRequestStatus(id: string, status: string, adminNotes?: string): Promise<PaymentRequest | undefined> {
+  async updatePaymentRequestStatus(id: string, status: string, adminNotes?: string, rejectionReason?: string): Promise<PaymentRequest | undefined> {
     const result = await db.update(paymentRequests)
-      .set({ status, adminNotes, updatedAt: new Date() })
+      .set({ status, adminNotes, rejectionReason, updatedAt: new Date() })
       .where(eq(paymentRequests.id, id))
       .returning();
+    return result[0];
+  }
+
+  async createWalletTransaction(transaction: InsertWalletTransaction): Promise<WalletTransaction> {
+    const result = await db.insert(walletTransactions).values(transaction).returning();
     return result[0];
   }
 

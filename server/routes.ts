@@ -252,22 +252,22 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const expectedDelivery = new Date();
       expectedDelivery.setDate(expectedDelivery.getDate() + 3);
       
-      // If payment is from wallet, deduct balance and create transaction
-      if (validatedData.paymentMethod === "wallet") {
+      // If payment is from wallet or online with wallet balance, deduct balance and create transaction
+      const paidFromWallet = parseFloat(validatedData.paidFromWallet || "0");
+      if (paidFromWallet > 0) {
         const user = await storage.getUser(validatedData.userId);
         if (!user) {
           return res.status(404).json({ message: "User not found" });
         }
         
         const currentBalance = parseFloat(user.walletBalance || "0");
-        const orderTotal = parseFloat(validatedData.totalPrice);
         
-        if (currentBalance < orderTotal) {
+        if (currentBalance < paidFromWallet) {
           return res.status(400).json({ message: "Insufficient wallet balance" });
         }
         
         // Deduct from wallet
-        const newBalance = (currentBalance - orderTotal).toFixed(2);
+        const newBalance = (currentBalance - paidFromWallet).toFixed(2);
         await storage.updateUser(validatedData.userId, {
           walletBalance: newBalance
         });
@@ -279,11 +279,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
       });
       
       // Create wallet transaction if payment is from wallet
-      if (validatedData.paymentMethod === "wallet") {
+      if (paidFromWallet > 0) {
         await db.insert(walletTransactions).values({
           userId: validatedData.userId,
           type: "debit",
-          amount: validatedData.totalPrice,
+          amount: paidFromWallet.toString(),
           description: `Payment for Order #${order.id.slice(0, 8)}`,
           orderId: order.id,
           status: "completed"
@@ -439,6 +439,49 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  app.get("/api/user-payment-accounts", async (req, res) => {
+    try {
+      const userId = req.query.userId as string;
+      if (!userId) {
+        return res.status(400).json({ message: "userId is required" });
+      }
+      const accounts = await storage.getUserPaymentAccounts(userId);
+      res.json(accounts);
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+
+  app.post("/api/user-payment-accounts", async (req, res) => {
+    try {
+      const account = await storage.createUserPaymentAccount(req.body);
+      res.status(201).json(account);
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+
+  app.patch("/api/user-payment-accounts/:id", async (req, res) => {
+    try {
+      const account = await storage.updateUserPaymentAccount(req.params.id, req.body);
+      if (!account) {
+        return res.status(404).json({ message: "User payment account not found" });
+      }
+      res.json(account);
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+
+  app.delete("/api/user-payment-accounts/:id", async (req, res) => {
+    try {
+      await storage.deleteUserPaymentAccount(req.params.id);
+      res.status(204).send();
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+
   app.get("/api/payment-requests", async (req, res) => {
     try {
       const userId = req.query.userId as string;
@@ -463,8 +506,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.patch("/api/payment-requests/:id", async (req, res) => {
     try {
-      const { status, adminNotes } = req.body;
-      const request = await storage.updatePaymentRequestStatus(req.params.id, status, adminNotes);
+      const { status, adminNotes, rejectionReason } = req.body;
+      const request = await storage.updatePaymentRequestStatus(req.params.id, status, adminNotes, rejectionReason);
       if (!request) {
         return res.status(404).json({ message: "Payment request not found" });
       }
