@@ -251,10 +251,43 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const expectedDelivery = new Date();
       expectedDelivery.setDate(expectedDelivery.getDate() + 3);
       
+      // If payment is from wallet, deduct balance and create transaction
+      if (validatedData.paymentMethod === "wallet") {
+        const user = await storage.getUser(validatedData.userId);
+        if (!user) {
+          return res.status(404).json({ message: "User not found" });
+        }
+        
+        const currentBalance = parseFloat(user.walletBalance || "0");
+        const orderTotal = parseFloat(validatedData.totalPrice);
+        
+        if (currentBalance < orderTotal) {
+          return res.status(400).json({ message: "Insufficient wallet balance" });
+        }
+        
+        // Deduct from wallet
+        const newBalance = (currentBalance - orderTotal).toFixed(2);
+        await storage.updateUser(validatedData.userId, {
+          walletBalance: newBalance
+        });
+      }
+      
       const order = await storage.createOrder({
         ...validatedData,
         expectedDelivery,
       });
+      
+      // Create wallet transaction if payment is from wallet
+      if (validatedData.paymentMethod === "wallet") {
+        await db.insert(walletTransactions).values({
+          userId: validatedData.userId,
+          type: "debit",
+          amount: validatedData.totalPrice,
+          description: `Payment for Order #${order.id.slice(0, 8)}`,
+          orderId: order.id,
+          status: "completed"
+        });
+      }
       
       inMemoryCart.delete(validatedData.userId);
       
