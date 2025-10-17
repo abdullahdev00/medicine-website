@@ -1,230 +1,537 @@
 import { db } from "../db";
-import { users, categories, products, orders, addresses, walletTransactions } from "@shared/schema";
+import { users, categories, products, addresses, cartItems, wishlistItems, orders, walletTransactions, partners, referralStats } from "@shared/schema";
 import bcrypt from "bcrypt";
 
 async function seed() {
-  console.log("🌱 Starting database seed...");
+  console.log("🌱 Starting database seeding...");
 
   try {
-    const hashedTestPassword = await bcrypt.hash("test123", 10);
-    const hashedAhmadPassword = await bcrypt.hash("password123", 10);
-
-    const testUser = await db.insert(users).values({
+    // Create users with hashed passwords
+    const hashedPassword = await bcrypt.hash("test123", 10);
+    
+    const [testUser] = await db.insert(users).values({
       fullName: "Test User",
       email: "test@example.com",
-      password: hashedTestPassword,
-      phoneNumber: "+92 300 1234567",
-      whatsappNumber: "+92 300 1234567",
-      address: "123 Test Street, Block A",
+      password: hashedPassword,
+      phoneNumber: "+92-300-1234567",
+      whatsappNumber: "+92-300-1234567",
+      address: "123 Main Street, Block A",
       city: "Karachi",
       province: "Sindh",
       postalCode: "75500",
       affiliateCode: "TEST2024",
-      walletBalance: "500.00",
-      totalEarnings: "1500.00",
-      pendingEarnings: "250.00",
-      isPartner: false,
+      walletBalance: "5000.00",
+      totalEarnings: "12500.00",
+      pendingEarnings: "2500.00",
+      isPartner: true,
     }).returning();
-    console.log("✅ Test user created:", testUser[0].email);
 
-    const ahmadUser = await db.insert(users).values({
-      fullName: "Ahmad Khan",
-      email: "ahmad.khan@example.com",
-      password: hashedAhmadPassword,
-      phoneNumber: "+92 321 9876543",
-      whatsappNumber: "+92 321 9876543",
-      address: "456 Main Road, DHA Phase 5",
+    const [user2] = await db.insert(users).values({
+      fullName: "Ahmed Ali",
+      email: "ahmed@example.com",
+      password: hashedPassword,
+      phoneNumber: "+92-301-9876543",
+      whatsappNumber: "+92-301-9876543",
+      address: "456 Green Avenue",
       city: "Lahore",
       province: "Punjab",
       postalCode: "54000",
-      affiliateCode: "AHMAD2024",
-      walletBalance: "1200.00",
-      totalEarnings: "3500.00",
-      pendingEarnings: "500.00",
-      isPartner: true,
+      affiliateCode: "AHMED2024",
+      referredBy: testUser.id,
+      walletBalance: "2500.00",
+      totalEarnings: "8500.00",
+      pendingEarnings: "1500.00",
+      isPartner: false,
     }).returning();
-    console.log("✅ Ahmad user created:", ahmadUser[0].email);
 
-    const categoryData = [
-      { name: "Pain Relief", icon: "💊", description: "Medicines for pain management and relief" },
-      { name: "Cold & Flu", icon: "🤧", description: "Remedies for cold, flu, and respiratory issues" },
-      { name: "Vitamins & Supplements", icon: "🌿", description: "Health supplements and vitamins" },
-      { name: "First Aid", icon: "🩹", description: "First aid supplies and emergency care" },
-      { name: "Personal Care", icon: "🧴", description: "Personal hygiene and care products" },
-      { name: "Diabetes Care", icon: "💉", description: "Products for diabetes management" },
-    ];
+    const [user3] = await db.insert(users).values({
+      fullName: "Fatima Khan",
+      email: "fatima@example.com",
+      password: hashedPassword,
+      phoneNumber: "+92-333-5555555",
+      whatsappNumber: "+92-333-5555555",
+      address: "789 Park Road",
+      city: "Islamabad",
+      province: "Islamabad Capital Territory",
+      postalCode: "44000",
+      affiliateCode: "FATIMA2024",
+      referredBy: testUser.id,
+      walletBalance: "3200.00",
+      totalEarnings: "6800.00",
+      pendingEarnings: "900.00",
+      isPartner: false,
+    }).returning();
 
-    const createdCategories = await db.insert(categories).values(categoryData).returning();
-    console.log("✅ Categories created:", createdCategories.length);
+    console.log("✅ Users created");
 
-    const productData = [
+    // Create categories
+    const medicineCategories = await db.insert(categories).values([
+      {
+        name: "Pain Relief",
+        icon: "💊",
+        description: "Medicines for pain management and relief"
+      },
+      {
+        name: "Vitamins & Supplements",
+        icon: "🍊",
+        description: "Essential vitamins and dietary supplements"
+      },
+      {
+        name: "Cold & Flu",
+        icon: "🤧",
+        description: "Treatment for cold, flu and respiratory issues"
+      },
+      {
+        name: "First Aid",
+        icon: "🩹",
+        description: "First aid supplies and emergency medications"
+      },
+      {
+        name: "Diabetes Care",
+        icon: "💉",
+        description: "Products for diabetes management"
+      },
+      {
+        name: "Heart Health",
+        icon: "❤️",
+        description: "Cardiovascular health medications"
+      },
+    ]).returning();
+
+    console.log("✅ Categories created");
+
+    // Create products
+    const productsList = await db.insert(products).values([
       {
         name: "Panadol Extra",
-        categoryId: createdCategories[0].id,
-        price: "250.00",
-        description: "Fast relief from headaches, fever, and body pain",
+        categoryId: medicineCategories[0].id,
+        price: "150.00",
+        description: "Fast relief from headaches, fever and body pain. Contains paracetamol and caffeine.",
         imageUrl: "https://images.unsplash.com/photo-1584308666744-24d5c474f2ae?w=400",
-        rating: "4.5",
-        packageOptions: ["10 Tablets", "20 Tablets", "30 Tablets"],
+        rating: "4.50",
+        packageOptions: ["10 tablets", "20 tablets", "30 tablets"],
         inStock: true,
       },
       {
         name: "Brufen 400mg",
-        categoryId: createdCategories[0].id,
+        categoryId: medicineCategories[0].id,
         price: "180.00",
-        description: "Anti-inflammatory medicine for pain and fever",
+        description: "Anti-inflammatory pain reliever for muscle pain, arthritis and fever.",
         imageUrl: "https://images.unsplash.com/photo-1587854692152-cbe660dbde88?w=400",
-        rating: "4.3",
-        packageOptions: ["10 Tablets", "20 Tablets"],
-        inStock: true,
-      },
-      {
-        name: "Lemsip Cold & Flu",
-        categoryId: createdCategories[1].id,
-        price: "320.00",
-        description: "Relief from cold and flu symptoms",
-        imageUrl: "https://images.unsplash.com/photo-1631549916768-4119b2e5f926?w=400",
-        rating: "4.6",
-        packageOptions: ["5 Sachets", "10 Sachets"],
-        inStock: true,
-      },
-      {
-        name: "Multivitamin Complete",
-        categoryId: createdCategories[2].id,
-        price: "850.00",
-        description: "Daily multivitamin for overall health",
-        imageUrl: "https://images.unsplash.com/photo-1550572017-4814c6c7e6b4?w=400",
-        rating: "4.7",
-        packageOptions: ["30 Tablets", "60 Tablets", "90 Tablets"],
+        rating: "4.30",
+        packageOptions: ["10 tablets", "20 tablets"],
         inStock: true,
       },
       {
         name: "Vitamin C 1000mg",
-        categoryId: createdCategories[2].id,
-        price: "650.00",
-        description: "Boost your immunity with Vitamin C",
-        imageUrl: "https://images.unsplash.com/photo-1584308666744-24d5c474f2ae?w=400",
-        rating: "4.5",
-        packageOptions: ["30 Tablets", "60 Tablets"],
+        categoryId: medicineCategories[1].id,
+        price: "350.00",
+        description: "Boosts immunity and supports overall health. Essential vitamin supplement.",
+        imageUrl: "https://images.unsplash.com/photo-1550572017-4691e2e68b2f?w=400",
+        rating: "4.70",
+        packageOptions: ["30 tablets", "60 tablets", "90 tablets"],
         inStock: true,
       },
       {
-        name: "First Aid Kit Complete",
-        categoryId: createdCategories[3].id,
-        price: "1500.00",
-        description: "Complete first aid kit for home and travel",
-        imageUrl: "https://images.unsplash.com/photo-1603398938378-e54eab446dde?w=400",
-        rating: "4.8",
-        packageOptions: ["Basic Kit", "Advanced Kit"],
+        name: "Multivitamin Complex",
+        categoryId: medicineCategories[1].id,
+        price: "450.00",
+        description: "Complete daily multivitamin with minerals for overall wellness.",
+        imageUrl: "https://images.unsplash.com/photo-1607619056574-7b8d3ee536b2?w=400",
+        rating: "4.60",
+        packageOptions: ["30 capsules", "60 capsules"],
         inStock: true,
       },
       {
-        name: "Hand Sanitizer 500ml",
-        categoryId: createdCategories[4].id,
+        name: "Actifed Syrup",
+        categoryId: medicineCategories[2].id,
         price: "280.00",
-        description: "Kills 99.9% germs and bacteria",
-        imageUrl: "https://images.unsplash.com/photo-1584744982493-c48ad0b64f86?w=400",
-        rating: "4.4",
-        packageOptions: ["250ml", "500ml", "1L"],
+        description: "Relief from cold, flu symptoms and nasal congestion.",
+        imageUrl: "https://images.unsplash.com/photo-1631549916768-4119b2e5f926?w=400",
+        rating: "4.40",
+        packageOptions: ["60ml", "120ml"],
         inStock: true,
       },
       {
-        name: "Blood Glucose Monitor",
-        categoryId: createdCategories[5].id,
-        price: "3500.00",
-        description: "Digital blood glucose monitoring system",
-        imageUrl: "https://images.unsplash.com/photo-1615486511484-92e172cc4fe0?w=400",
-        rating: "4.9",
-        packageOptions: ["Basic Kit", "Kit with 50 Strips", "Kit with 100 Strips"],
+        name: "Strepsils Lozenges",
+        categoryId: medicineCategories[2].id,
+        price: "120.00",
+        description: "Soothing relief for sore throat and mouth infections.",
+        imageUrl: "https://images.unsplash.com/photo-1471864190281-a93a3070b6de?w=400",
+        rating: "4.20",
+        packageOptions: ["12 lozenges", "24 lozenges"],
         inStock: true,
       },
-    ];
-
-    const createdProducts = await db.insert(products).values(productData).returning();
-    console.log("✅ Products created:", createdProducts.length);
-
-    const orderData = [
       {
-        userId: testUser[0].id,
-        products: [
-          { productId: createdProducts[0].id, name: "Panadol Extra", quantity: 2, price: "250.00", selectedPackage: "20 Tablets" },
-          { productId: createdProducts[2].id, name: "Lemsip Cold & Flu", quantity: 1, price: "320.00", selectedPackage: "10 Sachets" },
-        ],
-        totalPrice: "820.00",
-        deliveryAddress: "123 Test Street, Block A, Karachi, Sindh - 75500",
-        paymentMethod: "Cash on Delivery",
-        status: "delivered",
-        expectedDelivery: new Date(Date.now() + 3 * 24 * 60 * 60 * 1000),
+        name: "First Aid Kit",
+        categoryId: medicineCategories[3].id,
+        price: "950.00",
+        description: "Complete first aid kit with bandages, antiseptics and essential supplies.",
+        imageUrl: "https://images.unsplash.com/photo-1603398938378-e54eab446dde?w=400",
+        rating: "4.80",
+        packageOptions: ["Basic", "Advanced"],
+        inStock: true,
       },
       {
-        userId: testUser[0].id,
-        products: [
-          { productId: createdProducts[3].id, name: "Multivitamin Complete", quantity: 1, price: "850.00", selectedPackage: "60 Tablets" },
-        ],
-        totalPrice: "850.00",
-        deliveryAddress: "123 Test Street, Block A, Karachi, Sindh - 75500",
-        paymentMethod: "Wallet",
-        paidFromWallet: "850.00",
-        status: "pending",
-        expectedDelivery: new Date(Date.now() + 5 * 24 * 60 * 60 * 1000),
+        name: "Dettol Antiseptic",
+        categoryId: medicineCategories[3].id,
+        price: "220.00",
+        description: "Antiseptic liquid for wound cleaning and disinfection.",
+        imageUrl: "https://images.unsplash.com/photo-1585435557343-3b092031a831?w=400",
+        rating: "4.50",
+        packageOptions: ["100ml", "250ml", "500ml"],
+        inStock: true,
       },
-    ];
-
-    const createdOrders = await db.insert(orders).values(orderData).returning();
-    console.log("✅ Orders created:", createdOrders.length);
-
-    const addressData = [
       {
-        userId: testUser[0].id,
+        name: "Glucometer Kit",
+        categoryId: medicineCategories[4].id,
+        price: "1500.00",
+        description: "Digital blood glucose monitoring system with test strips.",
+        imageUrl: "https://images.unsplash.com/photo-1615461066841-6116e61058f4?w=400",
+        rating: "4.60",
+        packageOptions: ["Kit + 25 strips", "Kit + 50 strips", "Kit + 100 strips"],
+        inStock: true,
+      },
+      {
+        name: "Insulin Needles",
+        categoryId: medicineCategories[4].id,
+        price: "800.00",
+        description: "Sterile insulin syringes for diabetes management.",
+        imageUrl: "https://images.unsplash.com/photo-1584362917165-526a968579e8?w=400",
+        rating: "4.40",
+        packageOptions: ["10 pieces", "30 pieces", "50 pieces"],
+        inStock: true,
+      },
+      {
+        name: "Aspirin 75mg",
+        categoryId: medicineCategories[5].id,
+        price: "200.00",
+        description: "Low-dose aspirin for heart health and blood thinning.",
+        imageUrl: "https://images.unsplash.com/photo-1550340499-a6c60fc8287c?w=400",
+        rating: "4.50",
+        packageOptions: ["30 tablets", "60 tablets", "90 tablets"],
+        inStock: true,
+      },
+      {
+        name: "Omega-3 Fish Oil",
+        categoryId: medicineCategories[5].id,
+        price: "650.00",
+        description: "Essential fatty acids for cardiovascular and brain health.",
+        imageUrl: "https://images.unsplash.com/photo-1505751172876-fa1923c5c528?w=400",
+        rating: "4.70",
+        packageOptions: ["30 capsules", "60 capsules"],
+        inStock: true,
+      },
+    ]).returning();
+
+    console.log("✅ Products created");
+
+    // Create addresses for test user
+    await db.insert(addresses).values([
+      {
+        userId: testUser.id,
         label: "Home",
-        address: "123 Test Street, Block A",
+        address: "123 Main Street, Block A",
         city: "Karachi",
         province: "Sindh",
         postalCode: "75500",
         isDefault: true,
       },
       {
-        userId: testUser[0].id,
+        userId: testUser.id,
         label: "Office",
-        address: "456 Business Center, Main Boulevard",
+        address: "456 Business Tower, I.I. Chundrigar Road",
         city: "Karachi",
         province: "Sindh",
-        postalCode: "75600",
+        postalCode: "74000",
         isDefault: false,
       },
-    ];
-
-    const createdAddresses = await db.insert(addresses).values(addressData).returning();
-    console.log("✅ Addresses created:", createdAddresses.length);
-
-    const transactionData = [
       {
-        userId: testUser[0].id,
+        userId: testUser.id,
+        label: "Parent's House",
+        address: "789 Garden Lane, Defence Phase 5",
+        city: "Karachi",
+        province: "Sindh",
+        postalCode: "75500",
+        isDefault: false,
+      },
+    ]);
+
+    console.log("✅ Addresses created");
+
+    // Create cart items for test user
+    await db.insert(cartItems).values([
+      {
+        userId: testUser.id,
+        productId: productsList[0].id,
+        quantity: 2,
+        selectedPackage: "20 tablets",
+      },
+      {
+        userId: testUser.id,
+        productId: productsList[2].id,
+        quantity: 1,
+        selectedPackage: "60 tablets",
+      },
+      {
+        userId: testUser.id,
+        productId: productsList[7].id,
+        quantity: 1,
+        selectedPackage: "250ml",
+      },
+    ]);
+
+    console.log("✅ Cart items created");
+
+    // Create wishlist items for test user
+    await db.insert(wishlistItems).values([
+      {
+        userId: testUser.id,
+        productId: productsList[6].id,
+      },
+      {
+        userId: testUser.id,
+        productId: productsList[8].id,
+      },
+      {
+        userId: testUser.id,
+        productId: productsList[11].id,
+      },
+      {
+        userId: testUser.id,
+        productId: productsList[3].id,
+      },
+    ]);
+
+    console.log("✅ Wishlist items created");
+
+    // Create orders
+    const ordersList = await db.insert(orders).values([
+      {
+        userId: testUser.id,
+        products: [
+          {
+            productId: productsList[0].id,
+            name: productsList[0].name,
+            quantity: 2,
+            price: "150.00",
+            selectedPackage: "20 tablets",
+          },
+          {
+            productId: productsList[4].id,
+            name: productsList[4].name,
+            quantity: 1,
+            price: "280.00",
+            selectedPackage: "120ml",
+          },
+        ],
+        totalPrice: "580.00",
+        deliveryAddress: "123 Main Street, Block A, Karachi, Sindh - 75500",
+        paymentMethod: "COD",
+        status: "delivered",
+        expectedDelivery: new Date(Date.now() - 5 * 24 * 60 * 60 * 1000),
+      },
+      {
+        userId: testUser.id,
+        products: [
+          {
+            productId: productsList[2].id,
+            name: productsList[2].name,
+            quantity: 1,
+            price: "350.00",
+            selectedPackage: "60 tablets",
+          },
+        ],
+        totalPrice: "350.00",
+        deliveryAddress: "456 Business Tower, I.I. Chundrigar Road, Karachi, Sindh - 74000",
+        paymentMethod: "wallet",
+        paidFromWallet: "350.00",
+        status: "shipped",
+        expectedDelivery: new Date(Date.now() + 2 * 24 * 60 * 60 * 1000),
+      },
+      {
+        userId: testUser.id,
+        products: [
+          {
+            productId: productsList[10].id,
+            name: productsList[10].name,
+            quantity: 2,
+            price: "200.00",
+            selectedPackage: "60 tablets",
+          },
+        ],
+        totalPrice: "400.00",
+        deliveryAddress: "123 Main Street, Block A, Karachi, Sindh - 75500",
+        paymentMethod: "bank_transfer",
+        paymentInfo: "Bank: HBL, Account: ****1234",
+        status: "processing",
+        expectedDelivery: new Date(Date.now() + 4 * 24 * 60 * 60 * 1000),
+      },
+      {
+        userId: user2.id,
+        products: [
+          {
+            productId: productsList[1].id,
+            name: productsList[1].name,
+            quantity: 1,
+            price: "180.00",
+            selectedPackage: "10 tablets",
+          },
+        ],
+        totalPrice: "180.00",
+        deliveryAddress: "456 Green Avenue, Lahore, Punjab - 54000",
+        paymentMethod: "COD",
+        usedAffiliateCode: "TEST2024",
+        affiliateUserId: testUser.id,
+        affiliateCommission: "18.00",
+        status: "delivered",
+        expectedDelivery: new Date(Date.now() - 3 * 24 * 60 * 60 * 1000),
+      },
+      {
+        userId: user3.id,
+        products: [
+          {
+            productId: productsList[3].id,
+            name: productsList[3].name,
+            quantity: 1,
+            price: "450.00",
+            selectedPackage: "60 capsules",
+          },
+          {
+            productId: productsList[5].id,
+            name: productsList[5].name,
+            quantity: 2,
+            price: "120.00",
+            selectedPackage: "24 lozenges",
+          },
+        ],
+        totalPrice: "690.00",
+        deliveryAddress: "789 Park Road, Islamabad, Islamabad Capital Territory - 44000",
+        paymentMethod: "wallet",
+        paidFromWallet: "690.00",
+        usedAffiliateCode: "TEST2024",
+        affiliateUserId: testUser.id,
+        affiliateCommission: "69.00",
+        status: "delivered",
+        expectedDelivery: new Date(Date.now() - 7 * 24 * 60 * 60 * 1000),
+      },
+    ]).returning();
+
+    console.log("✅ Orders created");
+
+    // Create wallet transactions for test user
+    await db.insert(walletTransactions).values([
+      {
+        userId: testUser.id,
+        type: "credit",
+        amount: "2500.00",
+        description: "Affiliate commission from referral orders",
+        status: "completed",
+      },
+      {
+        userId: testUser.id,
+        type: "credit",
+        amount: "1500.00",
+        description: "Bonus reward for reaching milestone",
+        status: "completed",
+      },
+      {
+        userId: testUser.id,
+        type: "debit",
+        amount: "350.00",
+        description: "Payment for order #" + ordersList[1].id.slice(0, 8),
+        orderId: ordersList[1].id,
+        status: "completed",
+      },
+      {
+        userId: testUser.id,
         type: "credit",
         amount: "500.00",
+        description: "Cashback from purchases",
+        status: "completed",
+      },
+      {
+        userId: testUser.id,
+        type: "credit",
+        amount: "87.00",
+        description: "Affiliate commission",
+        status: "pending",
+      },
+    ]);
+
+    // Create wallet transactions for user2
+    await db.insert(walletTransactions).values([
+      {
+        userId: user2.id,
+        type: "credit",
+        amount: "1000.00",
         description: "Welcome bonus",
         status: "completed",
       },
       {
-        userId: testUser[0].id,
-        type: "debit",
-        amount: "850.00",
-        description: "Order payment",
-        orderId: createdOrders[1].id,
+        userId: user2.id,
+        type: "credit",
+        amount: "500.00",
+        description: "Affiliate commission",
         status: "completed",
       },
-    ];
+    ]);
 
-    const createdTransactions = await db.insert(walletTransactions).values(transactionData).returning();
-    console.log("✅ Wallet transactions created:", createdTransactions.length);
+    console.log("✅ Wallet transactions created");
+
+    // Create partner for test user
+    await db.insert(partners).values({
+      userId: testUser.id,
+      businessName: "MediCare Pharmacy",
+      businessType: "Retail Pharmacy",
+      commissionRate: "15.00",
+      totalSales: "25000.00",
+      status: "active",
+    });
+
+    console.log("✅ Partner created");
+
+    // Create referral stats
+    await db.insert(referralStats).values([
+      {
+        userId: testUser.id,
+        totalReferrals: 2,
+        totalOrders: 2,
+        totalCommission: "87.00",
+      },
+      {
+        userId: user2.id,
+        totalReferrals: 0,
+        totalOrders: 0,
+        totalCommission: "0.00",
+      },
+      {
+        userId: user3.id,
+        totalReferrals: 0,
+        totalOrders: 0,
+        totalCommission: "0.00",
+      },
+    ]);
+
+    console.log("✅ Referral stats created");
 
     console.log("\n🎉 Database seeding completed successfully!");
-    console.log("\nTest User Credentials:");
-    console.log("Email: test@example.com");
-    console.log("Password: test123");
-    console.log("\nAhmad User Credentials:");
-    console.log("Email: ahmad.khan@example.com");
-    console.log("Password: password123");
+    console.log("\n📝 Test Account:");
+    console.log("   Email: test@example.com");
+    console.log("   Password: test123");
+    console.log("   Affiliate Code: TEST2024");
+    console.log("   Wallet Balance: PKR 5,000");
+    console.log("\n✨ The database now contains:");
+    console.log(`   - 3 users (including test account)`);
+    console.log(`   - 6 categories`);
+    console.log(`   - 12 products`);
+    console.log(`   - 3 addresses`);
+    console.log(`   - 3 cart items`);
+    console.log(`   - 4 wishlist items`);
+    console.log(`   - 5 orders`);
+    console.log(`   - 7 wallet transactions`);
+    console.log(`   - 1 partner`);
+    console.log(`   - 3 referral stats`);
 
   } catch (error) {
     console.error("❌ Error seeding database:", error);
@@ -234,10 +541,10 @@ async function seed() {
 
 seed()
   .then(() => {
-    console.log("✅ Seed script completed");
+    console.log("\n✅ Seeding script finished");
     process.exit(0);
   })
   .catch((error) => {
-    console.error("❌ Seed script failed:", error);
+    console.error("\n❌ Seeding failed:", error);
     process.exit(1);
   });
