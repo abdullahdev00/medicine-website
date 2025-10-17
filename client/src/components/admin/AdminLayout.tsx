@@ -12,7 +12,7 @@ import {
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 
 interface AdminLayoutProps {
   children: React.ReactNode;
@@ -28,13 +28,47 @@ const navigation = [
 ];
 
 export default function AdminLayout({ children }: AdminLayoutProps) {
-  const [location] = useLocation();
+  const [location, setLocation] = useLocation();
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [isChecking, setIsChecking] = useState(true);
+
+  useEffect(() => {
+    // Verify admin session on mount
+    const checkAdminAuth = async () => {
+      try {
+        const response = await fetch('/api/admin/check', {
+          credentials: 'include',
+        });
+        
+        if (!response.ok) {
+          // Not authenticated, redirect to login
+          setLocation("/login");
+        }
+      } catch (error) {
+        setLocation("/login");
+      } finally {
+        setIsChecking(false);
+      }
+    };
+    
+    checkAdminAuth();
+  }, [setLocation]);
 
   const handleLogout = async () => {
-    await fetch("/api/admin/logout", { method: "POST" });
+    await fetch("/api/admin/logout", { 
+      method: "POST",
+      credentials: 'include',
+    });
     window.location.href = "/login";
   };
+
+  if (isChecking) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="text-gray-600 dark:text-gray-400">Loading...</div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-gray-50 dark:bg-gray-900">

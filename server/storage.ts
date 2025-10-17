@@ -62,6 +62,7 @@ export interface IStorage {
   createWalletTransaction(transaction: InsertWalletTransaction): Promise<WalletTransaction>;
   
   getAdminByEmail(email: string): Promise<Admin | undefined>;
+  getAdminById(id: string): Promise<Admin | undefined>;
   createAdmin(admin: InsertAdmin): Promise<Admin>;
   updateAdminLastLogin(id: string): Promise<void>;
   
@@ -318,6 +319,11 @@ export class DatabaseStorage implements IStorage {
 
   async getAdminByEmail(email: string): Promise<Admin | undefined> {
     const result = await db.select().from(admins).where(eq(admins.email, email)).limit(1);
+    return result[0];
+  }
+
+  async getAdminById(id: string): Promise<Admin | undefined> {
+    const result = await db.select().from(admins).where(eq(admins.id, id)).limit(1);
     return result[0];
   }
 

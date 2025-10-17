@@ -4,6 +4,7 @@ import { storage } from "./storage";
 import { insertProductSchema, insertWishlistItemSchema, insertOrderSchema, insertUserSchema, insertAddressSchema, walletTransactions } from "@shared/schema";
 import { z } from "zod";
 import { db } from "../db";
+import { requireAdmin, type AdminRequest } from "./middleware/adminAuth";
 
 interface CartItem {
   id: string;
@@ -677,8 +678,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Admin Dashboard Stats
-  app.get("/api/admin/stats", async (req, res) => {
+  // Admin Dashboard Stats (protected)
+  app.get("/api/admin/stats", requireAdmin, async (req, res) => {
     try {
       const stats = await storage.getAdminStats();
       res.json(stats);
@@ -687,8 +688,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Admin Users Management
-  app.get("/api/admin/users", async (req, res) => {
+  // Admin Users Management (protected)
+  app.get("/api/admin/users", requireAdmin, async (req, res) => {
     try {
       const users = await storage.getAllUsers();
       res.json(users);
@@ -697,7 +698,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.patch("/api/admin/users/:id/toggle", async (req, res) => {
+  app.patch("/api/admin/users/:id/toggle", requireAdmin, async (req, res) => {
     try {
       const { isActive } = req.body;
       await storage.toggleUserStatus(req.params.id, isActive);
@@ -707,8 +708,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Admin Orders Management
-  app.get("/api/admin/orders", async (req, res) => {
+  // Admin Orders Management (protected)
+  app.get("/api/admin/orders", requireAdmin, async (req, res) => {
     try {
       const orders = await storage.getAllOrders();
       res.json(orders);
@@ -717,7 +718,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.patch("/api/admin/orders/:id/status", async (req, res) => {
+  app.patch("/api/admin/orders/:id/status", requireAdmin, async (req, res) => {
     try {
       const { status } = req.body;
       const order = await storage.updateOrderStatus(req.params.id, status);
@@ -727,8 +728,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Admin Payment Requests
-  app.get("/api/admin/payment-requests", async (req, res) => {
+  // Admin Payment Requests (protected)
+  app.get("/api/admin/payment-requests", requireAdmin, async (req, res) => {
     try {
       const payments = await storage.getAllPaymentRequests();
       res.json(payments);
@@ -737,7 +738,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.patch("/api/admin/payment-requests/:id", async (req, res) => {
+  app.patch("/api/admin/payment-requests/:id", requireAdmin, async (req, res) => {
     try {
       const { status, rejectionReason } = req.body;
       const payment = await storage.updatePaymentRequest(req.params.id, status, rejectionReason);
@@ -747,8 +748,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Admin Partners Management
-  app.get("/api/admin/partners", async (req, res) => {
+  // Admin Partners Management (protected)
+  app.get("/api/admin/partners", requireAdmin, async (req, res) => {
     try {
       const partners = await storage.getAllPartners();
       res.json(partners);
@@ -757,7 +758,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Admin Login
+  // Admin Login (unprotected)
   app.post("/api/admin/login", async (req, res) => {
     try {
       const { email, password } = req.body;
@@ -765,14 +766,41 @@ export async function registerRoutes(app: Express): Promise<Server> {
       if (!admin) {
         return res.status(401).json({ message: "Invalid credentials" });
       }
-      res.json(admin);
+      
+      // Set admin session
+      req.session.adminId = admin.id;
+      req.session.isAdmin = true;
+      
+      // Don't send password hash to client
+      const { password: _, ...adminData } = admin;
+      res.json({ ...adminData, isAdmin: true });
     } catch (error: any) {
       res.status(500).json({ message: error.message });
     }
   });
 
   app.post("/api/admin/logout", async (req, res) => {
-    res.json({ message: "Logged out successfully" });
+    req.session.adminId = undefined;
+    req.session.isAdmin = undefined;
+    req.session.destroy((err) => {
+      if (err) {
+        return res.status(500).json({ message: "Logout failed" });
+      }
+      res.json({ message: "Logged out successfully" });
+    });
+  });
+
+  app.get("/api/admin/check", requireAdmin, async (req: AdminRequest, res) => {
+    try {
+      const admin = await storage.getAdminById(req.adminId!);
+      if (!admin) {
+        return res.status(401).json({ message: "Admin not found" });
+      }
+      const { password: _, ...adminData } = admin;
+      res.json({ ...adminData, isAdmin: true });
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
   });
 
   const httpServer = createServer(app);
