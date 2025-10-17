@@ -14,6 +14,9 @@ interface ProductCardProps {
 
 export function ProductCard({ product, onAddToCart, onToggleWishlist, isWishlisted }: ProductCardProps) {
   const rating = parseFloat(product.rating || "0");
+  const lowestPrice = product.variants && product.variants.length > 0
+    ? Math.min(...product.variants.map(v => parseFloat(v.price)))
+    : 0;
   
   return (
     <motion.div
@@ -82,7 +85,7 @@ export function ProductCard({ product, onAddToCart, onToggleWishlist, isWishlist
             <div className="flex items-center gap-3 flex-shrink-0">
               <div className="h-6 w-px bg-primary-foreground/30" />
               <span className="text-lg font-bold font-mono tabular-nums" data-testid={`text-price-${product.id}`}>
-                {parseFloat(product.price).toFixed(0)}
+                {lowestPrice.toFixed(0)}
               </span>
             </div>
           </Button>

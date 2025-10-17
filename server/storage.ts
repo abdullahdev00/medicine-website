@@ -40,6 +40,8 @@ export interface IStorage {
   createAddress(address: InsertAddress): Promise<Address>;
   updateAddress(id: string, updates: Partial<InsertAddress>): Promise<Address | undefined>;
   deleteAddress(id: string): Promise<void>;
+  
+  clearCart(userId: string): Promise<void>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -76,15 +78,15 @@ export class DatabaseStorage implements IStorage {
 
   async getProducts(): Promise<Product[]> {
     const result = await db.execute<Product>(
-      sql`SELECT id::text as id, name, category_id::text as category_id, price, description, 
-          image_url, rating, package_options, in_stock::boolean as in_stock, created_at 
+      sql`SELECT id::text as id, name, category_id::text as category_id, description, 
+          image_url, rating, variants, in_stock::boolean as in_stock, created_at 
           FROM products ORDER BY created_at DESC`
     );
     return result.rows.map(row => ({
       ...row,
       categoryId: (row as any).category_id,
       imageUrl: (row as any).image_url,
-      packageOptions: (row as any).package_options,
+      variants: (row as any).variants,
       inStock: Boolean((row as any).in_stock),
       createdAt: (row as any).created_at,
     })) as Product[];
@@ -92,8 +94,8 @@ export class DatabaseStorage implements IStorage {
 
   async getProductById(id: string): Promise<Product | undefined> {
     const result = await db.execute<Product>(
-      sql`SELECT id::text as id, name, category_id::text as category_id, price, description, 
-          image_url, rating, package_options, in_stock::boolean as in_stock, created_at 
+      sql`SELECT id::text as id, name, category_id::text as category_id, description, 
+          image_url, rating, variants, in_stock::boolean as in_stock, created_at 
           FROM products WHERE id = ${id}::uuid LIMIT 1`
     );
     if (result.rows.length === 0) return undefined;
@@ -102,7 +104,7 @@ export class DatabaseStorage implements IStorage {
       ...row,
       categoryId: (row as any).category_id,
       imageUrl: (row as any).image_url,
-      packageOptions: (row as any).package_options,
+      variants: (row as any).variants,
       inStock: Boolean((row as any).in_stock),
       createdAt: (row as any).created_at,
     } as Product;
@@ -178,6 +180,9 @@ export class DatabaseStorage implements IStorage {
 
   async deleteAddress(id: string): Promise<void> {
     await db.delete(addresses).where(eq(addresses.id, id));
+  }
+
+  async clearCart(userId: string): Promise<void> {
   }
 }
 

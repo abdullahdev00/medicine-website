@@ -87,7 +87,7 @@ export default function ProductDetail() {
         userId: user.id,
         productId: id,
         quantity: quantity,
-        selectedPackage: product?.packageOptions?.[selectedPackage],
+        selectedPackage: product?.variants?.[selectedPackage],
       });
     },
     onMutate: async () => {
@@ -108,7 +108,7 @@ export default function ProductDetail() {
           userId: user?.id,
           productId: id,
           quantity,
-          selectedPackage: product?.packageOptions?.[selectedPackage],
+          selectedPackage: product?.variants?.[selectedPackage],
           product,
         }];
       });
@@ -268,11 +268,11 @@ export default function ProductDetail() {
           </p>
         </div>
 
-        {product.packageOptions && product.packageOptions.length > 0 && (
+        {product.variants && product.variants.length > 0 && (
           <div className="space-y-3">
             <h3 className="font-semibold text-lg">Package Size</h3>
             <div className="flex flex-wrap gap-3">
-              {product.packageOptions.map((option, index) => (
+              {product.variants.map((option, index) => (
                 <Button
                   key={index}
                   variant={selectedPackage === index ? "default" : "outline"}
