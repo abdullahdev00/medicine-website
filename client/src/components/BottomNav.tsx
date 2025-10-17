@@ -1,17 +1,12 @@
 import { Home, ShoppingCart, User } from "lucide-react";
 import { useLocation } from "wouter";
-import { Badge } from "@/components/ui/badge";
 
-interface BottomNavProps {
-  cartCount?: number;
-}
-
-export function BottomNav({ cartCount = 0 }: BottomNavProps) {
+export function BottomNav() {
   const [location, setLocation] = useLocation();
   
   const navItems = [
     { icon: Home, label: "Home", path: "/home", testId: "nav-home" },
-    { icon: ShoppingCart, label: "Cart", path: "/cart", badge: cartCount, testId: "nav-cart" },
+    { icon: ShoppingCart, label: "Cart", path: "/cart", testId: "nav-cart" },
     { icon: User, label: "Profile", path: "/profile", testId: "nav-profile" },
   ];
 
@@ -33,14 +28,7 @@ export function BottomNav({ cartCount = 0 }: BottomNavProps) {
               }`}
               data-testid={item.testId}
             >
-              <div className="relative">
-                <Icon className="w-6 h-6" strokeWidth={isActive ? 2.5 : 2} />
-                {item.badge && item.badge > 0 ? (
-                  <Badge className="absolute -top-2 -right-2 h-5 w-5 flex items-center justify-center p-0 text-xs bg-red-500 text-white">
-                    {item.badge}
-                  </Badge>
-                ) : null}
-              </div>
+              <Icon className="w-6 h-6" strokeWidth={isActive ? 2.5 : 2} />
               {isActive && <span className="text-sm font-semibold">{item.label}</span>}
             </button>
           );

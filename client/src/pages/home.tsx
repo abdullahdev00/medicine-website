@@ -88,6 +88,12 @@ export default function Home() {
       const res = await apiRequest("POST", "/api/cart", { userId: user.id, productId, quantity: 1 });
       return res.json();
     },
+    onMutate: async () => {
+      toast({
+        title: "Added to cart",
+        description: "Item added successfully",
+      });
+    },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/cart", user?.id] });
     },
@@ -257,10 +263,7 @@ export default function Home() {
                   >
                     <ProductCard
                       product={product as any}
-                      onAddToCart={(e) => {
-                        e?.stopPropagation();
-                        handleAddToCart(product.id);
-                      }}
+                      onAddToCart={() => handleAddToCart(product.id)}
                       onToggleWishlist={() => handleToggleWishlist(product.id)}
                       isWishlisted={isWishlisted}
                     />
@@ -277,7 +280,7 @@ export default function Home() {
         </div>
       </div>
 
-      <BottomNav cartCount={cartItems.length} />
+      <BottomNav />
     </div>
   );
 }

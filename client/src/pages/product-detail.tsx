@@ -90,6 +90,12 @@ export default function ProductDetail() {
         selectedPackage: product?.packageOptions?.[selectedPackage],
       });
     },
+    onMutate: async () => {
+      toast({
+        title: "Added to cart",
+        description: "Item added successfully",
+      });
+    },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/cart", user?.id] });
     },
@@ -131,7 +137,7 @@ export default function ProductDetail() {
           <div className="h-8 bg-muted rounded animate-pulse" />
           <div className="h-4 bg-muted rounded animate-pulse w-3/4" />
         </div>
-        <BottomNav cartCount={cartItems.length} />
+        <BottomNav />
       </div>
     );
   }
@@ -311,7 +317,7 @@ export default function ProductDetail() {
         </Button>
       </div>
 
-      <BottomNav cartCount={cartItems.length} />
+      <BottomNav />
     </div>
   );
 }

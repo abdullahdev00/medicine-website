@@ -68,7 +68,10 @@ export function ProductCard({ product, onAddToCart, onToggleWishlist, isWishlist
 
           <Button
             className="w-full rounded-full h-12 flex items-center justify-between px-5 gap-3 shadow-lg"
-            onClick={onAddToCart}
+            onClick={(e) => {
+              e.stopPropagation();
+              onAddToCart?.();
+            }}
             disabled={!product.inStock}
             data-testid={`button-add-to-cart-${product.id}`}
           >

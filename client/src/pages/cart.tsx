@@ -29,15 +29,26 @@ export default function Cart() {
       const res = await apiRequest("PATCH", `/api/cart/${id}`, { quantity });
       return res.json();
     },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/cart", user?.id] });
+    onMutate: async ({ id, quantity }) => {
+      await queryClient.cancelQueries({ queryKey: ["/api/cart", user?.id] });
+      const previousCart = queryClient.getQueryData(["/api/cart", user?.id]);
+      
+      queryClient.setQueryData(["/api/cart", user?.id], (old: any[]) =>
+        old.map((item) => item.id === id ? { ...item, quantity } : item)
+      );
+      
+      return { previousCart };
     },
-    onError: () => {
+    onError: (err, variables, context: any) => {
+      queryClient.setQueryData(["/api/cart", user?.id], context.previousCart);
       toast({
         title: "Error",
         description: "Failed to update quantity. Please try again.",
         variant: "destructive",
       });
+    },
+    onSettled: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/cart", user?.id] });
     },
   });
 
@@ -45,15 +56,26 @@ export default function Cart() {
     mutationFn: async (id: string) => {
       await apiRequest("DELETE", `/api/cart/${id}`);
     },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/cart", user?.id] });
+    onMutate: async (id) => {
+      await queryClient.cancelQueries({ queryKey: ["/api/cart", user?.id] });
+      const previousCart = queryClient.getQueryData(["/api/cart", user?.id]);
+      
+      queryClient.setQueryData(["/api/cart", user?.id], (old: any[]) =>
+        old.filter((item) => item.id !== id)
+      );
+      
+      return { previousCart };
     },
-    onError: () => {
+    onError: (err, variables, context: any) => {
+      queryClient.setQueryData(["/api/cart", user?.id], context.previousCart);
       toast({
         title: "Error",
         description: "Failed to remove item. Please try again.",
         variant: "destructive",
       });
+    },
+    onSettled: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/cart", user?.id] });
     },
   });
 
@@ -208,7 +230,7 @@ export default function Cart() {
         </div>
       )}
 
-      <BottomNav cartCount={cartItems.length} />
+      <BottomNav />
     </div>
   );
 }
