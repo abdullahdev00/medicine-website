@@ -1,12 +1,13 @@
 import { createContext, useContext, useState, useEffect, ReactNode } from 'react';
-import type { User } from '@shared/schema';
+import type { User, Admin } from '@shared/schema';
 
 interface AuthContextType {
-  user: User | null;
-  login: (user: User) => void;
+  user: (User & { userType?: string }) | (Admin & { userType?: string }) | null;
+  login: (user: any) => void;
   logout: () => void;
-  updateUser: (updates: Partial<User>) => void;
+  updateUser: (updates: any) => void;
   isAuthenticated: boolean;
+  isAdmin: boolean;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -36,9 +37,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   };
 
   const isAuthenticated = !!user;
+  const isAdmin = user?.userType === 'admin';
 
   return (
-    <AuthContext.Provider value={{ user, login, logout, updateUser, isAuthenticated }}>
+    <AuthContext.Provider value={{ user, login, logout, updateUser, isAuthenticated, isAdmin }}>
       {children}
     </AuthContext.Provider>
   );

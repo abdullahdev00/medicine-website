@@ -28,7 +28,13 @@ export default function Login() {
       const response = await apiRequest('POST', '/api/auth/login', { email, password });
       const user = await response.json();
       login(user);
-      setLocation("/home");
+      
+      // Redirect based on user type
+      if (user.userType === 'admin') {
+        setLocation("/admin/dashboard");
+      } else {
+        setLocation("/home");
+      }
     } catch (error: any) {
       const errorMessage = error.message || "Something went wrong. Please try again.";
       toast({

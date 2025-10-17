@@ -330,6 +330,21 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ message: "Email and password are required" });
       }
       
+      // First check if this is an admin login
+      const admin = await storage.getAdminByEmail(email);
+      if (admin) {
+        const bcrypt = await import("bcrypt");
+        const isValidPassword = await bcrypt.compare(password, admin.password);
+        if (!isValidPassword) {
+          return res.status(401).json({ message: "Invalid credentials" });
+        }
+        
+        await storage.updateAdminLastLogin(admin.id);
+        const { password: _, ...adminWithoutPassword } = admin;
+        return res.json({ ...adminWithoutPassword, userType: "admin" });
+      }
+      
+      // Otherwise check regular user login
       const user = await storage.getUserByEmail(email);
       if (!user) {
         return res.status(401).json({ message: "Invalid credentials" });
@@ -342,7 +357,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
       
       const { password: _, ...userWithoutPassword } = user;
-      res.json(userWithoutPassword);
+      res.json({ ...userWithoutPassword, userType: "user" });
     } catch (error: any) {
       res.status(500).json({ message: error.message });
     }
@@ -514,6 +529,149 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(404).json({ message: "Payment request not found" });
       }
       res.json(request);
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+
+  // Admin Routes
+  app.get("/api/admin/dashboard/stats", async (req, res) => {
+    try {
+      const users = await storage.getAllUsers();
+      const orders = await storage.getAllOrders();
+      const paymentRequests = await storage.getAllPaymentRequests();
+      
+      const totalRevenue = orders
+        .filter(o => o.status === "delivered")
+        .reduce((sum, order) => sum + parseFloat(order.totalPrice), 0);
+      
+      const pendingOrders = orders.filter(o => o.status === "pending").length;
+      const pendingPayments = paymentRequests.filter(p => p.status === "pending").length;
+      
+      res.json({
+        totalUsers: users.length,
+        totalOrders: orders.length,
+        totalRevenue,
+        pendingOrders,
+        pendingPayments,
+        recentOrders: orders.slice(0, 10),
+      });
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+
+  app.get("/api/admin/users", async (req, res) => {
+    try {
+      const users = await storage.getAllUsers();
+      res.json(users);
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+
+  app.get("/api/admin/orders", async (req, res) => {
+    try {
+      const orders = await storage.getAllOrders();
+      res.json(orders);
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+
+  app.patch("/api/admin/orders/:id/status", async (req, res) => {
+    try {
+      const { status } = req.body;
+      const order = await storage.updateOrderStatus(req.params.id, status);
+      if (!order) {
+        return res.status(404).json({ message: "Order not found" });
+      }
+      res.json(order);
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+
+  app.get("/api/admin/payment-requests", async (req, res) => {
+    try {
+      const requests = await storage.getAllPaymentRequests();
+      res.json(requests);
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+
+  app.patch("/api/admin/payment-requests/:id/status", async (req, res) => {
+    try {
+      const { status, adminNotes, rejectionReason } = req.body;
+      const request = await storage.updatePaymentRequestStatus(
+        req.params.id,
+        status,
+        adminNotes,
+        rejectionReason
+      );
+      if (!request) {
+        return res.status(404).json({ message: "Payment request not found" });
+      }
+      res.json(request);
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+
+  app.get("/api/admin/products", async (req, res) => {
+    try {
+      const products = await storage.getProducts();
+      res.json(products);
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+
+  app.patch("/api/admin/products/:id", async (req, res) => {
+    try {
+      const product = await storage.updateProduct(req.params.id, req.body);
+      if (!product) {
+        return res.status(404).json({ message: "Product not found" });
+      }
+      res.json(product);
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+
+  app.delete("/api/admin/products/:id", async (req, res) => {
+    try {
+      await storage.deleteProduct(req.params.id);
+      res.json({ message: "Product deleted successfully" });
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+
+  app.post("/api/admin/products", async (req, res) => {
+    try {
+      const product = await storage.createProduct(req.body);
+      res.status(201).json(product);
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+
+  app.get("/api/admin/activity-logs", async (req, res) => {
+    try {
+      const limit = req.query.limit ? parseInt(req.query.limit as string) : 100;
+      const logs = await storage.getActivityLogs(limit);
+      res.json(logs);
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+
+  app.post("/api/admin/activity-logs", async (req, res) => {
+    try {
+      const log = await storage.logActivity(req.body);
+      res.status(201).json(log);
     } catch (error: any) {
       res.status(500).json({ message: error.message });
     }

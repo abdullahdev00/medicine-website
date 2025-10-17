@@ -151,6 +151,29 @@ export const paymentRequests = pgTable("payment_requests", {
   updatedAt: timestamp("updated_at").defaultNow().notNull(),
 });
 
+// Admin Tables
+export const admins = pgTable("admins", {
+  id: uuid("id").primaryKey().default(sql`gen_random_uuid()`),
+  fullName: text("full_name").notNull(),
+  email: text("email").notNull().unique(),
+  password: text("password").notNull(),
+  role: text("role").notNull().default("admin"),
+  isActive: boolean("is_active").default(true).notNull(),
+  lastLogin: timestamp("last_login"),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+});
+
+export const activityLogs = pgTable("activity_logs", {
+  id: uuid("id").primaryKey().default(sql`gen_random_uuid()`),
+  adminId: uuid("admin_id").references(() => admins.id).notNull(),
+  action: text("action").notNull(),
+  entity: text("entity").notNull(),
+  entityId: text("entity_id"),
+  details: jsonb("details"),
+  ipAddress: text("ip_address"),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+});
+
 // Insert schemas
 export const insertUserSchema = createInsertSchema(users, {
   email: z.string().email(),
@@ -222,6 +245,21 @@ export const insertPaymentRequestSchema = createInsertSchema(paymentRequests).om
   updatedAt: true,
 });
 
+export const insertAdminSchema = createInsertSchema(admins, {
+  email: z.string().email(),
+  password: z.string().min(8),
+  fullName: z.string().min(2),
+}).omit({
+  id: true,
+  createdAt: true,
+  lastLogin: true,
+});
+
+export const insertActivityLogSchema = createInsertSchema(activityLogs).omit({
+  id: true,
+  createdAt: true,
+});
+
 // Types
 export type User = typeof users.$inferSelect;
 export type InsertUser = z.infer<typeof insertUserSchema>;
@@ -258,3 +296,9 @@ export type InsertUserPaymentAccount = z.infer<typeof insertUserPaymentAccountSc
 
 export type PaymentRequest = typeof paymentRequests.$inferSelect;
 export type InsertPaymentRequest = z.infer<typeof insertPaymentRequestSchema>;
+
+export type Admin = typeof admins.$inferSelect;
+export type InsertAdmin = z.infer<typeof insertAdminSchema>;
+
+export type ActivityLog = typeof activityLogs.$inferSelect;
+export type InsertActivityLog = z.infer<typeof insertActivityLogSchema>;

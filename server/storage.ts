@@ -1,7 +1,7 @@
 import { db } from "../db";
 import { 
   users, products, categories, wishlistItems, orders, addresses, walletTransactions,
-  paymentAccounts, paymentRequests, userPaymentAccounts,
+  paymentAccounts, paymentRequests, userPaymentAccounts, admins, activityLogs,
   type User, type InsertUser,
   type Product, type InsertProduct,
   type Category, type InsertCategory,
@@ -11,7 +11,9 @@ import {
   type WalletTransaction, type InsertWalletTransaction,
   type PaymentAccount, type InsertPaymentAccount,
   type PaymentRequest, type InsertPaymentRequest,
-  type UserPaymentAccount, type InsertUserPaymentAccount
+  type UserPaymentAccount, type InsertUserPaymentAccount,
+  type Admin, type InsertAdmin,
+  type ActivityLog, type InsertActivityLog
 } from "@shared/schema";
 import { eq, and, desc, sql } from "drizzle-orm";
 import bcrypt from "bcrypt";
@@ -53,9 +55,23 @@ export interface IStorage {
   deleteUserPaymentAccount(id: string): Promise<void>;
   
   getPaymentRequests(userId: string): Promise<PaymentRequest[]>;
+  getAllPaymentRequests(): Promise<PaymentRequest[]>;
   createPaymentRequest(request: InsertPaymentRequest): Promise<PaymentRequest>;
   updatePaymentRequestStatus(id: string, status: string, adminNotes?: string, rejectionReason?: string): Promise<PaymentRequest | undefined>;
   createWalletTransaction(transaction: InsertWalletTransaction): Promise<WalletTransaction>;
+  
+  getAdminByEmail(email: string): Promise<Admin | undefined>;
+  createAdmin(admin: InsertAdmin): Promise<Admin>;
+  updateAdminLastLogin(id: string): Promise<void>;
+  
+  logActivity(log: InsertActivityLog): Promise<ActivityLog>;
+  getActivityLogs(limit?: number): Promise<ActivityLog[]>;
+  
+  getAllUsers(): Promise<User[]>;
+  getAllOrders(): Promise<Order[]>;
+  updateOrderStatus(id: string, status: string): Promise<Order | undefined>;
+  updateProduct(id: string, updates: Partial<InsertProduct>): Promise<Product | undefined>;
+  deleteProduct(id: string): Promise<void>;
   
   clearCart(userId: string): Promise<void>;
 }
@@ -252,6 +268,28 @@ export class DatabaseStorage implements IStorage {
 
   async createPaymentRequest(request: InsertPaymentRequest): Promise<PaymentRequest> {
     const result = await db.insert(paymentRequests).values(request).returning();
+    
+    // If this is a withdraw request, deduct from user's wallet balance
+    if (request.type === "withdraw") {
+      const user = await this.getUser(request.userId);
+      if (user) {
+        const newBalance = parseFloat(user.walletBalance) - parseFloat(request.amount);
+        await db.update(users)
+          .set({ walletBalance: newBalance.toString() })
+          .where(eq(users.id, request.userId));
+        
+        // Create debit transaction
+        await db.insert(walletTransactions).values({
+          userId: request.userId,
+          type: "debit",
+          amount: request.amount,
+          description: `Withdrawal request - ${request.paymentMethod}`,
+          status: "completed",
+          paymentRequestId: result[0].id,
+        });
+      }
+    }
+    
     return result[0];
   }
 
@@ -269,6 +307,67 @@ export class DatabaseStorage implements IStorage {
   }
 
   async clearCart(userId: string): Promise<void> {
+  }
+
+  async getAdminByEmail(email: string): Promise<Admin | undefined> {
+    const result = await db.select().from(admins).where(eq(admins.email, email)).limit(1);
+    return result[0];
+  }
+
+  async createAdmin(insertAdmin: InsertAdmin): Promise<Admin> {
+    const hashedPassword = await bcrypt.hash(insertAdmin.password, 10);
+    const result = await db.insert(admins).values({ 
+      ...insertAdmin, 
+      password: hashedPassword
+    }).returning();
+    return result[0];
+  }
+
+  async updateAdminLastLogin(id: string): Promise<void> {
+    await db.update(admins)
+      .set({ lastLogin: new Date() })
+      .where(eq(admins.id, id));
+  }
+
+  async logActivity(log: InsertActivityLog): Promise<ActivityLog> {
+    const result = await db.insert(activityLogs).values(log).returning();
+    return result[0];
+  }
+
+  async getActivityLogs(limit: number = 100): Promise<ActivityLog[]> {
+    return await db.select().from(activityLogs).orderBy(desc(activityLogs.createdAt)).limit(limit);
+  }
+
+  async getAllUsers(): Promise<User[]> {
+    return await db.select().from(users).orderBy(desc(users.createdAt));
+  }
+
+  async getAllOrders(): Promise<Order[]> {
+    return await db.select().from(orders).orderBy(desc(orders.createdAt));
+  }
+
+  async getAllPaymentRequests(): Promise<PaymentRequest[]> {
+    return await db.select().from(paymentRequests).orderBy(desc(paymentRequests.createdAt));
+  }
+
+  async updateOrderStatus(id: string, status: string): Promise<Order | undefined> {
+    const result = await db.update(orders)
+      .set({ status })
+      .where(eq(orders.id, id))
+      .returning();
+    return result[0];
+  }
+
+  async updateProduct(id: string, updates: Partial<InsertProduct>): Promise<Product | undefined> {
+    const result = await db.update(products)
+      .set(updates)
+      .where(eq(products.id, id))
+      .returning();
+    return result[0];
+  }
+
+  async deleteProduct(id: string): Promise<void> {
+    await db.delete(products).where(eq(products.id, id));
   }
 }
 
