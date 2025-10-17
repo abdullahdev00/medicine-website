@@ -3,21 +3,22 @@ import { useLocation, useParams } from "wouter";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
-import { ArrowLeft, Heart, Star, ShoppingCart, Plus, Minus } from "lucide-react";
+import { ArrowLeft, Star, ShoppingCart, Plus, Minus } from "lucide-react";
 import { BottomNav } from "@/components/BottomNav";
+import { FavoriteButton } from "@/components/FavoriteButton";
 import { useToast } from "@/hooks/use-toast";
+import { useAuth } from "@/contexts/AuthContext";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { motion } from "framer-motion";
 import type { Product } from "@shared/schema";
-import { MOCK_USER_ID } from "@/lib/mockUser";
 
 export default function ProductDetail() {
   const { id } = useParams();
   const [, setLocation] = useLocation();
   const { toast } = useToast();
+  const { user, isAuthenticated } = useAuth();
   const [selectedPackage, setSelectedPackage] = useState(0);
   const [quantity, setQuantity] = useState(1);
-  const [isWishlisted, setIsWishlisted] = useState(false);
   const [currentImageIndex, setCurrentImageIndex] = useState(0);
 
   const { data: product, isLoading } = useQuery<Product>({
@@ -25,21 +26,72 @@ export default function ProductDetail() {
     enabled: !!id,
   });
 
+  const { data: wishlistItems = [] } = useQuery<any[]>({
+    queryKey: ["/api/wishlist", user?.id],
+    enabled: isAuthenticated && !!user,
+    queryFn: async () => {
+      const res = await fetch(`/api/wishlist?userId=${user?.id}`);
+      if (!res.ok) return [];
+      return res.json();
+    },
+  });
+
+  const { data: cartItems = [] } = useQuery<any[]>({
+    queryKey: ["/api/cart", user?.id],
+    enabled: isAuthenticated && !!user,
+    queryFn: async () => {
+      const res = await fetch(`/api/cart?userId=${user?.id}`);
+      if (!res.ok) return [];
+      return res.json();
+    },
+  });
+
+  const addToWishlistMutation = useMutation({
+    mutationFn: async (productId: string) => {
+      if (!user) throw new Error("Not authenticated");
+      const res = await apiRequest("POST", "/api/wishlist", { userId: user.id, productId });
+      return res.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/wishlist", user?.id] });
+    },
+    onError: () => {
+      toast({
+        title: "Error",
+        description: "Failed to add to wishlist. Please try again.",
+        variant: "destructive",
+      });
+    },
+  });
+
+  const removeFromWishlistMutation = useMutation({
+    mutationFn: async (wishlistItemId: string) => {
+      await apiRequest("DELETE", `/api/wishlist/${wishlistItemId}`);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/wishlist", user?.id] });
+    },
+    onError: () => {
+      toast({
+        title: "Error",
+        description: "Failed to remove from wishlist. Please try again.",
+        variant: "destructive",
+      });
+    },
+  });
+
   const addToCartMutation = useMutation({
     mutationFn: async () => {
+      if (!user) throw new Error("Not authenticated");
       return await apiRequest("POST", "/api/cart", {
-        userId: MOCK_USER_ID,
+        userId: user.id,
         productId: id,
         quantity: quantity,
         selectedPackage: product?.packageOptions?.[selectedPackage],
       });
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/cart"] });
-      toast({
-        title: "Added to cart",
-        description: `${product?.name} has been added to your cart.`,
-      });
+      queryClient.invalidateQueries({ queryKey: ["/api/cart", user?.id] });
     },
     onError: () => {
       toast({
@@ -50,6 +102,27 @@ export default function ProductDetail() {
     },
   });
 
+  const handleToggleWishlist = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    
+    if (!isAuthenticated) {
+      toast({
+        title: "Login required",
+        description: "Please login to add items to wishlist",
+        variant: "destructive",
+      });
+      setLocation("/login");
+      return;
+    }
+
+    const wishlistItem = wishlistItems.find((item) => item.productId === id);
+    if (wishlistItem) {
+      removeFromWishlistMutation.mutate(wishlistItem.id);
+    } else {
+      addToWishlistMutation.mutate(id as string);
+    }
+  };
+
   if (isLoading) {
     return (
       <div className="min-h-screen bg-background pb-24">
@@ -58,7 +131,7 @@ export default function ProductDetail() {
           <div className="h-8 bg-muted rounded animate-pulse" />
           <div className="h-4 bg-muted rounded animate-pulse w-3/4" />
         </div>
-        <BottomNav cartCount={0} />
+        <BottomNav cartCount={cartItems.length} />
       </div>
     );
   }
@@ -78,6 +151,7 @@ export default function ProductDetail() {
 
   const rating = parseFloat(product.rating || "0");
   const images = [product.imageUrl];
+  const isWishlisted = wishlistItems.some((item) => item.productId === id);
   
   const getPriceForSize = (index: number) => {
     const basePrice = parseFloat(product.price);
@@ -108,13 +182,11 @@ export default function ProductDetail() {
             <ArrowLeft className="w-5 h-5 text-white" />
           </button>
 
-          <button
-            className="absolute top-4 right-4 w-10 h-10 rounded-full bg-white/20 backdrop-blur-md border border-white/30 flex items-center justify-center hover:bg-white/30 transition-all shadow-lg"
-            onClick={() => setIsWishlisted(!isWishlisted)}
-            data-testid="button-wishlist-toggle"
-          >
-            <Heart className={`w-5 h-5 ${isWishlisted ? "fill-red-500 text-red-500" : "text-white"}`} />
-          </button>
+          <FavoriteButton
+            isWishlisted={isWishlisted}
+            onClick={handleToggleWishlist}
+            testId="button-wishlist-toggle"
+          />
 
           {images.length > 1 && (
             <div className="absolute bottom-4 left-0 right-0 flex justify-center gap-2">
@@ -239,7 +311,7 @@ export default function ProductDetail() {
         </Button>
       </div>
 
-      <BottomNav cartCount={0} />
+      <BottomNav cartCount={cartItems.length} />
     </div>
   );
 }

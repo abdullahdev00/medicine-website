@@ -56,7 +56,13 @@ export default function Home() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/wishlist", user?.id] });
-      toast({ title: "Added to wishlist", description: "Product added to your wishlist." });
+    },
+    onError: () => {
+      toast({
+        title: "Error",
+        description: "Failed to add to wishlist. Please try again.",
+        variant: "destructive",
+      });
     },
   });
 
@@ -66,7 +72,13 @@ export default function Home() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/wishlist", user?.id] });
-      toast({ title: "Removed from wishlist" });
+    },
+    onError: () => {
+      toast({
+        title: "Error",
+        description: "Failed to remove from wishlist. Please try again.",
+        variant: "destructive",
+      });
     },
   });
 
@@ -78,7 +90,13 @@ export default function Home() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/cart", user?.id] });
-      toast({ title: "Added to cart", description: "Product added to your cart." });
+    },
+    onError: () => {
+      toast({
+        title: "Error",
+        description: "Failed to add to cart. Please try again.",
+        variant: "destructive",
+      });
     },
   });
 
@@ -135,11 +153,16 @@ export default function Home() {
           </div>
           <Button
             size="icon"
-            className="rounded-full w-12 h-12 flex-shrink-0"
+            className="rounded-full w-12 h-12 flex-shrink-0 relative"
             onClick={() => setLocation("/cart")}
             data-testid="button-cart"
           >
             <ShoppingCart className="w-5 h-5" />
+            {cartItems.length > 0 && (
+              <span className="absolute -top-1 -right-1 bg-destructive text-destructive-foreground text-xs font-bold rounded-full w-5 h-5 flex items-center justify-center" data-testid="text-cart-count">
+                {cartItems.length}
+              </span>
+            )}
           </Button>
         </div>
         <motion.div

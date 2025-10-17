@@ -26,34 +26,47 @@ export default function Cart() {
 
   const updateQuantityMutation = useMutation({
     mutationFn: async ({ id, quantity }: { id: string; quantity: number }) => {
-      const res = await apiRequest(`/api/cart/${id}`, {
-        method: "PATCH",
-        body: JSON.stringify({ quantity }),
-      });
-      if (!res.ok) throw new Error("Failed to update quantity");
+      const res = await apiRequest("PATCH", `/api/cart/${id}`, { quantity });
       return res.json();
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/cart", user?.id] });
     },
+    onError: () => {
+      toast({
+        title: "Error",
+        description: "Failed to update quantity. Please try again.",
+        variant: "destructive",
+      });
+    },
   });
 
   const removeItemMutation = useMutation({
     mutationFn: async (id: string) => {
-      const res = await apiRequest(`/api/cart/${id}`, { method: "DELETE" });
-      if (!res.ok) throw new Error("Failed to remove item");
+      await apiRequest("DELETE", `/api/cart/${id}`);
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/cart", user?.id] });
-      toast({ title: "Item removed", description: "Item has been removed from your cart." });
+    },
+    onError: () => {
+      toast({
+        title: "Error",
+        description: "Failed to remove item. Please try again.",
+        variant: "destructive",
+      });
     },
   });
 
   const updateQuantity = (id: string, delta: number) => {
     const item = cartItems.find((item) => item.id === id);
     if (!item) return;
-    const newQuantity = Math.max(1, item.quantity + delta);
-    updateQuantityMutation.mutate({ id, quantity: newQuantity });
+    const newQuantity = item.quantity + delta;
+    
+    if (newQuantity <= 0) {
+      removeItemMutation.mutate(id);
+    } else {
+      updateQuantityMutation.mutate({ id, quantity: newQuantity });
+    }
   };
 
   const removeItem = (id: string) => {
@@ -130,7 +143,6 @@ export default function Cart() {
                               size="icon"
                               className="rounded-full h-8 w-8 hover:bg-background"
                               onClick={() => updateQuantity(item.id, -1)}
-                              disabled={item.quantity <= 1}
                               data-testid={`button-decrease-${item.id}`}
                             >
                               <Minus className="w-3 h-3" />
