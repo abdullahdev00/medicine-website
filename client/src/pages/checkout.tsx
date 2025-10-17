@@ -15,7 +15,7 @@ import { motion, AnimatePresence } from "framer-motion";
 export default function Checkout() {
   const [, setLocation] = useLocation();
   const { toast } = useToast();
-  const { user, isAuthenticated } = useAuth();
+  const { user, isAuthenticated, updateUser } = useAuth();
   const [selectedAddressId, setSelectedAddressId] = useState<string>("");
   const [paymentMethod, setPaymentMethod] = useState("cod");
   const [selectedPaymentAccount, setSelectedPaymentAccount] = useState<any>(null);
@@ -251,6 +251,19 @@ export default function Checkout() {
         if (!response.ok) {
           throw new Error("Failed to place order");
         }
+
+        // Fetch updated user data to refresh wallet balance
+        const userResponse = await fetch(`/api/users/${user?.id}`);
+        if (userResponse.ok) {
+          const updatedUserData = await userResponse.json();
+          updateUser(updatedUserData);
+        }
+
+        // Invalidate user cache to refresh wallet balance
+        queryClient.invalidateQueries({ queryKey: ["/api/users", user?.id] });
+        queryClient.invalidateQueries({ queryKey: ["/api/wallet", user?.id] });
+        queryClient.invalidateQueries({ queryKey: ["/api/orders", user?.id] });
+        queryClient.invalidateQueries({ queryKey: ["/api/cart", user?.id] });
 
         setTimeout(() => {
           setLocation("/order-success");

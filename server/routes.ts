@@ -1,8 +1,9 @@
 import type { Express } from "express";
 import { createServer, type Server } from "http";
 import { storage } from "./storage";
-import { insertProductSchema, insertWishlistItemSchema, insertOrderSchema, insertUserSchema, insertAddressSchema } from "@shared/schema";
+import { insertProductSchema, insertWishlistItemSchema, insertOrderSchema, insertUserSchema, insertAddressSchema, walletTransactions } from "@shared/schema";
 import { z } from "zod";
+import { db } from "../db";
 
 interface CartItem {
   id: string;

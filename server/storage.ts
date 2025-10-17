@@ -19,7 +19,7 @@ export interface IStorage {
   getUser(id: string): Promise<User | undefined>;
   getUserByEmail(email: string): Promise<User | undefined>;
   createUser(user: InsertUser): Promise<User>;
-  updateUser(id: string, updates: Partial<InsertUser>): Promise<User | undefined>;
+  updateUser(id: string, updates: Partial<Omit<User, 'id' | 'createdAt'>>): Promise<User | undefined>;
   
   getCategories(): Promise<Category[]>;
   createCategory(category: InsertCategory): Promise<Category>;
@@ -165,7 +165,7 @@ export class DatabaseStorage implements IStorage {
     return result[0];
   }
 
-  async updateUser(id: string, updates: Partial<InsertUser>): Promise<User | undefined> {
+  async updateUser(id: string, updates: Partial<Omit<User, 'id' | 'createdAt'>>): Promise<User | undefined> {
     if (updates.password) {
       updates.password = await bcrypt.hash(updates.password, 10);
     }
