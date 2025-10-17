@@ -4,6 +4,16 @@ import { storage } from "./storage";
 import { insertProductSchema, insertWishlistItemSchema, insertOrderSchema, insertUserSchema, insertAddressSchema } from "@shared/schema";
 import { z } from "zod";
 
+interface CartItem {
+  id: string;
+  userId: string;
+  productId: string;
+  quantity: number;
+  selectedPackage: { name: string; price: string };
+}
+
+const inMemoryCart = new Map<string, CartItem[]>();
+
 export async function registerRoutes(app: Express): Promise<Server> {
   app.get("/api/categories", async (req, res) => {
     try {
@@ -99,6 +109,101 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  app.get("/api/cart", async (req, res) => {
+    try {
+      const userId = req.query.userId as string;
+      if (!userId) {
+        return res.json([]);
+      }
+      
+      const userCart = inMemoryCart.get(userId) || [];
+      const cartWithProducts = await Promise.all(
+        userCart.map(async (item) => {
+          const product = await storage.getProductById(item.productId);
+          return { ...item, product };
+        })
+      );
+      
+      res.json(cartWithProducts);
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+
+  app.post("/api/cart", async (req, res) => {
+    try {
+      const { userId, productId, quantity, selectedPackage } = req.body;
+      
+      if (!userId || !productId || !quantity || !selectedPackage) {
+        return res.status(400).json({ message: "Missing required fields" });
+      }
+
+      const userCart = inMemoryCart.get(userId) || [];
+      const existingItemIndex = userCart.findIndex(
+        item => item.productId === productId && item.selectedPackage.name === selectedPackage.name
+      );
+
+      if (existingItemIndex >= 0) {
+        userCart[existingItemIndex].quantity += quantity;
+      } else {
+        const newItem: CartItem = {
+          id: `cart-${Date.now()}-${Math.random()}`,
+          userId,
+          productId,
+          quantity,
+          selectedPackage,
+        };
+        userCart.push(newItem);
+      }
+
+      inMemoryCart.set(userId, userCart);
+      res.json({ success: true, cart: userCart });
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+
+  app.delete("/api/cart/:id", async (req, res) => {
+    try {
+      const userId = req.query.userId as string;
+      if (!userId) {
+        return res.status(400).json({ message: "userId is required" });
+      }
+
+      const userCart = inMemoryCart.get(userId) || [];
+      const updatedCart = userCart.filter(item => item.id !== req.params.id);
+      inMemoryCart.set(userId, updatedCart);
+      
+      res.status(204).send();
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+
+  app.patch("/api/cart/:id", async (req, res) => {
+    try {
+      const userId = req.query.userId as string;
+      const { quantity } = req.body;
+      
+      if (!userId) {
+        return res.status(400).json({ message: "userId is required" });
+      }
+
+      const userCart = inMemoryCart.get(userId) || [];
+      const itemIndex = userCart.findIndex(item => item.id === req.params.id);
+      
+      if (itemIndex >= 0) {
+        userCart[itemIndex].quantity = quantity;
+        inMemoryCart.set(userId, userCart);
+        res.json(userCart[itemIndex]);
+      } else {
+        res.status(404).json({ message: "Cart item not found" });
+      }
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+
   app.get("/api/orders", async (req, res) => {
     try {
       const userId = req.query.userId as string;
@@ -137,7 +242,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         expectedDelivery,
       });
       
-      await storage.clearCart(validatedData.userId);
+      inMemoryCart.delete(validatedData.userId);
       
       res.status(201).json(order);
     } catch (error: any) {
