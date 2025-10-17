@@ -68,9 +68,8 @@ async function seed() {
     const adminPassword = await bcrypt.hash("admin123", 10);
     await db.insert(admins).values({
       fullName: "Platform Admin",
-      email: "admin@mediswift.pk",
+      email: "admin@example.com",
       password: adminPassword,
-      role: "admin",
       isActive: true,
     });
     console.log("✅ Admin created");
@@ -563,7 +562,7 @@ async function seed() {
     console.log("   Affiliate Code: 123456");
     console.log("   Wallet Balance: PKR 5,000");
     console.log("\n👤 Admin Account:");
-    console.log("   Email: admin@mediswift.pk");
+    console.log("   Email: admin@example.com");
     console.log("   Password: admin123");
     console.log("\n✨ The database now contains:");
     console.log(`   - 3 users (including test account)`);
