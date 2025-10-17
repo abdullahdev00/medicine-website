@@ -116,85 +116,83 @@ export default function Cart() {
           <h1 className="font-serif text-2xl font-bold">Shopping Cart</h1>
         </div>
 
-        <div className={cartItems.length === 0 ? "" : "max-h-[calc(100vh-350px)] overflow-y-auto scrollbar-hide"}>
-          <div className="space-y-4 pr-2">
-            {cartItems.length === 0 ? (
-              <EmptyState
-                icon={ShoppingCart}
-                title="Your Cart is Empty"
-                description="Looks like you haven't added any items to your cart yet. Start shopping and discover our quality medicines and health products."
-                actionLabel="Start Shopping"
-                onAction={() => setLocation("/home")}
-                testId="button-start-shopping"
-              />
-            ) : (
-              <>
-                {cartItems.map((item) => (
-                  <Card key={item.id} className="shadow-lg rounded-3xl border-none overflow-hidden">
-                    <CardContent className="p-5">
-                      <div className="flex gap-4">
-                        <div className="w-24 h-24 bg-gradient-to-br from-primary/10 to-accent/20 rounded-2xl flex items-center justify-center flex-shrink-0">
-                          <img
-                            src={item.product?.imageUrl}
-                            alt={item.product?.name}
-                            className="w-full h-full object-contain p-2"
-                            data-testid={`img-cart-item-${item.id}`}
-                          />
+        <div className={cartItems.length === 0 ? "space-y-4" : "max-h-[calc(100vh-400px)] overflow-y-auto scrollbar-hide space-y-4 pr-2"}>
+          {cartItems.length === 0 ? (
+            <EmptyState
+              icon={ShoppingCart}
+              title="Your Cart is Empty"
+              description="Looks like you haven't added any items to your cart yet. Start shopping and discover our quality medicines and health products."
+              actionLabel="Start Shopping"
+              onAction={() => setLocation("/home")}
+              testId="button-start-shopping"
+            />
+          ) : (
+            <>
+              {cartItems.map((item) => (
+                <Card key={item.id} className="shadow-lg rounded-3xl border-none overflow-hidden">
+                  <CardContent className="p-5">
+                    <div className="flex gap-4">
+                      <div className="w-24 h-24 bg-gradient-to-br from-primary/10 to-accent/20 rounded-2xl flex items-center justify-center flex-shrink-0">
+                        <img
+                          src={item.product?.imageUrl}
+                          alt={item.product?.name}
+                          className="w-full h-full object-contain p-2"
+                          data-testid={`img-cart-item-${item.id}`}
+                        />
+                      </div>
+                      <div className="flex-1 space-y-3">
+                        <div className="flex justify-between gap-2">
+                          <div>
+                            <h3 className="font-semibold text-base" data-testid={`text-cart-item-name-${item.id}`}>
+                              {item.product?.name}
+                            </h3>
+                            <p className="text-sm text-muted-foreground mt-1">{item.selectedPackage}</p>
+                          </div>
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="rounded-full h-9 w-9 text-destructive hover:bg-destructive/10"
+                            onClick={() => removeItem(item.id)}
+                            data-testid={`button-remove-${item.id}`}
+                          >
+                            <Trash2 className="w-4 h-4" />
+                          </Button>
                         </div>
-                        <div className="flex-1 space-y-3">
-                          <div className="flex justify-between gap-2">
-                            <div>
-                              <h3 className="font-semibold text-base" data-testid={`text-cart-item-name-${item.id}`}>
-                                {item.product?.name}
-                              </h3>
-                              <p className="text-sm text-muted-foreground mt-1">{item.selectedPackage}</p>
-                            </div>
+                        <div className="flex items-center justify-between">
+                          <div className="flex items-center gap-3 bg-accent/50 rounded-full p-1">
                             <Button
                               variant="ghost"
                               size="icon"
-                              className="rounded-full h-9 w-9 text-destructive hover:bg-destructive/10"
-                              onClick={() => removeItem(item.id)}
-                              data-testid={`button-remove-${item.id}`}
+                              className="rounded-full h-8 w-8 hover:bg-background"
+                              onClick={() => updateQuantity(item.id, -1)}
+                              data-testid={`button-decrease-${item.id}`}
                             >
-                              <Trash2 className="w-4 h-4" />
+                              <Minus className="w-3 h-3" />
+                            </Button>
+                            <span className="w-8 text-center font-bold" data-testid={`text-quantity-${item.id}`}>
+                              {item.quantity}
+                            </span>
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              className="rounded-full h-8 w-8 hover:bg-background"
+                              onClick={() => updateQuantity(item.id, 1)}
+                              data-testid={`button-increase-${item.id}`}
+                            >
+                              <Plus className="w-3 h-3" />
                             </Button>
                           </div>
-                          <div className="flex items-center justify-between">
-                            <div className="flex items-center gap-3 bg-accent/50 rounded-full p-1">
-                              <Button
-                                variant="ghost"
-                                size="icon"
-                                className="rounded-full h-8 w-8 hover:bg-background"
-                                onClick={() => updateQuantity(item.id, -1)}
-                                data-testid={`button-decrease-${item.id}`}
-                              >
-                                <Minus className="w-3 h-3" />
-                              </Button>
-                              <span className="w-8 text-center font-bold" data-testid={`text-quantity-${item.id}`}>
-                                {item.quantity}
-                              </span>
-                              <Button
-                                variant="ghost"
-                                size="icon"
-                                className="rounded-full h-8 w-8 hover:bg-background"
-                                onClick={() => updateQuantity(item.id, 1)}
-                                data-testid={`button-increase-${item.id}`}
-                              >
-                                <Plus className="w-3 h-3" />
-                              </Button>
-                            </div>
-                            <div className="font-bold text-lg text-primary" data-testid={`text-price-${item.id}`}>
-                              Rs {(parseFloat(item.product?.price || "0") * item.quantity).toFixed(0)}
-                            </div>
+                          <div className="font-bold text-lg text-primary" data-testid={`text-price-${item.id}`}>
+                            Rs {(parseFloat(item.product?.price || "0") * item.quantity).toFixed(0)}
                           </div>
                         </div>
                       </div>
-                    </CardContent>
-                  </Card>
-                ))}
-              </>
-            )}
-          </div>
+                    </div>
+                  </CardContent>
+                </Card>
+              ))}
+            </>
+          )}
         </div>
       </div>
 
