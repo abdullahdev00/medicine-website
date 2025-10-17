@@ -96,7 +96,7 @@ export default function Cart() {
   };
 
   const subtotal = cartItems.reduce(
-    (sum, item) => sum + parseFloat(item.product?.price || "0") * item.quantity,
+    (sum, item) => sum + parseFloat(item.selectedPackage?.price || "0") * item.quantity,
     0
   );
   const deliveryCharges = 150;
@@ -146,7 +146,7 @@ export default function Cart() {
                             <h3 className="font-semibold text-base" data-testid={`text-cart-item-name-${item.id}`}>
                               {item.product?.name}
                             </h3>
-                            <p className="text-sm text-muted-foreground mt-1">{item.selectedPackage}</p>
+                            <p className="text-sm text-muted-foreground mt-1">{item.selectedPackage?.name}</p>
                           </div>
                           <Button
                             variant="ghost"
@@ -183,7 +183,7 @@ export default function Cart() {
                             </Button>
                           </div>
                           <div className="font-bold text-lg text-primary" data-testid={`text-price-${item.id}`}>
-                            Rs {(parseFloat(item.product?.price || "0") * item.quantity).toFixed(0)}
+                            Rs {(parseFloat(item.selectedPackage?.price || "0") * item.quantity).toFixed(0)}
                           </div>
                         </div>
                       </div>
