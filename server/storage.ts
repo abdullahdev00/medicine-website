@@ -87,7 +87,7 @@ export class DatabaseStorage implements IStorage {
       categoryId: (row as any).category_id,
       imageUrl: (row as any).image_url,
       variants: (row as any).variants,
-      inStock: Boolean((row as any).in_stock),
+      inStock: (row as any).in_stock === true || (row as any).in_stock === 't',
       createdAt: (row as any).created_at,
     })) as Product[];
   }
@@ -105,7 +105,7 @@ export class DatabaseStorage implements IStorage {
       categoryId: (row as any).category_id,
       imageUrl: (row as any).image_url,
       variants: (row as any).variants,
-      inStock: Boolean((row as any).in_stock),
+      inStock: (row as any).in_stock === true || (row as any).in_stock === 't',
       createdAt: (row as any).created_at,
     } as Product;
   }
