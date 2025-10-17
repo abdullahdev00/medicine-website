@@ -19,7 +19,7 @@ async function seed() {
       city: "Karachi",
       province: "Sindh",
       postalCode: "75500",
-      affiliateCode: "TEST2024",
+      affiliateCode: "123456",
       walletBalance: "5000.00",
       totalEarnings: "12500.00",
       pendingEarnings: "2500.00",
@@ -36,7 +36,7 @@ async function seed() {
       city: "Lahore",
       province: "Punjab",
       postalCode: "54000",
-      affiliateCode: "AHMED2024",
+      affiliateCode: "789012",
       referredBy: testUser.id,
       walletBalance: "2500.00",
       totalEarnings: "8500.00",
@@ -54,7 +54,7 @@ async function seed() {
       city: "Islamabad",
       province: "Islamabad Capital Territory",
       postalCode: "44000",
-      affiliateCode: "FATIMA2024",
+      affiliateCode: "345678",
       referredBy: testUser.id,
       walletBalance: "3200.00",
       totalEarnings: "6800.00",
@@ -387,7 +387,7 @@ async function seed() {
         totalPrice: "150.00",
         deliveryAddress: "456 Green Avenue, Lahore, Punjab - 54000",
         paymentMethod: "COD",
-        usedAffiliateCode: "TEST2024",
+        usedAffiliateCode: "123456",
         affiliateUserId: testUser.id,
         affiliateCommission: "15.00",
         status: "delivered",
@@ -415,7 +415,7 @@ async function seed() {
         deliveryAddress: "789 Park Road, Islamabad, Islamabad Capital Territory - 44000",
         paymentMethod: "wallet",
         paidFromWallet: "1290.00",
-        usedAffiliateCode: "TEST2024",
+        usedAffiliateCode: "123456",
         affiliateUserId: testUser.id,
         affiliateCommission: "129.00",
         status: "delivered",
@@ -549,7 +549,7 @@ async function seed() {
     console.log("\n📝 Test Account:");
     console.log("   Email: test@example.com");
     console.log("   Password: test123");
-    console.log("   Affiliate Code: TEST2024");
+    console.log("   Affiliate Code: 123456");
     console.log("   Wallet Balance: PKR 5,000");
     console.log("\n✨ The database now contains:");
     console.log(`   - 3 users (including test account)`);

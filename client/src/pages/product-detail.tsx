@@ -254,7 +254,7 @@ export default function ProductDetail() {
       <div className="px-4 pt-12 space-y-6">
         <div className="flex items-baseline gap-2">
           <p className="font-serif text-4xl font-bold text-primary" data-testid="text-price">
-            Rs {unitPrice.toFixed(0)}
+            {unitPrice.toFixed(0)}
           </p>
         </div>
 
@@ -270,7 +270,7 @@ export default function ProductDetail() {
                   onClick={() => setSelectedPackage(index)}
                   data-testid={`button-package-${index}`}
                 >
-                  {option.name} - Rs {parseFloat(option.price).toFixed(0)}
+                  {option.name} - {parseFloat(option.price).toFixed(0)}
                 </Button>
               ))}
             </div>

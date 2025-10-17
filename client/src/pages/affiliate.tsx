@@ -46,10 +46,6 @@ export default function AffiliatePage() {
   const handleCopy = () => {
     navigator.clipboard.writeText(couponCode);
     setCopied(true);
-    toast({
-      title: "Copied!",
-      description: "Referral code copied to clipboard.",
-    });
     setTimeout(() => setCopied(false), 2000);
   };
 
