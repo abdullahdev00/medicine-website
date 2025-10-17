@@ -28,10 +28,6 @@ export default function Login() {
       const response = await apiRequest('POST', '/api/auth/login', { email, password });
       const user = await response.json();
       login(user);
-      toast({
-        title: "Welcome back!",
-        description: "You have successfully logged in.",
-      });
       setLocation("/home");
     } catch (error: any) {
       const errorMessage = error.message || "Something went wrong. Please try again.";

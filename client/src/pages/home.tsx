@@ -121,12 +121,6 @@ export default function Home() {
       
       return { previousCart };
     },
-    onSuccess: () => {
-      toast({
-        title: "Added to cart",
-        description: "Item added successfully",
-      });
-    },
     onError: (err, variables, context: any) => {
       queryClient.setQueryData(["/api/cart", user?.id], context.previousCart);
       toast({

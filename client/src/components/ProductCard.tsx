@@ -1,7 +1,8 @@
+import { useState } from "react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { ShoppingCart, Star } from "lucide-react";
-import { motion } from "framer-motion";
+import { ShoppingCart, Star, Check } from "lucide-react";
+import { motion, AnimatePresence } from "framer-motion";
 import { FavoriteButton } from "@/components/FavoriteButton";
 import type { Product } from "@shared/schema";
 
@@ -13,10 +14,18 @@ interface ProductCardProps {
 }
 
 export function ProductCard({ product, onAddToCart, onToggleWishlist, isWishlisted }: ProductCardProps) {
+  const [isAdded, setIsAdded] = useState(false);
   const rating = parseFloat(product.rating || "0");
   const lowestPrice = product.variants && product.variants.length > 0
     ? Math.min(...product.variants.map(v => parseFloat(v.price)))
     : 0;
+
+  const handleAddToCart = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    setIsAdded(true);
+    onAddToCart?.();
+    setTimeout(() => setIsAdded(false), 1500);
+  };
   
   return (
     <motion.div
@@ -69,26 +78,50 @@ export function ProductCard({ product, onAddToCart, onToggleWishlist, isWishlist
             <span className="text-xs text-muted-foreground ml-1">({rating.toFixed(1)})</span>
           </div>
 
-          <Button
-            className="w-full rounded-full h-12 flex items-center justify-between px-5 gap-3 shadow-lg"
-            onClick={(e) => {
-              e.stopPropagation();
-              onAddToCart?.();
-            }}
-            disabled={!product.inStock}
-            data-testid={`button-add-to-cart-${product.id}`}
+          <motion.div
+            whileTap={{ scale: 0.95 }}
+            transition={{ duration: 0.1 }}
           >
-            <div className="flex items-center gap-2 flex-shrink-0">
-              <ShoppingCart className="w-4 h-4" />
-              <span className="font-semibold">Add</span>
-            </div>
-            <div className="flex items-center gap-3 flex-shrink-0">
-              <div className="h-6 w-px bg-primary-foreground/30" />
-              <span className="text-lg font-bold font-mono tabular-nums" data-testid={`text-price-${product.id}`}>
-                {lowestPrice.toFixed(0)}
-              </span>
-            </div>
-          </Button>
+            <Button
+              className="w-full rounded-full h-12 flex items-center justify-between px-5 gap-3 shadow-lg relative overflow-hidden"
+              onClick={handleAddToCart}
+              disabled={!product.inStock}
+              data-testid={`button-add-to-cart-${product.id}`}
+            >
+              <AnimatePresence mode="wait">
+                {isAdded ? (
+                  <motion.div
+                    key="added"
+                    initial={{ scale: 0, opacity: 0 }}
+                    animate={{ scale: 1, opacity: 1 }}
+                    exit={{ scale: 0, opacity: 0 }}
+                    transition={{ duration: 0.2 }}
+                    className="absolute inset-0 flex items-center justify-center bg-primary"
+                  >
+                    <Check className="w-6 h-6 text-primary-foreground" />
+                  </motion.div>
+                ) : (
+                  <motion.div
+                    key="normal"
+                    initial={{ opacity: 1 }}
+                    exit={{ opacity: 0 }}
+                    className="w-full flex items-center justify-between"
+                  >
+                    <div className="flex items-center gap-2 flex-shrink-0">
+                      <ShoppingCart className="w-4 h-4" />
+                      <span className="font-semibold">Add</span>
+                    </div>
+                    <div className="flex items-center gap-3 flex-shrink-0">
+                      <div className="h-6 w-px bg-primary-foreground/30" />
+                      <span className="text-lg font-bold font-mono tabular-nums" data-testid={`text-price-${product.id}`}>
+                        {lowestPrice.toFixed(0)}
+                      </span>
+                    </div>
+                  </motion.div>
+                )}
+              </AnimatePresence>
+            </Button>
+          </motion.div>
         </CardContent>
       </Card>
     </motion.div>

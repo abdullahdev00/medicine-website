@@ -65,12 +65,22 @@ export class DatabaseStorage implements IStorage {
   }
 
   async createUser(insertUser: InsertUser): Promise<User> {
-    const affiliateCode = Math.random().toString(36).substring(2, 10).toUpperCase();
+    let affiliateCode: string;
+    let isUnique = false;
+    
+    while (!isUnique) {
+      affiliateCode = Math.floor(100000 + Math.random() * 900000).toString();
+      const existing = await db.select().from(users).where(eq(users.affiliateCode, affiliateCode)).limit(1);
+      if (existing.length === 0) {
+        isUnique = true;
+      }
+    }
+    
     const hashedPassword = await bcrypt.hash(insertUser.password, 10);
     const result = await db.insert(users).values({ 
       ...insertUser, 
       password: hashedPassword,
-      affiliateCode 
+      affiliateCode: affiliateCode!
     }).returning();
     return result[0];
   }

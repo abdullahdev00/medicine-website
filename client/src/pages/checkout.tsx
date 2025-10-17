@@ -10,6 +10,7 @@ import { AuthDialog } from "@/components/AuthDialog";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { Label } from "@/components/ui/label";
+import { motion, AnimatePresence } from "framer-motion";
 
 export default function Checkout() {
   const [, setLocation] = useLocation();
@@ -23,6 +24,7 @@ export default function Checkout() {
   const [isProcessing, setIsProcessing] = useState(false);
   const [showAuthDialog, setShowAuthDialog] = useState(false);
   const [dragActive, setDragActive] = useState(false);
+  const [copiedId, setCopiedId] = useState<string | null>(null);
 
   const { data: cartItems = [] } = useQuery<any[]>({
     queryKey: ["/api/cart", user?.id],
@@ -89,12 +91,10 @@ export default function Checkout() {
   const walletBalance = parseFloat(user?.walletBalance || "0");
   const needsPaymentRequest = paymentMethod === "online" && walletBalance < total;
 
-  const copyToClipboard = (text: string, label: string) => {
+  const copyToClipboard = (text: string, accountId: string) => {
     navigator.clipboard.writeText(text);
-    toast({
-      title: "Copied!",
-      description: `${label} copied to clipboard`,
-    });
+    setCopiedId(accountId);
+    setTimeout(() => setCopiedId(null), 2000);
   };
 
   const handleDrag = useCallback((e: React.DragEvent) => {
@@ -440,11 +440,31 @@ export default function Checkout() {
                                   size="sm"
                                   onClick={(e) => {
                                     e.stopPropagation();
-                                    copyToClipboard(account.accountNumber, "Account number");
+                                    copyToClipboard(account.accountNumber, account.id);
                                   }}
                                   data-testid={`button-copy-${account.id}`}
                                 >
-                                  <Copy className="w-4 h-4" />
+                                  <AnimatePresence mode="wait">
+                                    {copiedId === account.id ? (
+                                      <motion.div
+                                        key="check"
+                                        initial={{ scale: 0 }}
+                                        animate={{ scale: 1 }}
+                                        exit={{ scale: 0 }}
+                                        transition={{ duration: 0.2 }}
+                                      >
+                                        <Check className="w-4 h-4 text-green-600" />
+                                      </motion.div>
+                                    ) : (
+                                      <motion.div
+                                        key="copy"
+                                        initial={{ scale: 1 }}
+                                        exit={{ scale: 0 }}
+                                      >
+                                        <Copy className="w-4 h-4" />
+                                      </motion.div>
+                                    )}
+                                  </AnimatePresence>
                                 </Button>
                               </div>
                             </div>

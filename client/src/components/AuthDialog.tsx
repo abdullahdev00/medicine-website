@@ -32,27 +32,9 @@ export function AuthDialog({ open, onOpenChange, onSuccess }: AuthDialogProps) {
     const password = formData.get("password") as string;
 
     try {
-      const response = await apiRequest("/api/auth/login", {
-        method: "POST",
-        body: JSON.stringify({ email, password }),
-      });
-
-      if (!response.ok) {
-        const error = await response.json();
-        toast({
-          title: "Login failed",
-          description: error.message || "Invalid email or password",
-          variant: "destructive",
-        });
-        return;
-      }
-
+      const response = await apiRequest("POST", "/api/auth/login", { email, password });
       const user = await response.json();
       login(user);
-      toast({
-        title: "Welcome back!",
-        description: "You have successfully logged in.",
-      });
       onOpenChange(false);
       onSuccess?.();
     } catch (error) {
@@ -76,21 +58,7 @@ export function AuthDialog({ open, onOpenChange, onSuccess }: AuthDialogProps) {
     const password = formData.get("password") as string;
 
     try {
-      const response = await apiRequest("/api/auth/register", {
-        method: "POST",
-        body: JSON.stringify({ fullName, email, password }),
-      });
-
-      if (!response.ok) {
-        const error = await response.json();
-        toast({
-          title: "Signup failed",
-          description: error.message || "Could not create account",
-          variant: "destructive",
-        });
-        return;
-      }
-
+      const response = await apiRequest("POST", "/api/auth/register", { fullName, email, password });
       const user = await response.json();
       login(user);
       toast({

@@ -113,11 +113,6 @@ export default function ProductDetail() {
         }];
       });
       
-      toast({
-        title: "Added to cart",
-        description: "Item added successfully",
-      });
-      
       return { previousCart };
     },
     onError: (err, variables, context: any) => {
