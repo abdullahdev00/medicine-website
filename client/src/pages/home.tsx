@@ -51,11 +51,7 @@ export default function Home() {
   const addToWishlistMutation = useMutation({
     mutationFn: async (productId: string) => {
       if (!user) throw new Error("Not authenticated");
-      const res = await apiRequest("/api/wishlist", {
-        method: "POST",
-        body: JSON.stringify({ userId: user.id, productId }),
-      });
-      if (!res.ok) throw new Error("Failed to add to wishlist");
+      const res = await apiRequest("POST", "/api/wishlist", { userId: user.id, productId });
       return res.json();
     },
     onSuccess: () => {
@@ -66,8 +62,7 @@ export default function Home() {
 
   const removeFromWishlistMutation = useMutation({
     mutationFn: async (wishlistItemId: string) => {
-      const res = await apiRequest(`/api/wishlist/${wishlistItemId}`, { method: "DELETE" });
-      if (!res.ok) throw new Error("Failed to remove from wishlist");
+      await apiRequest("DELETE", `/api/wishlist/${wishlistItemId}`);
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/wishlist", user?.id] });
@@ -78,11 +73,7 @@ export default function Home() {
   const addToCartMutation = useMutation({
     mutationFn: async (productId: string) => {
       if (!user) throw new Error("Not authenticated");
-      const res = await apiRequest("/api/cart", {
-        method: "POST",
-        body: JSON.stringify({ userId: user.id, productId, quantity: 1 }),
-      });
-      if (!res.ok) throw new Error("Failed to add to cart");
+      const res = await apiRequest("POST", "/api/cart", { userId: user.id, productId, quantity: 1 });
       return res.json();
     },
     onSuccess: () => {

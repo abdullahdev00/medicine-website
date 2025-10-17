@@ -68,7 +68,7 @@ export class DatabaseStorage implements IStorage {
   async getProducts(): Promise<Product[]> {
     const result = await db.execute<Product>(
       sql`SELECT id::text as id, name, category_id::text as category_id, price, description, 
-          image_url, rating, package_options, in_stock, created_at 
+          image_url, rating, package_options, in_stock::boolean as in_stock, created_at 
           FROM products ORDER BY created_at DESC`
     );
     return result.rows.map(row => ({
@@ -76,7 +76,7 @@ export class DatabaseStorage implements IStorage {
       categoryId: (row as any).category_id,
       imageUrl: (row as any).image_url,
       packageOptions: (row as any).package_options,
-      inStock: (row as any).in_stock,
+      inStock: Boolean((row as any).in_stock),
       createdAt: (row as any).created_at,
     })) as Product[];
   }
@@ -84,7 +84,7 @@ export class DatabaseStorage implements IStorage {
   async getProductById(id: string): Promise<Product | undefined> {
     const result = await db.execute<Product>(
       sql`SELECT id::text as id, name, category_id::text as category_id, price, description, 
-          image_url, rating, package_options, in_stock, created_at 
+          image_url, rating, package_options, in_stock::boolean as in_stock, created_at 
           FROM products WHERE id = ${id}::uuid LIMIT 1`
     );
     if (result.rows.length === 0) return undefined;
@@ -94,7 +94,7 @@ export class DatabaseStorage implements IStorage {
       categoryId: (row as any).category_id,
       imageUrl: (row as any).image_url,
       packageOptions: (row as any).package_options,
-      inStock: (row as any).in_stock,
+      inStock: Boolean((row as any).in_stock),
       createdAt: (row as any).created_at,
     } as Product;
   }
