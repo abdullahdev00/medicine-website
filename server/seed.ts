@@ -1,5 +1,5 @@
 import { db } from "../db";
-import { users, categories, products, addresses, cartItems, wishlistItems, orders, walletTransactions, partners, referralStats } from "@shared/schema";
+import { users, categories, products, addresses, wishlistItems, orders, walletTransactions, partners, referralStats } from "@shared/schema";
 import bcrypt from "bcrypt";
 
 async function seed() {
@@ -100,126 +100,156 @@ async function seed() {
 
     console.log("✅ Categories created");
 
-    // Create products
+    // Create products with variants
     const productsList = await db.insert(products).values([
       {
         name: "Panadol Extra",
         categoryId: medicineCategories[0].id,
-        price: "150.00",
+        variants: [
+          { name: "10 tablets", price: "100" },
+          { name: "20 tablets", price: "180" },
+          { name: "30 tablets", price: "250" }
+        ],
         description: "Fast relief from headaches, fever and body pain. Contains paracetamol and caffeine.",
         imageUrl: "https://images.unsplash.com/photo-1584308666744-24d5c474f2ae?w=400",
         rating: "4.50",
-        packageOptions: ["10 tablets", "20 tablets", "30 tablets"],
         inStock: true,
       },
       {
         name: "Brufen 400mg",
         categoryId: medicineCategories[0].id,
-        price: "180.00",
+        variants: [
+          { name: "10 tablets", price: "150" },
+          { name: "20 tablets", price: "280" }
+        ],
         description: "Anti-inflammatory pain reliever for muscle pain, arthritis and fever.",
         imageUrl: "https://images.unsplash.com/photo-1587854692152-cbe660dbde88?w=400",
         rating: "4.30",
-        packageOptions: ["10 tablets", "20 tablets"],
         inStock: true,
       },
       {
         name: "Vitamin C 1000mg",
         categoryId: medicineCategories[1].id,
-        price: "350.00",
+        variants: [
+          { name: "30 tablets", price: "350" },
+          { name: "60 tablets", price: "650" },
+          { name: "90 tablets", price: "900" }
+        ],
         description: "Boosts immunity and supports overall health. Essential vitamin supplement.",
         imageUrl: "https://images.unsplash.com/photo-1550572017-4691e2e68b2f?w=400",
         rating: "4.70",
-        packageOptions: ["30 tablets", "60 tablets", "90 tablets"],
         inStock: true,
       },
       {
         name: "Multivitamin Complex",
         categoryId: medicineCategories[1].id,
-        price: "450.00",
+        variants: [
+          { name: "30 capsules", price: "450" },
+          { name: "60 capsules", price: "850" }
+        ],
         description: "Complete daily multivitamin with minerals for overall wellness.",
         imageUrl: "https://images.unsplash.com/photo-1607619056574-7b8d3ee536b2?w=400",
         rating: "4.60",
-        packageOptions: ["30 capsules", "60 capsules"],
         inStock: true,
       },
       {
         name: "Actifed Syrup",
         categoryId: medicineCategories[2].id,
-        price: "280.00",
+        variants: [
+          { name: "60ml", price: "280" },
+          { name: "120ml", price: "480" }
+        ],
         description: "Relief from cold, flu symptoms and nasal congestion.",
         imageUrl: "https://images.unsplash.com/photo-1631549916768-4119b2e5f926?w=400",
         rating: "4.40",
-        packageOptions: ["60ml", "120ml"],
         inStock: true,
       },
       {
         name: "Strepsils Lozenges",
         categoryId: medicineCategories[2].id,
-        price: "120.00",
+        variants: [
+          { name: "12 lozenges", price: "120" },
+          { name: "24 lozenges", price: "220" }
+        ],
         description: "Soothing relief for sore throat and mouth infections.",
         imageUrl: "https://images.unsplash.com/photo-1471864190281-a93a3070b6de?w=400",
         rating: "4.20",
-        packageOptions: ["12 lozenges", "24 lozenges"],
         inStock: true,
       },
       {
         name: "First Aid Kit",
         categoryId: medicineCategories[3].id,
-        price: "950.00",
+        variants: [
+          { name: "Basic", price: "950" },
+          { name: "Advanced", price: "1850" }
+        ],
         description: "Complete first aid kit with bandages, antiseptics and essential supplies.",
         imageUrl: "https://images.unsplash.com/photo-1603398938378-e54eab446dde?w=400",
         rating: "4.80",
-        packageOptions: ["Basic", "Advanced"],
         inStock: true,
       },
       {
         name: "Dettol Antiseptic",
         categoryId: medicineCategories[3].id,
-        price: "220.00",
+        variants: [
+          { name: "100ml", price: "120" },
+          { name: "250ml", price: "220" },
+          { name: "500ml", price: "380" }
+        ],
         description: "Antiseptic liquid for wound cleaning and disinfection.",
         imageUrl: "https://images.unsplash.com/photo-1585435557343-3b092031a831?w=400",
         rating: "4.50",
-        packageOptions: ["100ml", "250ml", "500ml"],
         inStock: true,
       },
       {
         name: "Glucometer Kit",
         categoryId: medicineCategories[4].id,
-        price: "1500.00",
+        variants: [
+          { name: "Kit + 25 strips", price: "1500" },
+          { name: "Kit + 50 strips", price: "2200" },
+          { name: "Kit + 100 strips", price: "3500" }
+        ],
         description: "Digital blood glucose monitoring system with test strips.",
         imageUrl: "https://images.unsplash.com/photo-1615461066841-6116e61058f4?w=400",
         rating: "4.60",
-        packageOptions: ["Kit + 25 strips", "Kit + 50 strips", "Kit + 100 strips"],
         inStock: true,
       },
       {
         name: "Insulin Needles",
         categoryId: medicineCategories[4].id,
-        price: "800.00",
+        variants: [
+          { name: "10 pieces", price: "400" },
+          { name: "30 pieces", price: "1000" },
+          { name: "50 pieces", price: "1500" }
+        ],
         description: "Sterile insulin syringes for diabetes management.",
         imageUrl: "https://images.unsplash.com/photo-1584362917165-526a968579e8?w=400",
         rating: "4.40",
-        packageOptions: ["10 pieces", "30 pieces", "50 pieces"],
         inStock: true,
       },
       {
         name: "Aspirin 75mg",
         categoryId: medicineCategories[5].id,
-        price: "200.00",
+        variants: [
+          { name: "30 tablets", price: "200" },
+          { name: "60 tablets", price: "350" },
+          { name: "90 tablets", price: "480" }
+        ],
         description: "Low-dose aspirin for heart health and blood thinning.",
         imageUrl: "https://images.unsplash.com/photo-1550340499-a6c60fc8287c?w=400",
         rating: "4.50",
-        packageOptions: ["30 tablets", "60 tablets", "90 tablets"],
         inStock: true,
       },
       {
         name: "Omega-3 Fish Oil",
         categoryId: medicineCategories[5].id,
-        price: "650.00",
+        variants: [
+          { name: "30 capsules", price: "650" },
+          { name: "60 capsules", price: "1150" }
+        ],
         description: "Essential fatty acids for cardiovascular and brain health.",
         imageUrl: "https://images.unsplash.com/photo-1505751172876-fa1923c5c528?w=400",
         rating: "4.70",
-        packageOptions: ["30 capsules", "60 capsules"],
         inStock: true,
       },
     ]).returning();
@@ -259,30 +289,6 @@ async function seed() {
 
     console.log("✅ Addresses created");
 
-    // Create cart items for test user
-    await db.insert(cartItems).values([
-      {
-        userId: testUser.id,
-        productId: productsList[0].id,
-        quantity: 2,
-        selectedPackage: "20 tablets",
-      },
-      {
-        userId: testUser.id,
-        productId: productsList[2].id,
-        quantity: 1,
-        selectedPackage: "60 tablets",
-      },
-      {
-        userId: testUser.id,
-        productId: productsList[7].id,
-        quantity: 1,
-        selectedPackage: "250ml",
-      },
-    ]);
-
-    console.log("✅ Cart items created");
-
     // Create wishlist items for test user
     await db.insert(wishlistItems).values([
       {
@@ -314,18 +320,18 @@ async function seed() {
             productId: productsList[0].id,
             name: productsList[0].name,
             quantity: 2,
-            price: "150.00",
-            selectedPackage: "20 tablets",
+            price: "180",
+            variantName: "20 tablets",
           },
           {
             productId: productsList[4].id,
             name: productsList[4].name,
             quantity: 1,
-            price: "280.00",
-            selectedPackage: "120ml",
+            price: "480",
+            variantName: "120ml",
           },
         ],
-        totalPrice: "580.00",
+        totalPrice: "1140.00",
         deliveryAddress: "123 Main Street, Block A, Karachi, Sindh - 75500",
         paymentMethod: "COD",
         status: "delivered",
@@ -338,14 +344,14 @@ async function seed() {
             productId: productsList[2].id,
             name: productsList[2].name,
             quantity: 1,
-            price: "350.00",
-            selectedPackage: "60 tablets",
+            price: "650",
+            variantName: "60 tablets",
           },
         ],
-        totalPrice: "350.00",
+        totalPrice: "650.00",
         deliveryAddress: "456 Business Tower, I.I. Chundrigar Road, Karachi, Sindh - 74000",
         paymentMethod: "wallet",
-        paidFromWallet: "350.00",
+        paidFromWallet: "650.00",
         status: "shipped",
         expectedDelivery: new Date(Date.now() + 2 * 24 * 60 * 60 * 1000),
       },
@@ -356,11 +362,11 @@ async function seed() {
             productId: productsList[10].id,
             name: productsList[10].name,
             quantity: 2,
-            price: "200.00",
-            selectedPackage: "60 tablets",
+            price: "350",
+            variantName: "60 tablets",
           },
         ],
-        totalPrice: "400.00",
+        totalPrice: "700.00",
         deliveryAddress: "123 Main Street, Block A, Karachi, Sindh - 75500",
         paymentMethod: "bank_transfer",
         paymentInfo: "Bank: HBL, Account: ****1234",
@@ -374,16 +380,16 @@ async function seed() {
             productId: productsList[1].id,
             name: productsList[1].name,
             quantity: 1,
-            price: "180.00",
-            selectedPackage: "10 tablets",
+            price: "150",
+            variantName: "10 tablets",
           },
         ],
-        totalPrice: "180.00",
+        totalPrice: "150.00",
         deliveryAddress: "456 Green Avenue, Lahore, Punjab - 54000",
         paymentMethod: "COD",
         usedAffiliateCode: "TEST2024",
         affiliateUserId: testUser.id,
-        affiliateCommission: "18.00",
+        affiliateCommission: "15.00",
         status: "delivered",
         expectedDelivery: new Date(Date.now() - 3 * 24 * 60 * 60 * 1000),
       },
@@ -394,24 +400,24 @@ async function seed() {
             productId: productsList[3].id,
             name: productsList[3].name,
             quantity: 1,
-            price: "450.00",
-            selectedPackage: "60 capsules",
+            price: "850",
+            variantName: "60 capsules",
           },
           {
             productId: productsList[5].id,
             name: productsList[5].name,
             quantity: 2,
-            price: "120.00",
-            selectedPackage: "24 lozenges",
+            price: "220",
+            variantName: "24 lozenges",
           },
         ],
-        totalPrice: "690.00",
+        totalPrice: "1290.00",
         deliveryAddress: "789 Park Road, Islamabad, Islamabad Capital Territory - 44000",
         paymentMethod: "wallet",
-        paidFromWallet: "690.00",
+        paidFromWallet: "1290.00",
         usedAffiliateCode: "TEST2024",
         affiliateUserId: testUser.id,
-        affiliateCommission: "69.00",
+        affiliateCommission: "129.00",
         status: "delivered",
         expectedDelivery: new Date(Date.now() - 7 * 24 * 60 * 60 * 1000),
       },
@@ -438,7 +444,7 @@ async function seed() {
       {
         userId: testUser.id,
         type: "debit",
-        amount: "350.00",
+        amount: "650.00",
         description: "Payment for order #" + ordersList[1].id.slice(0, 8),
         orderId: ordersList[1].id,
         status: "completed",
@@ -453,7 +459,7 @@ async function seed() {
       {
         userId: testUser.id,
         type: "credit",
-        amount: "87.00",
+        amount: "144.00",
         description: "Affiliate commission",
         status: "pending",
       },
@@ -497,7 +503,7 @@ async function seed() {
         userId: testUser.id,
         totalReferrals: 2,
         totalOrders: 2,
-        totalCommission: "87.00",
+        totalCommission: "144.00",
       },
       {
         userId: user2.id,
@@ -524,14 +530,14 @@ async function seed() {
     console.log("\n✨ The database now contains:");
     console.log(`   - 3 users (including test account)`);
     console.log(`   - 6 categories`);
-    console.log(`   - 12 products`);
+    console.log(`   - 12 products with variants`);
     console.log(`   - 3 addresses`);
-    console.log(`   - 3 cart items`);
     console.log(`   - 4 wishlist items`);
     console.log(`   - 5 orders`);
     console.log(`   - 7 wallet transactions`);
     console.log(`   - 1 partner`);
     console.log(`   - 3 referral stats`);
+    console.log("\n💡 Note: Cart is now stored in localStorage (browser storage)");
 
   } catch (error) {
     console.error("❌ Error seeding database:", error);
