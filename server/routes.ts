@@ -497,9 +497,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.post("/api/payment-requests", async (req, res) => {
     try {
+      console.log("Payment request received:", req.body);
       const request = await storage.createPaymentRequest(req.body);
       res.status(201).json(request);
     } catch (error: any) {
+      console.error("Payment request error:", error);
       res.status(500).json({ message: error.message });
     }
   });

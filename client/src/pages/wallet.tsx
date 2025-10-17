@@ -7,7 +7,7 @@ import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sh
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
-import { ArrowLeft, Wallet, ArrowDownLeft, ArrowUpRight, Plus, Receipt, Clock, CheckCircle, XCircle, Download, Upload, X, Copy } from "lucide-react";
+import { ArrowLeft, Wallet, ArrowDownLeft, ArrowUpRight, Plus, Receipt, Clock, CheckCircle, XCircle, Download, Upload, X, Copy, RefreshCw } from "lucide-react";
 import { motion } from "framer-motion";
 import { EmptyState } from "@/components/EmptyState";
 import { useAuth } from "@/contexts/AuthContext";
@@ -34,6 +34,7 @@ export default function WalletPage() {
   // Withdraw states
   const [withdrawAmount, setWithdrawAmount] = useState("");
   const [selectedWithdrawAccount, setSelectedWithdrawAccount] = useState<any>(null);
+  const [isRefreshing, setIsRefreshing] = useState(false);
 
   const { data: userData, isLoading: loadingUser } = useQuery({
     queryKey: ["/api/users", user?.id],
@@ -127,6 +128,16 @@ export default function WalletPage() {
         variant: "destructive",
       });
     }
+  };
+
+  const handleRefresh = async () => {
+    setIsRefreshing(true);
+    await Promise.all([
+      queryClient.invalidateQueries({ queryKey: ["/api/users", user?.id] }),
+      queryClient.invalidateQueries({ queryKey: ["/api/wallet", user?.id] }),
+      queryClient.invalidateQueries({ queryKey: ["/api/payment-requests", user?.id] }),
+    ]);
+    setTimeout(() => setIsRefreshing(false), 500);
   };
 
   const addAmountMutation = useMutation({
@@ -252,12 +263,22 @@ export default function WalletPage() {
             >
               <ArrowLeft className="w-6 h-6" />
             </Button>
-            <div>
+            <div className="flex-1">
               <h1 className="font-serif text-2xl font-bold">My Wallet</h1>
               <p className="text-sm text-muted-foreground mt-1">
                 Manage your balance
               </p>
             </div>
+            <Button
+              variant="ghost"
+              size="icon"
+              className="rounded-full w-10 h-10"
+              onClick={handleRefresh}
+              disabled={isRefreshing}
+              data-testid="button-refresh"
+            >
+              <RefreshCw className={`w-5 h-5 ${isRefreshing ? 'animate-spin' : ''}`} />
+            </Button>
           </div>
         </div>
       </div>
@@ -277,7 +298,7 @@ export default function WalletPage() {
                 <div>
                   <p className="text-sm text-white/80 font-medium">Total Balance</p>
                   <h2 className="text-4xl font-bold mt-1">
-                    Rs. {parseFloat(totalBalance).toLocaleString()}
+                    {parseFloat(totalBalance).toLocaleString()}
                   </h2>
                 </div>
               </div>
@@ -358,7 +379,7 @@ export default function WalletPage() {
                                 }`}
                                 data-testid={`text-amount-${transaction.id}`}
                               >
-                                {transaction.type === "credit" ? "+" : "-"}Rs. {parseFloat(transaction.amount).toLocaleString()}
+                                {transaction.type === "credit" ? "+" : "-"}{parseFloat(transaction.amount).toLocaleString()}
                               </p>
                               <p className="text-sm text-muted-foreground capitalize">{transaction.status}</p>
                             </div>
@@ -401,7 +422,7 @@ export default function WalletPage() {
                                 </div>
                               </div>
                               <div className="text-right">
-                                <p className="font-bold text-lg text-primary">Rs. {parseFloat(request.amount).toLocaleString()}</p>
+                                <p className="font-bold text-lg text-primary">{parseFloat(request.amount).toLocaleString()}</p>
                                 <span className={`text-xs px-2 py-1 rounded-full capitalize ${getStatusColor(request.status)}`}>
                                   {request.status}
                                 </span>
