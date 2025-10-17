@@ -34,21 +34,11 @@ export const products = pgTable("products", {
   id: uuid("id").primaryKey().default(sql`gen_random_uuid()`),
   name: text("name").notNull(),
   categoryId: uuid("category_id").references(() => categories.id).notNull(),
-  price: decimal("price", { precision: 10, scale: 2 }).notNull(),
   description: text("description").notNull(),
   imageUrl: text("image_url").notNull(),
   rating: decimal("rating", { precision: 3, scale: 2 }).default("0"),
-  packageOptions: jsonb("package_options").$type<string[]>().default(sql`'[]'::jsonb`),
+  variants: jsonb("variants").$type<Array<{ name: string; price: string }>>().notNull(),
   inStock: boolean("in_stock").default(true).notNull(),
-  createdAt: timestamp("created_at").defaultNow().notNull(),
-});
-
-export const cartItems = pgTable("cart_items", {
-  id: uuid("id").primaryKey().default(sql`gen_random_uuid()`),
-  userId: uuid("user_id").references(() => users.id).notNull(),
-  productId: uuid("product_id").references(() => products.id).notNull(),
-  quantity: integer("quantity").notNull().default(1),
-  selectedPackage: text("selected_package"),
   createdAt: timestamp("created_at").defaultNow().notNull(),
 });
 
@@ -67,7 +57,7 @@ export const orders = pgTable("orders", {
     name: string;
     quantity: number;
     price: string;
-    selectedPackage?: string;
+    variantName: string;
   }>>(),
   totalPrice: decimal("total_price", { precision: 10, scale: 2 }).notNull(),
   deliveryAddress: text("delivery_address").notNull(),
@@ -148,11 +138,6 @@ export const insertProductSchema = createInsertSchema(products).omit({
   createdAt: true,
 });
 
-export const insertCartItemSchema = createInsertSchema(cartItems).omit({
-  id: true,
-  createdAt: true,
-});
-
 export const insertWishlistItemSchema = createInsertSchema(wishlistItems).omit({
   id: true,
   createdAt: true,
@@ -194,9 +179,6 @@ export type InsertCategory = z.infer<typeof insertCategorySchema>;
 
 export type Product = typeof products.$inferSelect;
 export type InsertProduct = z.infer<typeof insertProductSchema>;
-
-export type CartItem = typeof cartItems.$inferSelect;
-export type InsertCartItem = z.infer<typeof insertCartItemSchema>;
 
 export type WishlistItem = typeof wishlistItems.$inferSelect;
 export type InsertWishlistItem = z.infer<typeof insertWishlistItemSchema>;
