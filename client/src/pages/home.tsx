@@ -85,38 +85,47 @@ export default function Home() {
   const addToCartMutation = useMutation({
     mutationFn: async (productId: string) => {
       if (!user) throw new Error("Not authenticated");
-      const res = await apiRequest("POST", "/api/cart", { userId: user.id, productId, quantity: 1 });
+      const product = products.find(p => p.id === productId);
+      if (!product || !product.variants || product.variants.length === 0) {
+        throw new Error("Product not found or has no variants");
+      }
+      const selectedPackage = product.variants[0];
+      const res = await apiRequest("POST", "/api/cart", { userId: user.id, productId, quantity: 1, selectedPackage });
       return res.json();
     },
     onMutate: async (productId) => {
       await queryClient.cancelQueries({ queryKey: ["/api/cart", user?.id] });
       const previousCart = queryClient.getQueryData(["/api/cart", user?.id]);
       
+      const product = products.find((p) => p.id === productId);
+      const selectedPackage = product?.variants?.[0];
+      
       queryClient.setQueryData(["/api/cart", user?.id], (old: any[] = []) => {
-        const existing = old.find((item) => item.productId === productId);
+        const existing = old.find((item) => item.productId === productId && item.selectedPackage?.name === selectedPackage?.name);
         if (existing) {
           return old.map((item) => 
-            item.productId === productId 
+            item.productId === productId && item.selectedPackage?.name === selectedPackage?.name
               ? { ...item, quantity: item.quantity + 1 }
               : item
           );
         }
-        const product = products.find((p) => p.id === productId);
         return [...old, {
           id: 'temp-' + Date.now(),
           userId: user?.id,
           productId,
           quantity: 1,
+          selectedPackage,
           product,
         }];
       });
       
+      return { previousCart };
+    },
+    onSuccess: () => {
       toast({
         title: "Added to cart",
         description: "Item added successfully",
       });
-      
-      return { previousCart };
     },
     onError: (err, variables, context: any) => {
       queryClient.setQueryData(["/api/cart", user?.id], context.previousCart);
