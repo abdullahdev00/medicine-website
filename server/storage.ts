@@ -1,10 +1,9 @@
 import { db } from "../db";
 import { 
-  users, products, categories, cartItems, wishlistItems, orders, addresses, walletTransactions,
+  users, products, categories, wishlistItems, orders, addresses, walletTransactions,
   type User, type InsertUser,
   type Product, type InsertProduct,
   type Category, type InsertCategory,
-  type CartItem, type InsertCartItem,
   type WishlistItem, type InsertWishlistItem,
   type Order, type InsertOrder,
   type Address, type InsertAddress,
@@ -26,12 +25,6 @@ export interface IStorage {
   getProductById(id: string): Promise<Product | undefined>;
   getProductsByCategory(categoryId: string): Promise<Product[]>;
   createProduct(product: InsertProduct): Promise<Product>;
-  
-  getCartItems(userId: string): Promise<CartItem[]>;
-  addToCart(item: InsertCartItem): Promise<CartItem>;
-  updateCartItem(id: string, quantity: number): Promise<CartItem | undefined>;
-  removeFromCart(id: string): Promise<void>;
-  clearCart(userId: string): Promise<void>;
   
   getWishlistItems(userId: string): Promise<WishlistItem[]>;
   addToWishlist(item: InsertWishlistItem): Promise<WishlistItem>;
@@ -122,47 +115,6 @@ export class DatabaseStorage implements IStorage {
   async createProduct(product: InsertProduct): Promise<Product> {
     const result = await db.insert(products).values(product).returning();
     return result[0];
-  }
-
-  async getCartItems(userId: string): Promise<CartItem[]> {
-    return await db.select().from(cartItems).where(eq(cartItems.userId, userId));
-  }
-
-  async addToCart(item: InsertCartItem): Promise<CartItem> {
-    const existing = await db.select().from(cartItems)
-      .where(and(
-        eq(cartItems.userId, item.userId),
-        eq(cartItems.productId, item.productId)
-      ))
-      .limit(1);
-
-    if (existing.length > 0) {
-      const newQuantity = (existing[0].quantity || 0) + (item.quantity || 1);
-      const updated = await db.update(cartItems)
-        .set({ quantity: newQuantity })
-        .where(eq(cartItems.id, existing[0].id))
-        .returning();
-      return updated[0];
-    }
-
-    const result = await db.insert(cartItems).values(item).returning();
-    return result[0];
-  }
-
-  async updateCartItem(id: string, quantity: number): Promise<CartItem | undefined> {
-    const result = await db.update(cartItems)
-      .set({ quantity })
-      .where(eq(cartItems.id, id))
-      .returning();
-    return result[0];
-  }
-
-  async removeFromCart(id: string): Promise<void> {
-    await db.delete(cartItems).where(eq(cartItems.id, id));
-  }
-
-  async clearCart(userId: string): Promise<void> {
-    await db.delete(cartItems).where(eq(cartItems.userId, userId));
   }
 
   async getWishlistItems(userId: string): Promise<WishlistItem[]> {

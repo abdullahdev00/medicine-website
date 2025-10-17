@@ -1,7 +1,7 @@
 import type { Express } from "express";
 import { createServer, type Server } from "http";
 import { storage } from "./storage";
-import { insertProductSchema, insertCartItemSchema, insertWishlistItemSchema, insertOrderSchema, insertUserSchema, insertAddressSchema } from "@shared/schema";
+import { insertProductSchema, insertWishlistItemSchema, insertOrderSchema, insertUserSchema, insertAddressSchema } from "@shared/schema";
 import { z } from "zod";
 
 export async function registerRoutes(app: Express): Promise<Server> {
@@ -52,81 +52,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
       if (error instanceof z.ZodError) {
         return res.status(400).json({ message: "Validation error", errors: error.errors });
       }
-      res.status(500).json({ message: error.message });
-    }
-  });
-
-  app.get("/api/cart", async (req, res) => {
-    try {
-      const userId = req.query.userId as string;
-      if (!userId) {
-        return res.status(400).json({ message: "userId is required" });
-      }
-      
-      const items = await storage.getCartItems(userId);
-      const itemsWithProducts = await Promise.all(
-        items.map(async (item) => {
-          const product = await storage.getProductById(item.productId);
-          return { ...item, product };
-        })
-      );
-      
-      res.json(itemsWithProducts);
-    } catch (error: any) {
-      res.status(500).json({ message: error.message });
-    }
-  });
-
-  app.post("/api/cart", async (req, res) => {
-    try {
-      const validatedData = insertCartItemSchema.parse(req.body);
-      const item = await storage.addToCart(validatedData);
-      res.status(201).json(item);
-    } catch (error: any) {
-      if (error instanceof z.ZodError) {
-        return res.status(400).json({ message: "Validation error", errors: error.errors });
-      }
-      res.status(500).json({ message: error.message });
-    }
-  });
-
-  app.patch("/api/cart/:id", async (req, res) => {
-    try {
-      const { quantity } = req.body;
-      if (typeof quantity !== 'number' || quantity < 1) {
-        return res.status(400).json({ message: "Invalid quantity" });
-      }
-      
-      const item = await storage.updateCartItem(req.params.id, quantity);
-      if (!item) {
-        return res.status(404).json({ message: "Cart item not found" });
-      }
-      
-      res.json(item);
-    } catch (error: any) {
-      res.status(500).json({ message: error.message });
-    }
-  });
-
-  app.delete("/api/cart/:id", async (req, res) => {
-    try {
-      await storage.removeFromCart(req.params.id);
-      res.status(204).send();
-    } catch (error: any) {
-      res.status(500).json({ message: error.message });
-    }
-  });
-
-  app.delete("/api/cart", async (req, res) => {
-    try {
-      const userId = req.query.userId as string;
-      if (!userId) {
-        return res.status(400).json({ message: "userId is required" });
-      }
-      
-      await storage.clearCart(userId);
-      res.status(204).send();
-    } catch (error: any) {
       res.status(500).json({ message: error.message });
     }
   });
