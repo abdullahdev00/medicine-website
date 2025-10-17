@@ -1,23 +1,28 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { useLocation } from "wouter";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { ArrowLeft } from "lucide-react";
+import { ArrowLeft, Check, Copy, Upload, X, Plus } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/contexts/AuthContext";
 import { AuthDialog } from "@/components/AuthDialog";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useMutation } from "@tanstack/react-query";
+import { apiRequest, queryClient } from "@/lib/queryClient";
+import { Label } from "@/components/ui/label";
 
 export default function Checkout() {
   const [, setLocation] = useLocation();
   const { toast } = useToast();
   const { user, isAuthenticated } = useAuth();
+  const [selectedAddressId, setSelectedAddressId] = useState<string>("");
   const [paymentMethod, setPaymentMethod] = useState("cod");
+  const [selectedPaymentAccount, setSelectedPaymentAccount] = useState<any>(null);
+  const [receiptFile, setReceiptFile] = useState<File | null>(null);
+  const [receiptPreview, setReceiptPreview] = useState<string>("");
   const [isProcessing, setIsProcessing] = useState(false);
   const [showAuthDialog, setShowAuthDialog] = useState(false);
+  const [dragActive, setDragActive] = useState(false);
 
   const { data: cartItems = [] } = useQuery<any[]>({
     queryKey: ["/api/cart", user?.id],
@@ -29,11 +34,43 @@ export default function Checkout() {
     },
   });
 
+  const { data: addresses = [] } = useQuery<any[]>({
+    queryKey: ["/api/addresses", user?.id],
+    enabled: isAuthenticated && !!user,
+    queryFn: async () => {
+      const res = await fetch(`/api/addresses?userId=${user?.id}`);
+      if (!res.ok) return [];
+      return res.json();
+    },
+  });
+
+  const { data: paymentAccounts = [] } = useQuery<any[]>({
+    queryKey: ["/api/payment-accounts"],
+    queryFn: async () => {
+      const res = await fetch("/api/payment-accounts");
+      if (!res.ok) return [];
+      return res.json();
+    },
+  });
+
   useEffect(() => {
     if (!isAuthenticated) {
       setShowAuthDialog(true);
     }
   }, [isAuthenticated]);
+
+  useEffect(() => {
+    if (addresses.length > 0 && !selectedAddressId) {
+      const defaultAddress = addresses.find(addr => addr.isDefault) || addresses[0];
+      setSelectedAddressId(defaultAddress?.id || "");
+    }
+  }, [addresses, selectedAddressId]);
+
+  useEffect(() => {
+    if (paymentMethod === "online" && paymentAccounts.length > 0 && !selectedPaymentAccount) {
+      setSelectedPaymentAccount(paymentAccounts[0]);
+    }
+  }, [paymentMethod, paymentAccounts, selectedPaymentAccount]);
 
   const handleAuthSuccess = () => {
     setShowAuthDialog(false);
@@ -46,18 +83,113 @@ export default function Checkout() {
     setShowAuthDialog(open);
   };
 
-  const subtotal = cartItems.reduce((sum, item) => sum + parseFloat(item.product?.price || "0") * item.quantity, 0);
+  const subtotal = cartItems.reduce((sum, item) => sum + parseFloat(item.selectedPackage?.price || "0") * item.quantity, 0);
   const deliveryCharges = 150;
   const total = subtotal + deliveryCharges;
+  const walletBalance = parseFloat(user?.walletBalance || "0");
+  const needsPaymentRequest = paymentMethod === "online" && walletBalance < total;
 
-  const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
+  const copyToClipboard = (text: string, label: string) => {
+    navigator.clipboard.writeText(text);
+    toast({
+      title: "Copied!",
+      description: `${label} copied to clipboard`,
+    });
+  };
+
+  const handleDrag = useCallback((e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    if (e.type === "dragenter" || e.type === "dragover") {
+      setDragActive(true);
+    } else if (e.type === "dragleave") {
+      setDragActive(false);
+    }
+  }, []);
+
+  const handleDrop = useCallback((e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setDragActive(false);
+    
+    if (e.dataTransfer.files && e.dataTransfer.files[0]) {
+      handleFileChange(e.dataTransfer.files[0]);
+    }
+  }, []);
+
+  const handleFileChange = (file: File) => {
+    if (file && file.type.startsWith("image/")) {
+      setReceiptFile(file);
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        setReceiptPreview(reader.result as string);
+      };
+      reader.readAsDataURL(file);
+    } else {
+      toast({
+        title: "Invalid file",
+        description: "Please upload an image file",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const createPaymentRequestMutation = useMutation({
+    mutationFn: async (data: any) => {
+      const res = await apiRequest("POST", "/api/payment-requests", {
+        userId: user?.id,
+        amount: total.toString(),
+        paymentMethod: "online",
+        paymentAccountId: selectedPaymentAccount?.id,
+        receiptUrl: receiptPreview,
+        orderId: data.orderId,
+        orderData: data,
+        status: "pending",
+      });
+      return res.json();
+    },
+    onSuccess: async () => {
+      if (user?.id) {
+        await fetch(`/api/cart?userId=${user.id}`, { method: "DELETE" });
+        queryClient.invalidateQueries({ queryKey: ["/api/cart", user.id] });
+      }
+      toast({
+        title: "Payment request submitted",
+        description: "Your payment request is pending verification. You can check its status in your wallet.",
+      });
+      queryClient.invalidateQueries({ queryKey: ["/api/payment-requests", user?.id] });
+      queryClient.invalidateQueries({ queryKey: ["/api/orders", user?.id] });
+      setLocation("/wallet");
+    },
+    onError: () => {
+      toast({
+        title: "Error",
+        description: "Failed to submit payment request",
+        variant: "destructive",
+      });
+      setIsProcessing(false);
+    },
+  });
+
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!user) return;
 
+    if (!selectedAddressId) {
+      toast({
+        title: "Address required",
+        description: "Please select a delivery address",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    const selectedAddress = addresses.find(addr => addr.id === selectedAddressId);
+    if (!selectedAddress) return;
+
     setIsProcessing(true);
-    
-    const formData = new FormData(e.currentTarget);
-    const deliveryAddress = `${formData.get("address")}, ${formData.get("city")}, ${formData.get("province")}`;
+
+    const deliveryAddress = `${selectedAddress.address}, ${selectedAddress.city}, ${selectedAddress.province} - ${selectedAddress.postalCode}`;
 
     const orderData = {
       userId: user.id,
@@ -65,35 +197,72 @@ export default function Checkout() {
         productId: item.productId,
         name: item.product?.name || "",
         quantity: item.quantity,
-        price: item.product?.price || "0",
-        selectedPackage: item.selectedPackage,
+        price: item.selectedPackage?.price || "0",
+        variantName: item.selectedPackage?.name || "",
       })),
       totalPrice: total.toString(),
       deliveryAddress,
       paymentMethod,
     };
 
-    try {
-      const response = await fetch("/api/orders", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(orderData),
-      });
-
-      if (!response.ok) {
-        throw new Error("Failed to place order");
+    if (needsPaymentRequest) {
+      if (!receiptFile) {
+        toast({
+          title: "Receipt required",
+          description: "Please upload payment receipt",
+          variant: "destructive",
+        });
+        setIsProcessing(false);
+        return;
       }
 
-      setTimeout(() => {
-        setLocation("/order-success");
-      }, 500);
-    } catch (error) {
-      toast({
-        title: "Error",
-        description: "Failed to place order. Please try again.",
-        variant: "destructive",
-      });
-      setIsProcessing(false);
+      try {
+        const orderResponse = await fetch("/api/orders", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            ...orderData,
+            status: "awaiting_payment",
+          }),
+        });
+
+        if (!orderResponse.ok) {
+          throw new Error("Failed to create order");
+        }
+
+        const order = await orderResponse.json();
+        createPaymentRequestMutation.mutate({ ...orderData, orderId: order.id });
+      } catch (error) {
+        toast({
+          title: "Error",
+          description: "Failed to create order. Please try again.",
+          variant: "destructive",
+        });
+        setIsProcessing(false);
+      }
+    } else {
+      try {
+        const response = await fetch("/api/orders", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(orderData),
+        });
+
+        if (!response.ok) {
+          throw new Error("Failed to place order");
+        }
+
+        setTimeout(() => {
+          setLocation("/order-success");
+        }, 500);
+      } catch (error) {
+        toast({
+          title: "Error",
+          description: "Failed to place order. Please try again.",
+          variant: "destructive",
+        });
+        setIsProcessing(false);
+      }
     }
   };
 
@@ -112,145 +281,271 @@ export default function Checkout() {
     <>
       <AuthDialog open={showAuthDialog} onOpenChange={handleDialogClose} onSuccess={handleAuthSuccess} />
       <div className="min-h-screen bg-background pb-8">
-      <div className="max-w-3xl mx-auto px-4 py-6">
-        <div className="flex items-center gap-4 mb-6">
-          <button
-            className="w-12 h-12 rounded-full bg-card shadow-lg flex items-center justify-center hover:bg-accent transition-all"
-            onClick={() => setLocation("/cart")}
-            data-testid="button-back"
-          >
-            <ArrowLeft className="w-6 h-6 text-primary" />
-          </button>
-          <h1 className="font-serif text-2xl font-bold">Checkout</h1>
+        <div className="max-w-3xl mx-auto px-4 py-6">
+          <div className="flex items-center gap-4 mb-6">
+            <button
+              className="w-12 h-12 rounded-full bg-card shadow-lg flex items-center justify-center hover:bg-accent transition-all"
+              onClick={() => setLocation("/cart")}
+              data-testid="button-back"
+            >
+              <ArrowLeft className="w-6 h-6 text-primary" />
+            </button>
+            <h1 className="font-serif text-2xl font-bold">Checkout</h1>
+          </div>
+
+          <form onSubmit={handleSubmit} className="space-y-6">
+            <Card className="shadow-lg rounded-3xl border-none">
+              <CardHeader className="flex flex-row items-center justify-between">
+                <CardTitle>Delivery Address</CardTitle>
+                {addresses.length > 0 && (
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => setLocation("/my-addresses")}
+                    data-testid="button-manage-addresses"
+                  >
+                    <Plus className="w-4 h-4 mr-1" />
+                    Add New
+                  </Button>
+                )}
+              </CardHeader>
+              <CardContent className="space-y-3">
+                {addresses.length === 0 ? (
+                  <div className="text-center py-8">
+                    <p className="text-muted-foreground mb-4">No saved addresses</p>
+                    <Button
+                      type="button"
+                      onClick={() => setLocation("/my-addresses")}
+                      data-testid="button-add-address"
+                    >
+                      <Plus className="w-4 h-4 mr-2" />
+                      Add Address
+                    </Button>
+                  </div>
+                ) : (
+                  <RadioGroup value={selectedAddressId} onValueChange={setSelectedAddressId}>
+                    {addresses.map((address) => (
+                      <div
+                        key={address.id}
+                        className={`flex items-start space-x-3 p-4 rounded-2xl border-2 hover:bg-accent/5 cursor-pointer transition-colors ${
+                          selectedAddressId === address.id ? "border-primary bg-primary/5" : ""
+                        }`}
+                        onClick={() => setSelectedAddressId(address.id)}
+                      >
+                        <RadioGroupItem value={address.id} id={address.id} data-testid={`radio-address-${address.id}`} />
+                        <Label htmlFor={address.id} className="cursor-pointer flex-1">
+                          <div>
+                            <div className="flex items-center gap-2">
+                              <p className="font-semibold">{address.label}</p>
+                              {address.isDefault && (
+                                <span className="text-xs bg-primary/10 text-primary px-2 py-0.5 rounded-full">Default</span>
+                              )}
+                            </div>
+                            <p className="text-sm text-muted-foreground mt-1">
+                              {address.address}, {address.city}, {address.province} - {address.postalCode}
+                            </p>
+                          </div>
+                        </Label>
+                      </div>
+                    ))}
+                  </RadioGroup>
+                )}
+              </CardContent>
+            </Card>
+
+            <Card className="shadow-lg rounded-3xl border-none">
+              <CardHeader>
+                <CardTitle>Payment Method</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <RadioGroup value={paymentMethod} onValueChange={setPaymentMethod}>
+                  <div
+                    className={`flex items-center space-x-3 p-4 rounded-2xl border-2 hover:bg-accent/5 cursor-pointer transition-colors ${
+                      paymentMethod === "cod" ? "border-primary bg-primary/5" : ""
+                    }`}
+                    onClick={() => setPaymentMethod("cod")}
+                  >
+                    <RadioGroupItem value="cod" id="cod" data-testid="radio-cod" />
+                    <Label htmlFor="cod" className="cursor-pointer flex-1">
+                      <div>
+                        <p className="font-semibold">Cash on Delivery</p>
+                        <p className="text-sm text-muted-foreground">Pay when you receive your order</p>
+                      </div>
+                    </Label>
+                  </div>
+
+                  <div
+                    className={`flex items-center space-x-3 p-4 rounded-2xl border-2 hover:bg-accent/5 cursor-pointer transition-colors mt-3 ${
+                      paymentMethod === "online" ? "border-primary bg-primary/5" : ""
+                    }`}
+                    onClick={() => setPaymentMethod("online")}
+                  >
+                    <RadioGroupItem value="online" id="online" data-testid="radio-online" />
+                    <Label htmlFor="online" className="cursor-pointer flex-1">
+                      <div>
+                        <p className="font-semibold">Online Payment</p>
+                        <p className="text-sm text-muted-foreground">Pay via JazzCash, EasyPaisa, or Bank Transfer</p>
+                      </div>
+                    </Label>
+                  </div>
+                </RadioGroup>
+
+                {paymentMethod === "online" && (
+                  <div className="mt-6 space-y-4">
+                    <div className="bg-accent/20 rounded-2xl p-4 space-y-4">
+                      <div>
+                        <p className="text-sm font-medium mb-2">Your Wallet Balance:</p>
+                        <p className="text-2xl font-bold text-primary">Rs {walletBalance.toFixed(0)}</p>
+                        <p className="text-sm text-muted-foreground mt-1">Order Total: Rs {total.toFixed(0)}</p>
+                      </div>
+
+                      {needsPaymentRequest && (
+                        <div className="bg-yellow-500/10 border border-yellow-500/20 rounded-xl p-3">
+                          <p className="text-sm text-yellow-700 dark:text-yellow-300">
+                            Insufficient wallet balance. Please upload payment receipt to create a payment request.
+                          </p>
+                        </div>
+                      )}
+
+                      <div>
+                        <p className="font-medium mb-3">Payment Account Details:</p>
+                        <RadioGroup
+                          value={selectedPaymentAccount?.id}
+                          onValueChange={(val) => {
+                            const account = paymentAccounts.find((acc) => acc.id === val);
+                            setSelectedPaymentAccount(account);
+                          }}
+                          className="space-y-2"
+                        >
+                          {paymentAccounts.map((account) => (
+                            <div
+                              key={account.id}
+                              className={`bg-card border rounded-xl p-3 cursor-pointer hover:border-primary transition-colors ${
+                                selectedPaymentAccount?.id === account.id ? "border-primary bg-primary/5" : ""
+                              }`}
+                              onClick={() => setSelectedPaymentAccount(account)}
+                            >
+                              <div className="flex items-center justify-between">
+                                <div className="flex items-center space-x-2 flex-1">
+                                  <RadioGroupItem value={account.id} id={account.id} />
+                                  <Label htmlFor={account.id} className="cursor-pointer flex-1">
+                                    <p className="font-semibold text-sm">{account.method}</p>
+                                    <div className="flex items-center gap-2 mt-1">
+                                      <p className="text-xs text-muted-foreground">{account.accountName}</p>
+                                      <span className="text-xs">•</span>
+                                      <p className="text-xs font-mono">{account.accountNumber}</p>
+                                    </div>
+                                  </Label>
+                                </div>
+                                <Button
+                                  type="button"
+                                  variant="ghost"
+                                  size="sm"
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    copyToClipboard(account.accountNumber, "Account number");
+                                  }}
+                                  data-testid={`button-copy-${account.id}`}
+                                >
+                                  <Copy className="w-4 h-4" />
+                                </Button>
+                              </div>
+                            </div>
+                          ))}
+                        </RadioGroup>
+                      </div>
+
+                      {needsPaymentRequest && (
+                        <div>
+                          <p className="font-medium mb-2">Upload Payment Receipt:</p>
+                          {!receiptPreview ? (
+                            <div
+                              onDragEnter={handleDrag}
+                              onDragLeave={handleDrag}
+                              onDragOver={handleDrag}
+                              onDrop={handleDrop}
+                              className={`border-2 border-dashed rounded-2xl p-8 text-center cursor-pointer transition-colors ${
+                                dragActive ? "border-primary bg-primary/5" : "border-border hover:border-primary"
+                              }`}
+                              onClick={() => document.getElementById("receipt-upload")?.click()}
+                            >
+                              <Upload className="w-12 h-12 mx-auto mb-4 text-muted-foreground" />
+                              <p className="text-sm font-medium mb-1">Drop receipt here or click to browse</p>
+                              <p className="text-xs text-muted-foreground">PNG, JPG up to 10MB</p>
+                              <input
+                                id="receipt-upload"
+                                type="file"
+                                accept="image/*"
+                                className="hidden"
+                                onChange={(e) => e.target.files && handleFileChange(e.target.files[0])}
+                              />
+                            </div>
+                          ) : (
+                            <div className="relative border rounded-2xl p-4">
+                              <Button
+                                type="button"
+                                variant="ghost"
+                                size="sm"
+                                className="absolute top-2 right-2 z-10"
+                                onClick={() => {
+                                  setReceiptFile(null);
+                                  setReceiptPreview("");
+                                }}
+                              >
+                                <X className="w-4 h-4" />
+                              </Button>
+                              <img src={receiptPreview} alt="Receipt preview" className="w-full h-auto rounded-lg" />
+                              <p className="text-sm text-muted-foreground mt-2 text-center">{receiptFile?.name}</p>
+                            </div>
+                          )}
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+
+            <Card className="shadow-lg rounded-3xl border-none">
+              <CardHeader>
+                <CardTitle>Order Summary</CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-3">
+                <div className="space-y-2">
+                  <div className="flex justify-between">
+                    <span className="text-muted-foreground">Subtotal</span>
+                    <span className="font-semibold">Rs {subtotal.toFixed(0)}</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-muted-foreground">Delivery Charges</span>
+                    <span className="font-semibold">Rs {deliveryCharges}</span>
+                  </div>
+                  <div className="h-px bg-border" />
+                  <div className="flex justify-between text-lg">
+                    <span className="font-bold">Total</span>
+                    <span className="font-bold text-primary">Rs {total.toFixed(0)}</span>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+
+            <Button
+              type="submit"
+              size="lg"
+              className="w-full rounded-full h-14 text-base font-semibold shadow-lg"
+              disabled={isProcessing || addresses.length === 0}
+              data-testid="button-place-order"
+            >
+              {isProcessing
+                ? "Processing..."
+                : needsPaymentRequest
+                ? "Submit Payment Request"
+                : "Place Order"}
+            </Button>
+          </form>
         </div>
-
-        <form onSubmit={handleSubmit} className="space-y-6">
-          <Card className="shadow-lg rounded-3xl border-none">
-            <CardHeader>
-              <CardTitle>Delivery Address</CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <div className="space-y-2">
-                <Label htmlFor="full-name">Full Name</Label>
-                <Input
-                  id="full-name"
-                  defaultValue="Ahmad Khan"
-                  required
-                  className="rounded-full h-14 px-6"
-                  data-testid="input-full-name"
-                />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="phone">Phone Number</Label>
-                <Input
-                  id="phone"
-                  defaultValue="+92 300 1234567"
-                  required
-                  className="rounded-full h-14 px-6"
-                  data-testid="input-phone"
-                />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="address">Complete Address</Label>
-                <Input
-                  id="address"
-                  defaultValue="House 123, Street 4, Gulshan-e-Iqbal"
-                  required
-                  className="rounded-full h-14 px-6"
-                  data-testid="input-address"
-                />
-              </div>
-              <div className="grid grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <Label htmlFor="city">City</Label>
-                  <Input
-                    id="city"
-                    defaultValue="Karachi"
-                    required
-                    className="rounded-full h-14 px-6"
-                    data-testid="input-city"
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="province">Province</Label>
-                  <Input
-                    id="province"
-                    defaultValue="Sindh"
-                    required
-                    className="rounded-full h-14 px-6"
-                    data-testid="input-province"
-                  />
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-
-          <Card className="shadow-lg rounded-3xl border-none">
-            <CardHeader>
-              <CardTitle>Payment Method</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <RadioGroup value={paymentMethod} onValueChange={setPaymentMethod}>
-                <div className="flex items-center space-x-3 p-4 rounded-2xl border-2 hover:bg-accent/5 cursor-pointer transition-colors"
-                     onClick={() => setPaymentMethod("cod")}>
-                  <RadioGroupItem value="cod" id="cod" data-testid="radio-cod" />
-                  <Label htmlFor="cod" className="cursor-pointer flex-1">
-                    <div>
-                      <p className="font-semibold">Cash on Delivery</p>
-                      <p className="text-sm text-muted-foreground">Pay when you receive your order</p>
-                    </div>
-                  </Label>
-                </div>
-                
-                <div className="flex items-center space-x-3 p-4 rounded-2xl border-2 hover:bg-accent/5 cursor-pointer transition-colors mt-3"
-                     onClick={() => setPaymentMethod("online")}>
-                  <RadioGroupItem value="online" id="online" data-testid="radio-online" />
-                  <Label htmlFor="online" className="cursor-pointer flex-1">
-                    <div>
-                      <p className="font-semibold">Online Payment</p>
-                      <p className="text-sm text-muted-foreground">Pay securely with your card</p>
-                    </div>
-                  </Label>
-                </div>
-              </RadioGroup>
-            </CardContent>
-          </Card>
-
-          <Card className="shadow-lg rounded-3xl border-none">
-            <CardHeader>
-              <CardTitle>Order Summary</CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-3">
-              <div className="space-y-2">
-                <div className="flex justify-between">
-                  <span className="text-muted-foreground">Subtotal</span>
-                  <span className="font-semibold">Rs {subtotal.toFixed(0)}</span>
-                </div>
-                <div className="flex justify-between">
-                  <span className="text-muted-foreground">Delivery Charges</span>
-                  <span className="font-semibold">Rs {deliveryCharges}</span>
-                </div>
-                <div className="h-px bg-border" />
-                <div className="flex justify-between text-lg">
-                  <span className="font-bold">Total</span>
-                  <span className="font-bold text-primary">Rs {total.toFixed(0)}</span>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-
-          <Button
-            type="submit"
-            size="lg"
-            className="w-full rounded-full h-14 text-base font-semibold shadow-lg"
-            disabled={isProcessing}
-            data-testid="button-place-order"
-          >
-            {isProcessing ? "Processing..." : "Place Order"}
-          </Button>
-        </form>
       </div>
-    </div>
     </>
   );
 }

@@ -180,6 +180,20 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  app.delete("/api/cart", async (req, res) => {
+    try {
+      const userId = req.query.userId as string;
+      if (!userId) {
+        return res.status(400).json({ message: "userId is required" });
+      }
+
+      inMemoryCart.delete(userId);
+      res.status(204).send();
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+
   app.patch("/api/cart/:id", async (req, res) => {
     try {
       const userId = req.query.userId as string;
@@ -377,6 +391,50 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       await storage.deleteAddress(req.params.id);
       res.status(204).send();
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+
+  app.get("/api/payment-accounts", async (req, res) => {
+    try {
+      const accounts = await storage.getPaymentAccounts();
+      res.json(accounts);
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+
+  app.get("/api/payment-requests", async (req, res) => {
+    try {
+      const userId = req.query.userId as string;
+      if (!userId) {
+        return res.status(400).json({ message: "userId is required" });
+      }
+      const requests = await storage.getPaymentRequests(userId);
+      res.json(requests);
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+
+  app.post("/api/payment-requests", async (req, res) => {
+    try {
+      const request = await storage.createPaymentRequest(req.body);
+      res.status(201).json(request);
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+
+  app.patch("/api/payment-requests/:id", async (req, res) => {
+    try {
+      const { status, adminNotes } = req.body;
+      const request = await storage.updatePaymentRequestStatus(req.params.id, status, adminNotes);
+      if (!request) {
+        return res.status(404).json({ message: "Payment request not found" });
+      }
+      res.json(request);
     } catch (error: any) {
       res.status(500).json({ message: error.message });
     }
