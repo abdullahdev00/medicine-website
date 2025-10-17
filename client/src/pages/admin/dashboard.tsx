@@ -2,6 +2,7 @@ import { useQuery } from "@tanstack/react-query";
 import AdminLayout from "@/components/admin/AdminLayout";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Users, Package, ShoppingCart, DollarSign, TrendingUp, Clock } from "lucide-react";
+import { ProtectedAdminRoute } from "@/components/ProtectedAdminRoute";
 
 interface DashboardStats {
   totalUsers: number;
@@ -79,57 +80,59 @@ export default function AdminDashboard() {
   ];
 
   return (
-    <AdminLayout>
-      <div className="space-y-6">
-        <div>
-          <h1 className="text-3xl font-bold text-gray-900 dark:text-white" data-testid="text-dashboard-title">
-            Dashboard
-          </h1>
-          <p className="text-gray-600 dark:text-gray-400 mt-1">
-            Overview of your MediSwift platform
-          </p>
-        </div>
-
-        {isLoading ? (
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
-            {[...Array(8)].map((_, i) => (
-              <Card key={i} className="animate-pulse">
-                <CardHeader className="pb-2">
-                  <div className="h-4 bg-gray-200 dark:bg-gray-700 rounded w-24"></div>
-                </CardHeader>
-                <CardContent>
-                  <div className="h-8 bg-gray-200 dark:bg-gray-700 rounded w-16 mt-2"></div>
-                </CardContent>
-              </Card>
-            ))}
+    <ProtectedAdminRoute>
+      <AdminLayout>
+        <div className="space-y-6">
+          <div>
+            <h1 className="text-3xl font-bold text-gray-900 dark:text-white" data-testid="text-dashboard-title">
+              Dashboard
+            </h1>
+            <p className="text-gray-600 dark:text-gray-400 mt-1">
+              Overview of your MediSwift platform
+            </p>
           </div>
-        ) : (
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
-            {statCards.map((stat, index) => {
-              const Icon = stat.icon;
-              return (
-                <Card key={index} data-testid={`card-stat-${stat.title.toLowerCase().replace(/\s+/g, '-')}`}>
+
+          {isLoading ? (
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+              {[...Array(8)].map((_, i) => (
+                <Card key={i} className="animate-pulse">
                   <CardHeader className="pb-2">
-                    <CardTitle className="text-sm font-medium text-gray-600 dark:text-gray-400">
-                      {stat.title}
-                    </CardTitle>
+                    <div className="h-4 bg-gray-200 dark:bg-gray-700 rounded w-24"></div>
                   </CardHeader>
                   <CardContent>
-                    <div className="flex items-center justify-between">
-                      <div className="text-2xl font-bold text-gray-900 dark:text-white" data-testid={`text-${stat.title.toLowerCase().replace(/\s+/g, '-')}`}>
-                        {stat.value}
-                      </div>
-                      <div className={`${stat.bgColor} ${stat.color} p-3 rounded-lg`}>
-                        <Icon className="w-6 h-6" />
-                      </div>
-                    </div>
+                    <div className="h-8 bg-gray-200 dark:bg-gray-700 rounded w-16 mt-2"></div>
                   </CardContent>
                 </Card>
-              );
-            })}
-          </div>
-        )}
-      </div>
-    </AdminLayout>
+              ))}
+            </div>
+          ) : (
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+              {statCards.map((stat, index) => {
+                const Icon = stat.icon;
+                return (
+                  <Card key={index} data-testid={`card-stat-${stat.title.toLowerCase().replace(/\s+/g, '-')}`}>
+                    <CardHeader className="pb-2">
+                      <CardTitle className="text-sm font-medium text-gray-600 dark:text-gray-400">
+                        {stat.title}
+                      </CardTitle>
+                    </CardHeader>
+                    <CardContent>
+                      <div className="flex items-center justify-between">
+                        <div className="text-2xl font-bold text-gray-900 dark:text-white" data-testid={`text-${stat.title.toLowerCase().replace(/\s+/g, '-')}`}>
+                          {stat.value}
+                        </div>
+                        <div className={`${stat.bgColor} ${stat.color} p-3 rounded-lg`}>
+                          <Icon className="w-6 h-6" />
+                        </div>
+                      </div>
+                    </CardContent>
+                  </Card>
+                );
+              })}
+            </div>
+          )}
+        </div>
+      </AdminLayout>
+    </ProtectedAdminRoute>
   );
 }

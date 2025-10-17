@@ -25,29 +25,19 @@ export default function Login() {
     const password = formData.get('password') as string;
 
     try {
-      // Try admin login first
-      try {
-        const adminResponse = await fetch('/api/admin/login', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ email, password }),
-          credentials: 'include',
-        });
-        
-        if (adminResponse.ok) {
-          // Admin login successful
-          setLocation("/admin");
-          return;
-        }
-      } catch {
-        // Not an admin, try regular user login
-      }
-      
-      // Regular user login
+      // Try login through the unified endpoint
       const response = await apiRequest('POST', '/api/auth/login', { email, password });
       const user = await response.json();
+      
+      // Store user in context
       login(user);
-      setLocation("/home");
+      
+      // Redirect based on user type
+      if (user.userType === 'admin') {
+        setLocation("/admin");
+      } else {
+        setLocation("/home");
+      }
     } catch (error: any) {
       const errorMessage = error.message || "Something went wrong. Please try again.";
       toast({

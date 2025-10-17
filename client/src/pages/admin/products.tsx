@@ -1,5 +1,6 @@
 import { useQuery } from "@tanstack/react-query";
 import AdminLayout from "@/components/admin/AdminLayout";
+import { ProtectedAdminRoute } from "@/components/ProtectedAdminRoute";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -37,6 +38,7 @@ export default function AdminProducts() {
   );
 
   return (
+    <ProtectedAdminRoute>
     <AdminLayout>
       <div className="space-y-6">
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
@@ -140,5 +142,6 @@ export default function AdminProducts() {
         </Card>
       </div>
     </AdminLayout>
+    </ProtectedAdminRoute>
   );
 }
