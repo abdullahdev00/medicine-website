@@ -4,35 +4,21 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { ArrowLeft, MapPin, Edit2, Plus, Trash2 } from "lucide-react";
+import { ArrowLeft, MapPin, Edit2, Plus, Trash2, X } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
-import { motion } from "framer-motion";
+import { motion, AnimatePresence } from "framer-motion";
 import { EmptyState } from "@/components/EmptyState";
-
-const mockAddresses = [
-  {
-    id: "1",
-    label: "Home",
-    address: "House 123, Street 4, Gulshan-e-Iqbal",
-    city: "Karachi",
-    province: "Sindh",
-    postalCode: "75300",
-  },
-  {
-    id: "2",
-    label: "Office",
-    address: "Office 45, Floor 3, IT Tower",
-    city: "Islamabad",
-    province: "Islamabad Capital Territory",
-    postalCode: "44000",
-  },
-];
+import { useAuth } from "@/contexts/AuthContext";
+import { useQuery, useMutation } from "@tanstack/react-query";
+import { apiRequest, queryClient } from "@/lib/queryClient";
 
 export default function MyAddresses() {
   const [, setLocation] = useLocation();
   const { toast } = useToast();
+  const { user, isAuthenticated } = useAuth();
   const [isAdding, setIsAdding] = useState(false);
-  const [newAddress, setNewAddress] = useState({
+  const [editingId, setEditingId] = useState<string | null>(null);
+  const [formData, setFormData] = useState({
     label: "",
     address: "",
     city: "",
@@ -40,24 +26,120 @@ export default function MyAddresses() {
     postalCode: "",
   });
 
+  const { data: addresses = [], isLoading } = useQuery({
+    queryKey: ["/api/addresses", user?.id],
+    enabled: isAuthenticated && !!user,
+    queryFn: async () => {
+      const res = await fetch(`/api/addresses?userId=${user?.id}`);
+      if (!res.ok) return [];
+      return res.json();
+    },
+  });
+
+  const addAddressMutation = useMutation({
+    mutationFn: async (data: typeof formData) => {
+      const res = await fetch("/api/addresses", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ ...data, userId: user?.id, isDefault: false }),
+      });
+      if (!res.ok) throw new Error("Failed to add address");
+      return res.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/addresses", user?.id] });
+      toast({ title: "Address added", description: "Your new address has been added successfully." });
+      setIsAdding(false);
+      setFormData({ label: "", address: "", city: "", province: "", postalCode: "" });
+    },
+    onError: () => {
+      toast({ title: "Error", description: "Failed to add address. Please try again.", variant: "destructive" });
+    },
+  });
+
+  const updateAddressMutation = useMutation({
+    mutationFn: async ({ id, data }: { id: string; data: typeof formData }) => {
+      const res = await fetch(`/api/addresses/${id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(data),
+      });
+      if (!res.ok) throw new Error("Failed to update address");
+      return res.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/addresses", user?.id] });
+      toast({ title: "Address updated", description: "Your address has been updated successfully." });
+      setEditingId(null);
+      setFormData({ label: "", address: "", city: "", province: "", postalCode: "" });
+    },
+    onError: () => {
+      toast({ title: "Error", description: "Failed to update address. Please try again.", variant: "destructive" });
+    },
+  });
+
+  const deleteAddressMutation = useMutation({
+    mutationFn: async (id: string) => {
+      const res = await fetch(`/api/addresses/${id}`, { method: "DELETE" });
+      if (!res.ok) throw new Error("Failed to delete address");
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/addresses", user?.id] });
+      toast({ title: "Address deleted", description: "Your address has been deleted successfully." });
+    },
+    onError: () => {
+      toast({ title: "Error", description: "Failed to delete address. Please try again.", variant: "destructive" });
+    },
+  });
+
   const handleAddAddress = () => {
-    toast({
-      title: "Address added",
-      description: "Your new address has been added successfully.",
-    });
-    setIsAdding(false);
-    setNewAddress({
-      label: "",
-      address: "",
-      city: "",
-      province: "",
-      postalCode: "",
+    if (!formData.label || !formData.address || !formData.city || !formData.province || !formData.postalCode) {
+      toast({ title: "Missing fields", description: "Please fill in all fields.", variant: "destructive" });
+      return;
+    }
+    addAddressMutation.mutate(formData);
+  };
+
+  const handleUpdateAddress = () => {
+    if (!editingId) return;
+    if (!formData.label || !formData.address || !formData.city || !formData.province || !formData.postalCode) {
+      toast({ title: "Missing fields", description: "Please fill in all fields.", variant: "destructive" });
+      return;
+    }
+    updateAddressMutation.mutate({ id: editingId, data: formData });
+  };
+
+  const handleEdit = (address: any) => {
+    setEditingId(address.id);
+    setFormData({
+      label: address.label,
+      address: address.address,
+      city: address.city,
+      province: address.province,
+      postalCode: address.postalCode,
     });
   };
 
-  const handleChange = (field: string, value: string) => {
-    setNewAddress((prev) => ({ ...prev, [field]: value }));
+  const handleCancel = () => {
+    setIsAdding(false);
+    setEditingId(null);
+    setFormData({ label: "", address: "", city: "", province: "", postalCode: "" });
   };
+
+  const handleChange = (field: string, value: string) => {
+    setFormData((prev) => ({ ...prev, [field]: value }));
+  };
+
+  if (isLoading) {
+    return (
+      <div className="min-h-screen bg-background flex items-center justify-center">
+        <div className="text-center">
+          <div className="w-16 h-16 border-4 border-primary border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
+          <p className="text-muted-foreground">Loading addresses...</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-background pb-8">
@@ -84,7 +166,7 @@ export default function MyAddresses() {
       </div>
 
       <div className="max-w-7xl mx-auto px-6 py-8">
-        {mockAddresses.length === 0 && !isAdding ? (
+        {addresses.length === 0 && !isAdding ? (
           <EmptyState
             icon={MapPin}
             title="No Saved Addresses"
@@ -96,171 +178,296 @@ export default function MyAddresses() {
           />
         ) : (
           <div className="space-y-5">
-            {mockAddresses.map((address, index) => (
-            <motion.div
-              key={address.id}
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: index * 0.1 }}
-            >
-              <Card className="shadow-lg rounded-3xl border-none">
-                <CardContent className="p-6">
-                  <div className="flex items-start gap-4">
-                    <div className="w-14 h-14 rounded-full bg-gradient-to-br from-chart-3/20 to-chart-3/10 flex items-center justify-center flex-shrink-0">
-                      <MapPin className="w-7 h-7 text-chart-3" />
-                    </div>
-                    <div className="flex-1">
-                      <h3 className="font-semibold text-lg mb-2">{address.label}</h3>
-                      <p className="text-muted-foreground leading-relaxed">
-                        {address.address}
-                        <br />
-                        {address.city}, {address.province}
-                        <br />
-                        {address.postalCode}
-                      </p>
-                    </div>
-                    <div className="flex gap-2 flex-shrink-0">
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        className="rounded-full w-12 h-12"
-                        data-testid={`button-edit-address-${address.id}`}
-                      >
-                        <Edit2 className="w-5 h-5" />
-                      </Button>
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        className="rounded-full w-12 h-12 text-destructive hover:text-destructive"
-                        data-testid={`button-delete-address-${address.id}`}
-                      >
-                        <Trash2 className="w-5 h-5" />
-                      </Button>
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
-            </motion.div>
-            ))}
+            <AnimatePresence mode="popLayout">
+              {addresses.map((address: any, index: number) => (
+                <motion.div
+                  key={address.id}
+                  initial={{ opacity: 0, y: 20 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  exit={{ opacity: 0, y: -20 }}
+                  transition={{ delay: index * 0.05 }}
+                >
+                  {editingId === address.id ? (
+                    <Card className="shadow-lg rounded-3xl border-primary/20 border-2">
+                      <CardContent className="p-8 space-y-6">
+                        <div className="flex items-center justify-between">
+                          <h3 className="font-serif text-xl font-bold">Edit Address</h3>
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="rounded-full"
+                            onClick={handleCancel}
+                          >
+                            <X className="w-5 h-5" />
+                          </Button>
+                        </div>
+                        
+                        <div className="space-y-3">
+                          <Label htmlFor="edit-label" className="text-base font-semibold">
+                            Address Label
+                          </Label>
+                          <Input
+                            id="edit-label"
+                            placeholder="e.g., Home, Office, etc."
+                            value={formData.label}
+                            onChange={(e) => handleChange("label", e.target.value)}
+                            className="rounded-full h-14 px-6 text-base shadow-sm"
+                            data-testid="input-edit-label"
+                          />
+                        </div>
 
-            {isAdding && (
-            <motion.div
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-            >
-              <Card className="shadow-lg rounded-3xl border-primary/20 border-2">
-                <CardContent className="p-8 space-y-6">
-                  <h3 className="font-serif text-xl font-bold">Add New Address</h3>
-                  
-                  <div className="space-y-3">
-                    <Label htmlFor="label" className="text-base font-semibold">
-                      Address Label
-                    </Label>
-                    <Input
-                      id="label"
-                      placeholder="e.g., Home, Office, etc."
-                      value={newAddress.label}
-                      onChange={(e) => handleChange("label", e.target.value)}
-                      className="rounded-full h-14 px-6 text-base shadow-sm"
-                      data-testid="input-address-label"
-                    />
-                  </div>
+                        <div className="space-y-3">
+                          <Label htmlFor="edit-address" className="text-base font-semibold">
+                            Street Address
+                          </Label>
+                          <Input
+                            id="edit-address"
+                            placeholder="House/Building number, Street name"
+                            value={formData.address}
+                            onChange={(e) => handleChange("address", e.target.value)}
+                            className="rounded-full h-14 px-6 text-base shadow-sm"
+                            data-testid="input-edit-address"
+                          />
+                        </div>
 
-                  <div className="space-y-3">
-                    <Label htmlFor="address" className="text-base font-semibold">
-                      Street Address
-                    </Label>
-                    <Input
-                      id="address"
-                      placeholder="House/Building number, Street name"
-                      value={newAddress.address}
-                      onChange={(e) => handleChange("address", e.target.value)}
-                      className="rounded-full h-14 px-6 text-base shadow-sm"
-                      data-testid="input-address"
-                    />
-                  </div>
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                          <div className="space-y-3">
+                            <Label htmlFor="edit-city" className="text-base font-semibold">
+                              City
+                            </Label>
+                            <Input
+                              id="edit-city"
+                              placeholder="City"
+                              value={formData.city}
+                              onChange={(e) => handleChange("city", e.target.value)}
+                              className="rounded-full h-14 px-6 text-base shadow-sm"
+                              data-testid="input-edit-city"
+                            />
+                          </div>
+                          <div className="space-y-3">
+                            <Label htmlFor="edit-province" className="text-base font-semibold">
+                              Province
+                            </Label>
+                            <Input
+                              id="edit-province"
+                              placeholder="Province/State"
+                              value={formData.province}
+                              onChange={(e) => handleChange("province", e.target.value)}
+                              className="rounded-full h-14 px-6 text-base shadow-sm"
+                              data-testid="input-edit-province"
+                            />
+                          </div>
+                        </div>
 
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                    <div className="space-y-3">
-                      <Label htmlFor="city" className="text-base font-semibold">
-                        City
-                      </Label>
-                      <Input
-                        id="city"
-                        placeholder="City name"
-                        value={newAddress.city}
-                        onChange={(e) => handleChange("city", e.target.value)}
-                        className="rounded-full h-14 px-6 text-base shadow-sm"
-                        data-testid="input-city"
-                      />
-                    </div>
-                    <div className="space-y-3">
-                      <Label htmlFor="province" className="text-base font-semibold">
-                        Province
-                      </Label>
-                      <Input
-                        id="province"
-                        placeholder="Province name"
-                        value={newAddress.province}
-                        onChange={(e) => handleChange("province", e.target.value)}
-                        className="rounded-full h-14 px-6 text-base shadow-sm"
-                        data-testid="input-province"
-                      />
-                    </div>
-                  </div>
+                        <div className="space-y-3">
+                          <Label htmlFor="edit-postalCode" className="text-base font-semibold">
+                            Postal Code
+                          </Label>
+                          <Input
+                            id="edit-postalCode"
+                            placeholder="Postal Code"
+                            value={formData.postalCode}
+                            onChange={(e) => handleChange("postalCode", e.target.value)}
+                            className="rounded-full h-14 px-6 text-base shadow-sm"
+                            data-testid="input-edit-postalCode"
+                          />
+                        </div>
 
-                  <div className="space-y-3">
-                    <Label htmlFor="postalCode" className="text-base font-semibold">
-                      Postal Code
-                    </Label>
-                    <Input
-                      id="postalCode"
-                      placeholder="Postal/ZIP code"
-                      value={newAddress.postalCode}
-                      onChange={(e) => handleChange("postalCode", e.target.value)}
-                      className="rounded-full h-14 px-6 text-base shadow-sm"
-                      data-testid="input-postal-code"
-                    />
-                  </div>
+                        <div className="flex gap-4 pt-4">
+                          <Button
+                            className="flex-1 rounded-full h-14 text-base font-semibold shadow-lg"
+                            onClick={handleUpdateAddress}
+                            disabled={updateAddressMutation.isPending}
+                            data-testid="button-update-address"
+                          >
+                            {updateAddressMutation.isPending ? "Updating..." : "Update Address"}
+                          </Button>
+                          <Button
+                            variant="outline"
+                            className="flex-1 rounded-full h-14 text-base font-semibold"
+                            onClick={handleCancel}
+                            data-testid="button-cancel-edit-address"
+                          >
+                            Cancel
+                          </Button>
+                        </div>
+                      </CardContent>
+                    </Card>
+                  ) : (
+                    <Card className="shadow-lg rounded-3xl border-none">
+                      <CardContent className="p-6">
+                        <div className="flex items-start gap-4">
+                          <div className="w-14 h-14 rounded-full bg-gradient-to-br from-chart-3/20 to-chart-3/10 flex items-center justify-center flex-shrink-0">
+                            <MapPin className="w-7 h-7 text-chart-3" />
+                          </div>
+                          <div className="flex-1">
+                            <h3 className="font-semibold text-lg mb-2">{address.label}</h3>
+                            <p className="text-muted-foreground leading-relaxed">
+                              {address.address}
+                              <br />
+                              {address.city}, {address.province}
+                              <br />
+                              {address.postalCode}
+                            </p>
+                          </div>
+                          <div className="flex gap-2 flex-shrink-0">
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              className="rounded-full w-12 h-12"
+                              onClick={() => handleEdit(address)}
+                              data-testid={`button-edit-address-${address.id}`}
+                            >
+                              <Edit2 className="w-5 h-5" />
+                            </Button>
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              className="rounded-full w-12 h-12 text-destructive hover:text-destructive"
+                              onClick={() => deleteAddressMutation.mutate(address.id)}
+                              disabled={deleteAddressMutation.isPending}
+                              data-testid={`button-delete-address-${address.id}`}
+                            >
+                              <Trash2 className="w-5 h-5" />
+                            </Button>
+                          </div>
+                        </div>
+                      </CardContent>
+                    </Card>
+                  )}
+                </motion.div>
+              ))}
 
-                  <div className="flex gap-4 pt-4">
-                    <Button
-                      className="flex-1 rounded-full h-14 text-base font-semibold shadow-lg"
-                      onClick={handleAddAddress}
-                      data-testid="button-save-address"
-                    >
-                      Save Address
-                    </Button>
-                    <Button
-                      variant="outline"
-                      className="flex-1 rounded-full h-14 text-base font-semibold"
-                      onClick={() => setIsAdding(false)}
-                      data-testid="button-cancel-add"
-                    >
-                      Cancel
-                    </Button>
-                  </div>
-                </CardContent>
-              </Card>
-            </motion.div>
-            )}
+              {isAdding && (
+                <motion.div
+                  initial={{ opacity: 0, y: 20 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  exit={{ opacity: 0, y: -20 }}
+                >
+                  <Card className="shadow-lg rounded-3xl border-primary/20 border-2">
+                    <CardContent className="p-8 space-y-6">
+                      <div className="flex items-center justify-between">
+                        <h3 className="font-serif text-xl font-bold">Add New Address</h3>
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="rounded-full"
+                          onClick={handleCancel}
+                        >
+                          <X className="w-5 h-5" />
+                        </Button>
+                      </div>
+                      
+                      <div className="space-y-3">
+                        <Label htmlFor="label" className="text-base font-semibold">
+                          Address Label
+                        </Label>
+                        <Input
+                          id="label"
+                          placeholder="e.g., Home, Office, etc."
+                          value={formData.label}
+                          onChange={(e) => handleChange("label", e.target.value)}
+                          className="rounded-full h-14 px-6 text-base shadow-sm"
+                          data-testid="input-address-label"
+                        />
+                      </div>
 
-            {!isAdding && mockAddresses.length > 0 && (
-            <motion.div
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              transition={{ delay: 0.3 }}
-            >
-              <Button
-                variant="outline"
-                className="w-full rounded-full h-14 text-base font-semibold border-2 border-dashed hover:border-primary hover:text-primary transition-all"
-                onClick={() => setIsAdding(true)}
-                data-testid="button-add-address"
+                      <div className="space-y-3">
+                        <Label htmlFor="address" className="text-base font-semibold">
+                          Street Address
+                        </Label>
+                        <Input
+                          id="address"
+                          placeholder="House/Building number, Street name"
+                          value={formData.address}
+                          onChange={(e) => handleChange("address", e.target.value)}
+                          className="rounded-full h-14 px-6 text-base shadow-sm"
+                          data-testid="input-address-address"
+                        />
+                      </div>
+
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                        <div className="space-y-3">
+                          <Label htmlFor="city" className="text-base font-semibold">
+                            City
+                          </Label>
+                          <Input
+                            id="city"
+                            placeholder="City"
+                            value={formData.city}
+                            onChange={(e) => handleChange("city", e.target.value)}
+                            className="rounded-full h-14 px-6 text-base shadow-sm"
+                            data-testid="input-address-city"
+                          />
+                        </div>
+                        <div className="space-y-3">
+                          <Label htmlFor="province" className="text-base font-semibold">
+                            Province
+                          </Label>
+                          <Input
+                            id="province"
+                            placeholder="Province/State"
+                            value={formData.province}
+                            onChange={(e) => handleChange("province", e.target.value)}
+                            className="rounded-full h-14 px-6 text-base shadow-sm"
+                            data-testid="input-address-province"
+                          />
+                        </div>
+                      </div>
+
+                      <div className="space-y-3">
+                        <Label htmlFor="postalCode" className="text-base font-semibold">
+                          Postal Code
+                        </Label>
+                        <Input
+                          id="postalCode"
+                          placeholder="Postal Code"
+                          value={formData.postalCode}
+                          onChange={(e) => handleChange("postalCode", e.target.value)}
+                          className="rounded-full h-14 px-6 text-base shadow-sm"
+                          data-testid="input-address-postalCode"
+                        />
+                      </div>
+
+                      <div className="flex gap-4 pt-4">
+                        <Button
+                          className="flex-1 rounded-full h-14 text-base font-semibold shadow-lg"
+                          onClick={handleAddAddress}
+                          disabled={addAddressMutation.isPending}
+                          data-testid="button-add-address"
+                        >
+                          {addAddressMutation.isPending ? "Adding..." : "Add Address"}
+                        </Button>
+                        <Button
+                          variant="outline"
+                          className="flex-1 rounded-full h-14 text-base font-semibold"
+                          onClick={handleCancel}
+                          data-testid="button-cancel-add"
+                        >
+                          Cancel
+                        </Button>
+                      </div>
+                    </CardContent>
+                  </Card>
+                </motion.div>
+              )}
+            </AnimatePresence>
+
+            {!isAdding && !editingId && addresses.length > 0 && (
+              <motion.div
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                className="pt-4"
               >
-                <Plus className="w-5 h-5 mr-2" />
-                Add New Address
-              </Button>
-            </motion.div>
+                <Button
+                  className="w-full rounded-full h-14 text-base font-semibold shadow-lg"
+                  onClick={() => setIsAdding(true)}
+                  data-testid="button-add-new-address"
+                >
+                  <Plus className="w-5 h-5 mr-2" />
+                  Add New Address
+                </Button>
+              </motion.div>
             )}
           </div>
         )}

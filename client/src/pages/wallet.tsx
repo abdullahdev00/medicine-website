@@ -4,42 +4,46 @@ import { Card, CardContent } from "@/components/ui/card";
 import { ArrowLeft, Wallet, ArrowDownLeft, ArrowUpRight, Plus, Receipt } from "lucide-react";
 import { motion } from "framer-motion";
 import { EmptyState } from "@/components/EmptyState";
-
-const mockTransactions = [
-  {
-    id: "1",
-    type: "credit",
-    amount: "500",
-    description: "Affiliate Commission",
-    date: "2024-01-20",
-  },
-  {
-    id: "2",
-    type: "debit",
-    amount: "1200",
-    description: "Order Payment",
-    date: "2024-01-18",
-  },
-  {
-    id: "3",
-    type: "credit",
-    amount: "250",
-    description: "Cashback",
-    date: "2024-01-15",
-  },
-  {
-    id: "4",
-    type: "credit",
-    amount: "750",
-    description: "Affiliate Commission",
-    date: "2024-01-10",
-  },
-];
+import { useAuth } from "@/contexts/AuthContext";
+import { useQuery } from "@tanstack/react-query";
+import { format } from "date-fns";
 
 export default function WalletPage() {
   const [, setLocation] = useLocation();
+  const { user, isAuthenticated } = useAuth();
 
-  const totalBalance = "2850";
+  const { data: userData, isLoading: loadingUser } = useQuery({
+    queryKey: ["/api/users", user?.id],
+    enabled: isAuthenticated && !!user,
+    queryFn: async () => {
+      const res = await fetch(`/api/users/${user?.id}`);
+      if (!res.ok) throw new Error("Failed to fetch user");
+      return res.json();
+    },
+  });
+
+  const { data: transactions = [], isLoading: loadingTransactions } = useQuery({
+    queryKey: ["/api/wallet", user?.id],
+    enabled: isAuthenticated && !!user,
+    queryFn: async () => {
+      const res = await fetch(`/api/wallet/${user?.id}`);
+      if (!res.ok) return [];
+      return res.json();
+    },
+  });
+
+  const totalBalance = userData?.walletBalance || "0";
+
+  if (loadingUser || loadingTransactions) {
+    return (
+      <div className="min-h-screen bg-background flex items-center justify-center">
+        <div className="text-center">
+          <div className="w-16 h-16 border-4 border-primary border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
+          <p className="text-muted-foreground">Loading wallet...</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-background pb-8">
@@ -78,49 +82,44 @@ export default function WalletPage() {
                   <Wallet className="w-7 h-7 text-white" />
                 </div>
                 <div>
-                  <p className="text-sm opacity-90">Available Balance</p>
-                  <h2 className="font-serif text-4xl font-bold mt-1">
-                    PKR {totalBalance}
+                  <p className="text-sm text-white/80 font-medium">Total Balance</p>
+                  <h2 className="text-4xl font-bold mt-1">
+                    Rs. {parseFloat(totalBalance).toLocaleString()}
                   </h2>
                 </div>
               </div>
-              <Button
-                className="w-full rounded-full h-12 bg-white text-chart-4 hover:bg-white/90 font-semibold"
-                data-testid="button-add-money"
-              >
-                <Plus className="w-5 h-5 mr-2" />
-                Add Money
-              </Button>
             </CardContent>
           </Card>
 
-          <div>
-            <h3 className="font-serif text-xl font-bold mb-4">Recent Transactions</h3>
-            {mockTransactions.length === 0 ? (
+          <div className="flex items-center justify-between mb-4">
+            <h3 className="text-xl font-bold">Transaction History</h3>
+          </div>
+
+          <div className="space-y-4">
+            {transactions.length === 0 ? (
               <EmptyState
                 icon={Receipt}
-                title="No Transactions Yet"
-                description="Your wallet transaction history will appear here. Start shopping or earn through our affiliate program."
-                iconColor="chart-4"
+                title="No Transactions"
+                description="You haven't made any transactions yet. Your wallet transaction history will appear here."
               />
             ) : (
               <div className="space-y-3">
-                {mockTransactions.map((transaction, index) => (
+                {transactions.map((transaction: any, index: number) => (
                 <motion.div
                   key={transaction.id}
-                  initial={{ opacity: 0, y: 20 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  transition={{ delay: index * 0.1 }}
+                  initial={{ opacity: 0, x: -20 }}
+                  animate={{ opacity: 1, x: 0 }}
+                  transition={{ delay: index * 0.05 }}
                 >
-                  <Card className="shadow-md rounded-3xl border-none">
-                    <CardContent className="p-5">
+                  <Card className="shadow-sm hover:shadow-md transition-shadow rounded-2xl border-none">
+                    <CardContent className="p-6">
                       <div className="flex items-center justify-between">
                         <div className="flex items-center gap-4">
                           <div
                             className={`w-12 h-12 rounded-full flex items-center justify-center ${
                               transaction.type === "credit"
-                                ? "bg-chart-2/20"
-                                : "bg-destructive/20"
+                                ? "bg-chart-2/10"
+                                : "bg-destructive/10"
                             }`}
                           >
                             {transaction.type === "credit" ? (
@@ -130,25 +129,30 @@ export default function WalletPage() {
                             )}
                           </div>
                           <div>
-                            <p className="font-semibold">{transaction.description}</p>
-                            <p className="text-sm text-muted-foreground mt-1">
-                              {new Date(transaction.date).toLocaleDateString('en-US', {
-                                month: 'short',
-                                day: 'numeric',
-                                year: 'numeric',
-                              })}
+                            <p className="font-semibold" data-testid={`text-description-${transaction.id}`}>
+                              {transaction.description}
+                            </p>
+                            <p className="text-sm text-muted-foreground">
+                              {format(new Date(transaction.createdAt), "MMM dd, yyyy")}
                             </p>
                           </div>
                         </div>
-                        <p
-                          className={`font-serif text-xl font-bold ${
-                            transaction.type === "credit"
-                              ? "text-chart-2"
-                              : "text-destructive"
-                          }`}
-                        >
-                          {transaction.type === "credit" ? "+" : "-"}PKR {transaction.amount}
-                        </p>
+                        <div className="text-right">
+                          <p
+                            className={`font-bold text-lg ${
+                              transaction.type === "credit"
+                                ? "text-chart-2"
+                                : "text-destructive"
+                            }`}
+                            data-testid={`text-amount-${transaction.id}`}
+                          >
+                            {transaction.type === "credit" ? "+" : "-"}Rs.{" "}
+                            {parseFloat(transaction.amount).toLocaleString()}
+                          </p>
+                          <p className="text-sm text-muted-foreground capitalize">
+                            {transaction.status}
+                          </p>
+                        </div>
                       </div>
                     </CardContent>
                   </Card>

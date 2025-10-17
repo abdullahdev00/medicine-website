@@ -1,7 +1,7 @@
 import type { Express } from "express";
 import { createServer, type Server } from "http";
 import { storage } from "./storage";
-import { insertProductSchema, insertCartItemSchema, insertWishlistItemSchema, insertOrderSchema, insertUserSchema } from "@shared/schema";
+import { insertProductSchema, insertCartItemSchema, insertWishlistItemSchema, insertOrderSchema, insertUserSchema, insertAddressSchema } from "@shared/schema";
 import { z } from "zod";
 
 export async function registerRoutes(app: Express): Promise<Server> {
@@ -265,6 +265,88 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       const { password: _, ...userWithoutPassword } = user;
       res.json(userWithoutPassword);
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+
+  app.get("/api/users/:id", async (req, res) => {
+    try {
+      const user = await storage.getUser(req.params.id);
+      if (!user) {
+        return res.status(404).json({ message: "User not found" });
+      }
+      const { password: _, ...userWithoutPassword } = user;
+      res.json(userWithoutPassword);
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+
+  app.patch("/api/users/:id", async (req, res) => {
+    try {
+      const user = await storage.updateUser(req.params.id, req.body);
+      if (!user) {
+        return res.status(404).json({ message: "User not found" });
+      }
+      const { password: _, ...userWithoutPassword } = user;
+      res.json(userWithoutPassword);
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+
+  app.get("/api/wallet/:userId", async (req, res) => {
+    try {
+      const transactions = await storage.getWalletTransactions(req.params.userId);
+      res.json(transactions);
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+
+  app.get("/api/addresses", async (req, res) => {
+    try {
+      const userId = req.query.userId as string;
+      if (!userId) {
+        return res.status(400).json({ message: "userId is required" });
+      }
+      const addresses = await storage.getAddresses(userId);
+      res.json(addresses);
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+
+  app.post("/api/addresses", async (req, res) => {
+    try {
+      const validatedData = insertAddressSchema.parse(req.body);
+      const address = await storage.createAddress(validatedData);
+      res.status(201).json(address);
+    } catch (error: any) {
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({ message: "Validation error", errors: error.errors });
+      }
+      res.status(500).json({ message: error.message });
+    }
+  });
+
+  app.patch("/api/addresses/:id", async (req, res) => {
+    try {
+      const address = await storage.updateAddress(req.params.id, req.body);
+      if (!address) {
+        return res.status(404).json({ message: "Address not found" });
+      }
+      res.json(address);
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+
+  app.delete("/api/addresses/:id", async (req, res) => {
+    try {
+      await storage.deleteAddress(req.params.id);
+      res.status(204).send();
     } catch (error: any) {
       res.status(500).json({ message: error.message });
     }

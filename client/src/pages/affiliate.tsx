@@ -7,58 +7,68 @@ import { ArrowLeft, Users, Copy, Check, Package, UserPlus } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { motion } from "framer-motion";
 import { EmptyState } from "@/components/EmptyState";
-
-const mockReferralOrders = [
-  {
-    id: "REF-001",
-    customerName: "Ali Ahmed",
-    amount: "1500",
-    commission: "150",
-    date: "2024-01-20",
-    status: "completed",
-  },
-  {
-    id: "REF-002",
-    customerName: "Sara Khan",
-    amount: "890",
-    commission: "89",
-    date: "2024-01-18",
-    status: "completed",
-  },
-  {
-    id: "REF-003",
-    customerName: "Usman Ali",
-    amount: "2340",
-    commission: "234",
-    date: "2024-01-15",
-    status: "pending",
-  },
-];
+import { useAuth } from "@/contexts/AuthContext";
+import { useQuery } from "@tanstack/react-query";
+import { format } from "date-fns";
 
 export default function AffiliatePage() {
   const [, setLocation] = useLocation();
   const { toast } = useToast();
+  const { user, isAuthenticated } = useAuth();
   const [copied, setCopied] = useState(false);
 
-  const couponCode = "MED789";
-  const totalEarnings = "473";
-  const pendingEarnings = "234";
+  const { data: userData, isLoading: loadingUser } = useQuery({
+    queryKey: ["/api/users", user?.id],
+    enabled: isAuthenticated && !!user,
+    queryFn: async () => {
+      const res = await fetch(`/api/users/${user?.id}`);
+      if (!res.ok) throw new Error("Failed to fetch user");
+      return res.json();
+    },
+  });
+
+  const { data: allOrders = [], isLoading: loadingOrders } = useQuery({
+    queryKey: ["/api/orders", user?.id],
+    enabled: isAuthenticated && !!user,
+    queryFn: async () => {
+      const res = await fetch(`/api/orders?userId=${user?.id}`);
+      if (!res.ok) return [];
+      return res.json();
+    },
+  });
+
+  const referralOrders = allOrders.filter((order: any) => order.affiliateUserId === user?.id);
+
+  const couponCode = userData?.affiliateCode || "";
+  const totalEarnings = userData?.totalEarnings || "0";
+  const pendingEarnings = userData?.pendingEarnings || "0";
 
   const handleCopy = () => {
     navigator.clipboard.writeText(couponCode);
     setCopied(true);
     toast({
       title: "Copied!",
-      description: "Coupon code copied to clipboard.",
+      description: "Referral code copied to clipboard.",
     });
     setTimeout(() => setCopied(false), 2000);
   };
 
   const getStatusColor = (status: string) => {
-    return status === "completed"
+    return status === "completed" || status === "delivered"
       ? "bg-chart-2/20 text-chart-2 border-chart-2/30"
       : "bg-chart-3/20 text-chart-3 border-chart-3/30";
   };
+
+  if (loadingUser || loadingOrders) {
+    return (
+      <div className="min-h-screen bg-background flex items-center justify-center">
+        <div className="text-center">
+          <div className="w-16 h-16 border-4 border-primary border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
+          <p className="text-muted-foreground">Loading affiliate data...</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-background pb-8">
@@ -122,11 +132,11 @@ export default function AffiliatePage() {
               <div className="grid grid-cols-2 gap-4 pt-4 border-t border-white/20">
                 <div>
                   <p className="text-sm opacity-90">Total Earnings</p>
-                  <p className="font-serif text-2xl font-bold mt-1">PKR {totalEarnings}</p>
+                  <p className="font-serif text-2xl font-bold mt-1">Rs. {parseFloat(totalEarnings).toLocaleString()}</p>
                 </div>
                 <div>
                   <p className="text-sm opacity-90">Pending</p>
-                  <p className="font-serif text-2xl font-bold mt-1">PKR {pendingEarnings}</p>
+                  <p className="font-serif text-2xl font-bold mt-1">Rs. {parseFloat(pendingEarnings).toLocaleString()}</p>
                 </div>
               </div>
             </CardContent>
@@ -134,7 +144,7 @@ export default function AffiliatePage() {
 
           <div>
             <h3 className="font-serif text-xl font-bold mb-4">Referral Orders</h3>
-            {mockReferralOrders.length === 0 ? (
+            {referralOrders.length === 0 ? (
               <EmptyState
                 icon={UserPlus}
                 title="No Referrals Yet"
@@ -146,7 +156,7 @@ export default function AffiliatePage() {
               />
             ) : (
               <div className="space-y-4">
-                {mockReferralOrders.map((order, index) => (
+                {referralOrders.map((order: any, index: number) => (
                 <motion.div
                   key={order.id}
                   initial={{ opacity: 0, y: 20 }}
@@ -161,9 +171,9 @@ export default function AffiliatePage() {
                             <Package className="w-7 h-7 text-chart-5" />
                           </div>
                           <div>
-                            <p className="font-semibold text-lg">{order.id}</p>
+                            <p className="font-semibold text-lg">Order #{order.id.slice(0, 8).toUpperCase()}</p>
                             <p className="text-sm text-muted-foreground mt-1">
-                              {order.customerName}
+                              {format(new Date(order.createdAt), "MMM dd, yyyy")}
                             </p>
                           </div>
                         </div>
@@ -176,26 +186,16 @@ export default function AffiliatePage() {
                         </Badge>
                       </div>
 
-                      <div className="bg-muted/30 rounded-2xl p-4 space-y-2">
-                        <div className="flex justify-between">
-                          <span className="text-muted-foreground">Order Amount</span>
-                          <span className="font-semibold">PKR {order.amount}</span>
+                      <div className="grid grid-cols-2 gap-6 pt-4 border-t">
+                        <div>
+                          <p className="text-sm text-muted-foreground">Order Amount</p>
+                          <p className="font-bold text-lg mt-1">Rs. {parseFloat(order.totalPrice).toLocaleString()}</p>
                         </div>
-                        <div className="flex justify-between">
-                          <span className="text-muted-foreground">Your Commission</span>
-                          <span className="font-semibold text-chart-5">
-                            PKR {order.commission}
-                          </span>
-                        </div>
-                        <div className="flex justify-between">
-                          <span className="text-muted-foreground">Date</span>
-                          <span className="font-semibold">
-                            {new Date(order.date).toLocaleDateString('en-US', {
-                              month: 'short',
-                              day: 'numeric',
-                              year: 'numeric',
-                            })}
-                          </span>
+                        <div>
+                          <p className="text-sm text-muted-foreground">Your Commission</p>
+                          <p className="font-bold text-lg text-chart-5 mt-1">
+                            Rs. {parseFloat(order.affiliateCommission || "0").toLocaleString()}
+                          </p>
                         </div>
                       </div>
                     </CardContent>

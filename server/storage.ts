@@ -1,12 +1,14 @@
 import { db } from "../db";
 import { 
-  users, products, categories, cartItems, wishlistItems, orders,
+  users, products, categories, cartItems, wishlistItems, orders, addresses, walletTransactions,
   type User, type InsertUser,
   type Product, type InsertProduct,
   type Category, type InsertCategory,
   type CartItem, type InsertCartItem,
   type WishlistItem, type InsertWishlistItem,
-  type Order, type InsertOrder
+  type Order, type InsertOrder,
+  type Address, type InsertAddress,
+  type WalletTransaction, type InsertWalletTransaction
 } from "@shared/schema";
 import { eq, and, desc, sql } from "drizzle-orm";
 import bcrypt from "bcrypt";
@@ -15,6 +17,7 @@ export interface IStorage {
   getUser(id: string): Promise<User | undefined>;
   getUserByEmail(email: string): Promise<User | undefined>;
   createUser(user: InsertUser): Promise<User>;
+  updateUser(id: string, updates: Partial<InsertUser>): Promise<User | undefined>;
   
   getCategories(): Promise<Category[]>;
   createCategory(category: InsertCategory): Promise<Category>;
@@ -37,6 +40,13 @@ export interface IStorage {
   getOrders(userId: string): Promise<Order[]>;
   createOrder(order: InsertOrder): Promise<Order>;
   getOrderById(id: string): Promise<Order | undefined>;
+  
+  getWalletTransactions(userId: string): Promise<WalletTransaction[]>;
+  
+  getAddresses(userId: string): Promise<Address[]>;
+  createAddress(address: InsertAddress): Promise<Address>;
+  updateAddress(id: string, updates: Partial<InsertAddress>): Promise<Address | undefined>;
+  deleteAddress(id: string): Promise<void>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -180,6 +190,42 @@ export class DatabaseStorage implements IStorage {
   async getOrderById(id: string): Promise<Order | undefined> {
     const result = await db.select().from(orders).where(eq(orders.id, id)).limit(1);
     return result[0];
+  }
+
+  async updateUser(id: string, updates: Partial<InsertUser>): Promise<User | undefined> {
+    if (updates.password) {
+      updates.password = await bcrypt.hash(updates.password, 10);
+    }
+    const result = await db.update(users)
+      .set(updates)
+      .where(eq(users.id, id))
+      .returning();
+    return result[0];
+  }
+
+  async getWalletTransactions(userId: string): Promise<WalletTransaction[]> {
+    return await db.select().from(walletTransactions).where(eq(walletTransactions.userId, userId)).orderBy(desc(walletTransactions.createdAt));
+  }
+
+  async getAddresses(userId: string): Promise<Address[]> {
+    return await db.select().from(addresses).where(eq(addresses.userId, userId)).orderBy(desc(addresses.isDefault));
+  }
+
+  async createAddress(address: InsertAddress): Promise<Address> {
+    const result = await db.insert(addresses).values(address).returning();
+    return result[0];
+  }
+
+  async updateAddress(id: string, updates: Partial<InsertAddress>): Promise<Address | undefined> {
+    const result = await db.update(addresses)
+      .set(updates)
+      .where(eq(addresses.id, id))
+      .returning();
+    return result[0];
+  }
+
+  async deleteAddress(id: string): Promise<void> {
+    await db.delete(addresses).where(eq(addresses.id, id));
   }
 }
 

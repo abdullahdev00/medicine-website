@@ -5,33 +5,23 @@ import { Badge } from "@/components/ui/badge";
 import { ArrowLeft, Package } from "lucide-react";
 import { motion } from "framer-motion";
 import { EmptyState } from "@/components/EmptyState";
-
-const mockOrders = [
-  {
-    id: "MED-ABC123",
-    date: "2024-01-15",
-    total: "1280",
-    status: "delivered",
-    items: ["Paracetamol 500mg", "Vitamin C 1000mg"],
-  },
-  {
-    id: "MED-XYZ789",
-    date: "2024-01-20",
-    total: "890",
-    status: "pending",
-    items: ["Cough Syrup"],
-  },
-  {
-    id: "MED-DEF456",
-    date: "2024-01-10",
-    total: "1550",
-    status: "delivered",
-    items: ["Omega-3 Fish Oil", "Multivitamin"],
-  },
-];
+import { useAuth } from "@/contexts/AuthContext";
+import { useQuery } from "@tanstack/react-query";
+import { format } from "date-fns";
 
 export default function MyOrders() {
   const [, setLocation] = useLocation();
+  const { user, isAuthenticated } = useAuth();
+
+  const { data: orders = [], isLoading } = useQuery({
+    queryKey: ["/api/orders", user?.id],
+    enabled: isAuthenticated && !!user,
+    queryFn: async () => {
+      const res = await fetch(`/api/orders?userId=${user?.id}`);
+      if (!res.ok) return [];
+      return res.json();
+    },
+  });
 
   const getStatusColor = (status: string) => {
     switch (status) {
@@ -45,6 +35,17 @@ export default function MyOrders() {
         return "bg-muted text-muted-foreground border-muted";
     }
   };
+
+  if (isLoading) {
+    return (
+      <div className="min-h-screen bg-background flex items-center justify-center">
+        <div className="text-center">
+          <div className="w-16 h-16 border-4 border-primary border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
+          <p className="text-muted-foreground">Loading orders...</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-background pb-8">
@@ -71,7 +72,7 @@ export default function MyOrders() {
       </div>
 
       <div className="max-w-7xl mx-auto px-6 py-8">
-        {mockOrders.length === 0 ? (
+        {orders.length === 0 ? (
           <EmptyState
             icon={Package}
             title="No Orders Yet"
@@ -83,7 +84,7 @@ export default function MyOrders() {
           />
         ) : (
           <div className="space-y-5">
-            {mockOrders.map((order, index) => (
+            {orders.map((order: any, index: number) => (
             <motion.div
               key={order.id}
               initial={{ opacity: 0, y: 20 }}
@@ -99,14 +100,10 @@ export default function MyOrders() {
                       </div>
                       <div>
                         <p className="font-semibold text-lg" data-testid={`text-order-id-${order.id}`}>
-                          {order.id}
+                          Order #{order.id.slice(0, 8).toUpperCase()}
                         </p>
                         <p className="text-sm text-muted-foreground mt-1">
-                          {new Date(order.date).toLocaleDateString('en-US', { 
-                            year: 'numeric', 
-                            month: 'long', 
-                            day: 'numeric' 
-                          })}
+                          {format(new Date(order.createdAt), "MMMM dd, yyyy")}
                         </p>
                       </div>
                     </div>
@@ -117,9 +114,9 @@ export default function MyOrders() {
 
                   <div className="bg-muted/30 rounded-2xl p-4 space-y-2">
                     <p className="text-sm font-semibold text-muted-foreground">Order Items:</p>
-                    {order.items.map((item, itemIndex) => (
+                    {order.products.map((item: any, itemIndex: number) => (
                       <p key={itemIndex} className="text-base">
-                        • {item}
+                        • {item.name} x {item.quantity} {item.selectedPackage && `(${item.selectedPackage})`}
                       </p>
                     ))}
                   </div>
@@ -127,7 +124,7 @@ export default function MyOrders() {
                   <div className="flex items-center justify-between pt-3 border-t">
                     <span className="text-muted-foreground font-medium">Total Amount</span>
                     <span className="font-serif text-2xl font-bold text-primary">
-                      PKR {order.total}
+                      Rs. {parseFloat(order.totalPrice).toLocaleString()}
                     </span>
                   </div>
                 </CardContent>
