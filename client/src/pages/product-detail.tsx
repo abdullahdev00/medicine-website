@@ -91,20 +91,45 @@ export default function ProductDetail() {
       });
     },
     onMutate: async () => {
+      await queryClient.cancelQueries({ queryKey: ["/api/cart", user?.id] });
+      const previousCart = queryClient.getQueryData(["/api/cart", user?.id]);
+      
+      queryClient.setQueryData(["/api/cart", user?.id], (old: any[] = []) => {
+        const existing = old.find((item) => item.productId === id);
+        if (existing) {
+          return old.map((item) => 
+            item.productId === id 
+              ? { ...item, quantity: item.quantity + quantity }
+              : item
+          );
+        }
+        return [...old, {
+          id: 'temp-' + Date.now(),
+          userId: user?.id,
+          productId: id,
+          quantity,
+          selectedPackage: product?.packageOptions?.[selectedPackage],
+          product,
+        }];
+      });
+      
       toast({
         title: "Added to cart",
         description: "Item added successfully",
       });
+      
+      return { previousCart };
     },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/cart", user?.id] });
-    },
-    onError: () => {
+    onError: (err, variables, context: any) => {
+      queryClient.setQueryData(["/api/cart", user?.id], context.previousCart);
       toast({
         title: "Error",
         description: "Failed to add item to cart. Please try again.",
         variant: "destructive",
       });
+    },
+    onSettled: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/cart", user?.id] });
     },
   });
 
