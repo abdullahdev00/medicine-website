@@ -4,13 +4,16 @@ import { Card, CardContent } from "@/components/ui/card";
 import { User, LogOut, Package, MapPin, Edit2, ChevronRight, Wallet, Users, Briefcase, Heart } from "lucide-react";
 import { BottomNav } from "@/components/BottomNav";
 import { useToast } from "@/hooks/use-toast";
+import { useAuth } from "@/contexts/AuthContext";
 import { motion } from "framer-motion";
 
 export default function Profile() {
   const [, setLocation] = useLocation();
   const { toast } = useToast();
+  const { user, logout } = useAuth();
 
   const handleLogout = () => {
+    logout();
     toast({
       title: "Logged out",
       description: "You have been successfully logged out.",
@@ -104,8 +107,8 @@ export default function Profile() {
               <User className="w-14 h-14 text-white" />
             </div>
             <div>
-              <h1 className="font-serif text-3xl font-bold">Ahmad Khan</h1>
-              <p className="text-muted-foreground mt-1">ahmad.khan@example.com</p>
+              <h1 className="font-serif text-3xl font-bold" data-testid="text-user-name">{user?.fullName || "Guest User"}</h1>
+              <p className="text-muted-foreground mt-1" data-testid="text-user-email">{user?.email || "guest@example.com"}</p>
             </div>
           </motion.div>
         </div>

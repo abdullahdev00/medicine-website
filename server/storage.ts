@@ -9,6 +9,7 @@ import {
   type Order, type InsertOrder
 } from "@shared/schema";
 import { eq, and, desc, sql } from "drizzle-orm";
+import bcrypt from "bcrypt";
 
 export interface IStorage {
   getUser(id: string): Promise<User | undefined>;
@@ -51,7 +52,12 @@ export class DatabaseStorage implements IStorage {
 
   async createUser(insertUser: InsertUser): Promise<User> {
     const affiliateCode = Math.random().toString(36).substring(2, 10).toUpperCase();
-    const result = await db.insert(users).values({ ...insertUser, affiliateCode }).returning();
+    const hashedPassword = await bcrypt.hash(insertUser.password, 10);
+    const result = await db.insert(users).values({ 
+      ...insertUser, 
+      password: hashedPassword,
+      affiliateCode 
+    }).returning();
     return result[0];
   }
 

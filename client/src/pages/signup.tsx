@@ -7,6 +7,8 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Activity, CheckCircle2, Loader2, ArrowRight, ArrowLeft } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { useToast } from "@/hooks/use-toast";
+import { useAuth } from "@/contexts/AuthContext";
+import { apiRequest } from "@/lib/queryClient";
 import {
   Dialog,
   DialogContent,
@@ -18,6 +20,7 @@ import {
 export default function Signup() {
   const [, setLocation] = useLocation();
   const { toast } = useToast();
+  const { login } = useAuth();
   const [isLoading, setIsLoading] = useState(false);
   
   const [signupStep, setSignupStep] = useState(1);
@@ -74,13 +77,25 @@ export default function Signup() {
     e.preventDefault();
     setIsLoading(true);
     
-    setTimeout(() => {
+    try {
+      const response = await apiRequest('POST', '/api/auth/register', signupData);
+      const user = await response.json();
+      login(user);
       toast({
         title: "Account created!",
         description: "Welcome to MediSwift Pakistan.",
       });
       setLocation("/home");
-    }, 1000);
+    } catch (error: any) {
+      const errorMessage = error.message || "Something went wrong. Please try again.";
+      toast({
+        title: "Registration failed",
+        description: errorMessage.includes('400') ? "Email already registered or invalid data" : errorMessage,
+        variant: "destructive",
+      });
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   const updateSignupData = (field: string, value: string) => {
