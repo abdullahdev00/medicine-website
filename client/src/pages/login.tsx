@@ -25,22 +25,7 @@ export default function Login() {
     const password = formData.get('password') as string;
 
     try {
-      const response = await apiRequest('/api/auth/login', {
-        method: 'POST',
-        body: JSON.stringify({ email, password }),
-      });
-
-      if (!response.ok) {
-        const error = await response.json();
-        toast({
-          title: "Login failed",
-          description: error.message || "Invalid email or password",
-          variant: "destructive",
-        });
-        setIsLoading(false);
-        return;
-      }
-
+      const response = await apiRequest('POST', '/api/auth/login', { email, password });
       const user = await response.json();
       login(user);
       toast({
@@ -48,10 +33,11 @@ export default function Login() {
         description: "You have successfully logged in.",
       });
       setLocation("/home");
-    } catch (error) {
+    } catch (error: any) {
+      const errorMessage = error.message || "Something went wrong. Please try again.";
       toast({
-        title: "Error",
-        description: "Something went wrong. Please try again.",
+        title: "Login failed",
+        description: errorMessage.includes('401') ? "Invalid email or password" : errorMessage,
         variant: "destructive",
       });
     } finally {
