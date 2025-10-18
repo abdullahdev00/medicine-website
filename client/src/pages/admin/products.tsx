@@ -217,10 +217,10 @@ export default function AdminProducts() {
       name: product.name,
       categoryId: product.categoryId,
       description: product.description,
-      imageUrl: product.imageUrl,
+      imageUrl: Array.isArray(product.images) && product.images.length > 0 ? product.images[0] : "",
       rating: product.rating?.toString() || "0",
       inStock: product.inStock,
-      variants: product.variants || [{ name: "", price: "" }],
+      variants: product.variants || [{ name: "", price: "", wholesalePrice: "" }],
     });
     setIsEditDialogOpen(true);
   };

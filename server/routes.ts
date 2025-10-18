@@ -631,7 +631,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.patch("/api/admin/products/:id", async (req, res) => {
     try {
-      const product = await storage.updateProduct(req.params.id, req.body);
+      const productData = { ...req.body };
+      if (productData.imageUrl && !productData.images) {
+        productData.images = [productData.imageUrl];
+        delete productData.imageUrl;
+      }
+      const product = await storage.updateProduct(req.params.id, productData);
       if (!product) {
         return res.status(404).json({ message: "Product not found" });
       }
@@ -652,7 +657,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.post("/api/admin/products", async (req, res) => {
     try {
-      const product = await storage.createProduct(req.body);
+      const productData = { ...req.body };
+      if (productData.imageUrl && !productData.images) {
+        productData.images = [productData.imageUrl];
+        delete productData.imageUrl;
+      }
+      const product = await storage.createProduct(productData);
       res.status(201).json(product);
     } catch (error: any) {
       res.status(500).json({ message: error.message });
