@@ -781,11 +781,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.post("/api/admin/login", async (req, res) => {
     try {
       const { email, password } = req.body;
-      console.log("🔐 Admin login attempt:", { email, passwordLength: password?.length });
-      
       const admin = await storage.adminLogin(email, password);
-      console.log("🔍 Admin found:", admin ? "YES" : "NO");
-      
       if (!admin) {
         return res.status(401).json({ message: "Invalid credentials" });
       }
@@ -794,13 +790,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
       req.session.adminId = admin.id;
       req.session.isAdmin = true;
       
-      console.log("✅ Admin login successful:", admin.email);
-      
       // Don't send password hash to client
       const { password: _, ...adminData } = admin;
       res.json({ ...adminData, isAdmin: true });
     } catch (error: any) {
-      console.error("❌ Admin login error:", error);
       res.status(500).json({ message: error.message });
     }
   });

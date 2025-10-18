@@ -127,7 +127,7 @@ export default function AdminUsers() {
       {/* View User Details Dialog */}
       {selectedUser && (
         <Dialog open={!!selectedUser} onOpenChange={() => setSelectedUser(null)}>
-          <DialogContent className="max-w-2xl bg-white dark:bg-gray-900 border-gray-200 dark:border-gray-800" data-testid="dialog-user-details">
+          <DialogContent className="max-w-[90vw] max-h-[90vh] overflow-y-auto bg-white dark:bg-gray-900 border-gray-200 dark:border-gray-800" data-testid="dialog-user-details">
             <DialogHeader>
               <DialogTitle className="text-gray-900 dark:text-white">User Details</DialogTitle>
             </DialogHeader>

@@ -11,6 +11,7 @@ interface AdminPageHeaderProps {
 
 export default function AdminPageHeader({ title, description, onRefresh, children }: AdminPageHeaderProps) {
   const [darkMode, setDarkMode] = useState(false);
+  const [isRefreshing, setIsRefreshing] = useState(false);
 
   useEffect(() => {
     const isDark = document.documentElement.classList.contains('dark');
@@ -28,6 +29,12 @@ export default function AdminPageHeader({ title, description, onRefresh, childre
     setDarkMode(!darkMode);
   };
 
+  const handleRefresh = () => {
+    setIsRefreshing(true);
+    onRefresh?.();
+    setTimeout(() => setIsRefreshing(false), 1000);
+  };
+
   return (
     <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
       <div>
@@ -43,11 +50,11 @@ export default function AdminPageHeader({ title, description, onRefresh, childre
           <Button
             variant="outline"
             size="sm"
-            onClick={onRefresh}
+            onClick={handleRefresh}
             data-testid="button-refresh"
             className="border-gray-300 dark:border-gray-600"
           >
-            <RefreshCw className="w-4 h-4 mr-2" />
+            <RefreshCw className={`w-4 h-4 mr-2 transition-transform duration-1000 ${isRefreshing ? 'animate-spin' : ''}`} />
             Refresh
           </Button>
         )}

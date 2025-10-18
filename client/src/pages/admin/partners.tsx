@@ -125,7 +125,7 @@ export default function AdminPartners() {
       {/* View Partner Details Dialog */}
       {selectedPartner && (
         <Dialog open={!!selectedPartner} onOpenChange={() => setSelectedPartner(null)}>
-          <DialogContent className="max-w-2xl bg-white dark:bg-gray-900 border-gray-200 dark:border-gray-800" data-testid="dialog-partner-details">
+          <DialogContent className="max-w-[90vw] max-h-[90vh] overflow-y-auto bg-white dark:bg-gray-900 border-gray-200 dark:border-gray-800" data-testid="dialog-partner-details">
             <DialogHeader>
               <DialogTitle className="text-gray-900 dark:text-white">Partner Details</DialogTitle>
             </DialogHeader>

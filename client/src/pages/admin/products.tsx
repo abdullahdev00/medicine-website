@@ -391,7 +391,7 @@ export default function AdminProducts() {
 
       {/* Add Product Dialog */}
       <Dialog open={isAddDialogOpen} onOpenChange={setIsAddDialogOpen}>
-        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+        <DialogContent className="max-w-[90vw] max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>Add New Product</DialogTitle>
             <DialogDescription>
@@ -602,7 +602,7 @@ export default function AdminProducts() {
 
       {/* Edit Product Dialog */}
       <Dialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}>
-        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+        <DialogContent className="max-w-[90vw] max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>Edit Product</DialogTitle>
             <DialogDescription>
@@ -813,7 +813,7 @@ export default function AdminProducts() {
 
       {/* Delete Confirmation Dialog */}
       <AlertDialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
-        <AlertDialogContent className="bg-white dark:bg-gray-900 border-gray-200 dark:border-gray-800">
+        <AlertDialogContent className="max-w-[90vw] max-h-[90vh] bg-white dark:bg-gray-900 border-gray-200 dark:border-gray-800">
           <AlertDialogHeader>
             <AlertDialogTitle className="text-gray-900 dark:text-white">Are you sure?</AlertDialogTitle>
             <AlertDialogDescription className="text-gray-600 dark:text-gray-400">
@@ -837,7 +837,7 @@ export default function AdminProducts() {
       {/* View Product Details Dialog */}
       {selectedProduct && isViewDialogOpen && (
         <Dialog open={isViewDialogOpen} onOpenChange={setIsViewDialogOpen}>
-          <DialogContent className="max-w-4xl bg-white dark:bg-gray-900 border-gray-200 dark:border-gray-800" data-testid="dialog-product-details">
+          <DialogContent className="max-w-[90vw] max-h-[90vh] overflow-y-auto bg-white dark:bg-gray-900 border-gray-200 dark:border-gray-800" data-testid="dialog-product-details">
             <DialogHeader>
               <DialogTitle className="text-gray-900 dark:text-white">Product Details</DialogTitle>
             </DialogHeader>

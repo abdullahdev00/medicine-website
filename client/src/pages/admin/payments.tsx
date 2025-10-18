@@ -274,7 +274,7 @@ export default function AdminPayments() {
       {/* View Details Dialog */}
       {selectedPayment && (
         <Dialog open={!!selectedPayment} onOpenChange={() => setSelectedPayment(null)}>
-          <DialogContent className="max-w-2xl bg-white dark:bg-gray-900 border-gray-200 dark:border-gray-800" data-testid="dialog-payment-details">
+          <DialogContent className="max-w-[90vw] max-h-[90vh] overflow-y-auto bg-white dark:bg-gray-900 border-gray-200 dark:border-gray-800" data-testid="dialog-payment-details">
             <DialogHeader>
               <DialogTitle className="text-gray-900 dark:text-white">Payment Request Details</DialogTitle>
             </DialogHeader>
@@ -425,7 +425,7 @@ export default function AdminPayments() {
 
       {/* Confirmation Dialog */}
       <AlertDialog open={!!confirmAction} onOpenChange={() => setConfirmAction(null)}>
-        <AlertDialogContent className="bg-white dark:bg-gray-900 border-gray-200 dark:border-gray-800">
+        <AlertDialogContent className="max-w-[90vw] max-h-[90vh] bg-white dark:bg-gray-900 border-gray-200 dark:border-gray-800">
           <AlertDialogHeader>
             <AlertDialogTitle className="text-gray-900 dark:text-white">
               {confirmAction?.type === 'approve' ? 'Approve Payment Request?' : 'Reject Payment Request?'}
