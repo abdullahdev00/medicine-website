@@ -1,167 +1,507 @@
 import { db } from "./index";
-import { categories, products } from "@shared/schema";
+import {
+  categories,
+  products,
+  users,
+  admins,
+  addresses,
+  wishlistItems,
+  orders,
+  walletTransactions,
+  partners,
+  referralStats,
+  paymentAccounts,
+} from "@shared/schema";
 import { count, sql } from "drizzle-orm";
-
-const mockCategories = [
-  { name: "First Aid", icon: "Activity", description: "Emergency medical supplies and bandages" },
-  { name: "Cold & Flu", icon: "Thermometer", description: "Medicines for cold and flu symptoms" },
-  { name: "Vitamins", icon: "Pill", description: "Essential vitamins and supplements" },
-  { name: "Personal Hygiene", icon: "Droplets", description: "Personal care and hygiene products" },
-  { name: "Skincare", icon: "Sparkles", description: "Skincare and beauty products" },
-  { name: "Pain Relief", icon: "Zap", description: "Pain management medications" },
-];
+import bcrypt from "bcrypt";
 
 async function seed() {
   try {
     console.log("🌱 Seeding database...");
 
-    console.log("Checking for existing categories...");
-    const existingCategories = await db.select().from(categories);
-    
-    if (existingCategories.length === 0) {
-      console.log("Creating categories...");
-      const createdCategories = await db.insert(categories)
-        .values(mockCategories)
-        .returning();
-      
-      console.log(`✅ Created ${createdCategories.length} categories`);
-    } else {
-      console.log(`ℹ️  Found ${existingCategories.length} existing categories`);
-    }
-
-    console.log("Getting category IDs as strings...");
-    const categoryRows = await db.execute<{ id: string; name: string }>(
-      sql`SELECT id::text as id, name FROM categories`
-    );
-    
-    const categoryMap = new Map<string, string>();
-    categoryRows.rows.forEach((cat: any) => {
-      categoryMap.set(cat.name, cat.id);
-    });
-
-    console.log("Checking for existing products...");
+    // Check if data already exists
     const productCount = await db.select({ count: count() }).from(products);
-    const existingProductCount = productCount[0]?.count || 0;
-    
-    if (existingProductCount > 0) {
-      console.log(`ℹ️  Found ${existingProductCount} existing products. Skipping seed.`);
+    if (productCount[0]?.count && productCount[0].count > 0) {
+      console.log("ℹ️  Database already seeded. Skipping...");
       return;
     }
 
+    // 1. Create Admin User
+    console.log("Creating admin user...");
+    const hashedAdminPassword = await bcrypt.hash("admin123", 10);
+    const adminResult = await db.insert(admins).values({
+      fullName: "Admin User",
+      email: "admin@example.com",
+      password: hashedAdminPassword,
+      isActive: true,
+    }).returning();
+    console.log(`✅ Created admin user: ${adminResult[0].email}`);
+
+    // 2. Create Test Users
+    console.log("Creating test users...");
+    const hashedUserPassword = await bcrypt.hash("test123", 10);
+    const hashedPartnerPassword = await bcrypt.hash("partner123", 10);
+
+    const testUser = await db.insert(users).values({
+      fullName: "Test User",
+      email: "test@example.com",
+      password: hashedUserPassword,
+      phoneNumber: "+92-300-1234567",
+      whatsappNumber: "+92-300-1234567",
+      affiliateCode: "TEST2024",
+      walletBalance: "5000.00",
+      totalEarnings: "2500.00",
+      pendingEarnings: "500.00",
+      isPartner: true,
+    }).returning();
+    console.log(`✅ Created test user: ${testUser[0].email}`);
+
+    const partnerUser = await db.insert(users).values({
+      fullName: "Partner User",
+      email: "partner@example.com",
+      password: hashedPartnerPassword,
+      phoneNumber: "+92-300-9876543",
+      whatsappNumber: "+92-300-9876543",
+      affiliateCode: "PARTNER2024",
+      walletBalance: "10000.00",
+      totalEarnings: "5000.00",
+      pendingEarnings: "1000.00",
+      isPartner: true,
+    }).returning();
+    console.log(`✅ Created partner user: ${partnerUser[0].email}`);
+
+    // 3. Create Categories
+    console.log("Creating categories...");
+    const mockCategories = [
+      { name: "Pain Relief", icon: "Pill", description: "Medications for pain management" },
+      { name: "Vitamins & Supplements", icon: "Heart", description: "Essential vitamins and nutritional supplements" },
+      { name: "Cold & Flu", icon: "Thermometer", description: "Medicines for cold and flu symptoms" },
+      { name: "First Aid", icon: "Activity", description: "Emergency medical supplies and bandages" },
+      { name: "Diabetes Care", icon: "Droplet", description: "Products for diabetes management" },
+      { name: "Personal Care", icon: "Sparkles", description: "Personal hygiene and care products" },
+    ];
+
+    const createdCategories = await db.insert(categories).values(mockCategories).returning();
+    console.log(`✅ Created ${createdCategories.length} categories`);
+
+    // Create category map
+    const categoryMap = new Map<string, string>();
+    createdCategories.forEach(cat => {
+      categoryMap.set(cat.name, cat.id);
+    });
+
+    // 4. Create Products with Variants
     console.log("Creating products...");
     const mockProducts = [
       {
-        name: "Paracetamol 500mg",
+        name: "Panadol Extra",
         categoryId: categoryMap.get("Pain Relief")!,
-        price: "120",
-        description: "Paracetamol is used to treat many conditions such as headache, muscle aches, arthritis, backache, toothaches, colds, and fevers.",
-        imageUrl: "https://images.unsplash.com/photo-1584308666744-24d5c474f2ae?w=400&h=400&fit=crop",
+        description: "Fast relief for headaches, fever, and body aches",
+        imageUrl: "https://images.unsplash.com/photo-1584308666744-24d5c474f2ae?w=400",
         rating: "4.5",
-        packageOptions: ["10 Tablets", "20 Tablets", "50 Tablets"],
+        variants: [
+          { name: "10 Tablets", price: "150" },
+          { name: "20 Tablets", price: "280" },
+          { name: "30 Tablets", price: "400" },
+        ],
         inStock: true,
       },
       {
-        name: "Vitamin C 1000mg",
-        categoryId: categoryMap.get("Vitamins")!,
-        price: "890",
-        description: "Vitamin C is an essential nutrient that supports immune function and acts as a powerful antioxidant.",
-        imageUrl: "https://images.unsplash.com/photo-1550572017-4257a8c37e4f?w=400&h=400&fit=crop",
-        rating: "4.8",
-        packageOptions: ["30 Tablets", "60 Tablets", "90 Tablets"],
-        inStock: true,
-      },
-      {
-        name: "Cough Syrup 200ml",
-        categoryId: categoryMap.get("Cold & Flu")!,
-        price: "245",
-        description: "Effective relief for dry and productive coughs. Soothes throat irritation and reduces cough frequency.",
-        imageUrl: "https://images.unsplash.com/photo-1587854692152-cbe660dbde88?w=400&h=400&fit=crop",
-        rating: "4.3",
-        packageOptions: ["100ml", "200ml"],
-        inStock: true,
-      },
-      {
-        name: "Bandages Pack",
-        categoryId: categoryMap.get("First Aid")!,
-        price: "350",
-        description: "Premium quality adhesive bandages for minor cuts and wounds. Breathable with strong adhesive.",
-        imageUrl: "https://images.unsplash.com/photo-1603398938378-e54eab446dde?w=400&h=400&fit=crop",
-        rating: "4.6",
-        packageOptions: ["20 Pieces", "50 Pieces", "100 Pieces"],
-        inStock: true,
-      },
-      {
-        name: "Hand Sanitizer 500ml",
-        categoryId: categoryMap.get("Personal Hygiene")!,
-        price: "450",
-        description: "70% alcohol-based hand sanitizer that kills 99.9% of germs. Quick-drying with moisturizing agents.",
-        imageUrl: "https://images.unsplash.com/photo-1584515979956-d9f6e5d09982?w=400&h=400&fit=crop",
-        rating: "4.7",
-        packageOptions: ["250ml", "500ml", "1000ml"],
-        inStock: true,
-      },
-      {
-        name: "Omega-3 Fish Oil",
-        categoryId: categoryMap.get("Vitamins")!,
-        price: "1250",
-        description: "Premium omega-3 with EPA and DHA to support heart, brain, and joint health.",
-        imageUrl: "https://images.unsplash.com/photo-1608571423902-eed4a5ad8108?w=400&h=400&fit=crop",
-        rating: "4.9",
-        packageOptions: ["60 Softgels", "120 Softgels", "180 Softgels"],
-        inStock: true,
-      },
-      {
-        name: "Ibuprofen 400mg",
+        name: "Brufen 400mg",
         categoryId: categoryMap.get("Pain Relief")!,
-        price: "180",
-        description: "Fast-acting pain relief for headaches, dental pain, and arthritis. Also reduces fever.",
-        imageUrl: "https://images.unsplash.com/photo-1471864190281-a93a3070b6de?w=400&h=400&fit=crop",
-        rating: "4.4",
-        packageOptions: ["10 Tablets", "20 Tablets"],
+        description: "Effective pain relief and anti-inflammatory",
+        imageUrl: "https://images.unsplash.com/photo-1471864190281-a93a3070b6de?w=400",
+        rating: "4.6",
+        variants: [
+          { name: "10 Tablets", price: "180" },
+          { name: "20 Tablets", price: "340" },
+        ],
         inStock: true,
       },
       {
         name: "Multivitamin Complex",
-        categoryId: categoryMap.get("Vitamins")!,
-        price: "950",
-        description: "Complete daily multivitamin supporting overall health, energy, and immune function.",
-        imageUrl: "https://images.unsplash.com/photo-1606791405792-1004f1718d0d?w=400&h=400&fit=crop",
-        rating: "4.6",
-        packageOptions: ["30 Tablets", "60 Tablets"],
+        categoryId: categoryMap.get("Vitamins & Supplements")!,
+        description: "Complete daily multivitamin for overall health",
+        imageUrl: "https://images.unsplash.com/photo-1550572017-4257a8c37e4f?w=400",
+        rating: "4.8",
+        variants: [
+          { name: "30 Capsules", price: "850" },
+          { name: "60 Capsules", price: "1500" },
+          { name: "90 Capsules", price: "2100" },
+        ],
         inStock: true,
       },
       {
-        name: "Antiseptic Cream",
-        categoryId: categoryMap.get("First Aid")!,
-        price: "280",
-        description: "Antiseptic cream for minor cuts, burns, and skin infections. Promotes faster healing.",
-        imageUrl: "https://images.unsplash.com/photo-1556228578-8c89e6adf883?w=400&h=400&fit=crop",
-        rating: "4.5",
-        packageOptions: ["25g", "50g", "100g"],
-        inStock: true,
-      },
-      {
-        name: "Face Moisturizer SPF 30",
-        categoryId: categoryMap.get("Skincare")!,
-        price: "1100",
-        description: "Daily moisturizer with SPF 30 sun protection. Lightweight, non-greasy formula.",
-        imageUrl: "https://images.unsplash.com/photo-1556228852-80c8b6c8ea00?w=400&h=400&fit=crop",
+        name: "Vitamin D3 5000 IU",
+        categoryId: categoryMap.get("Vitamins & Supplements")!,
+        description: "Essential vitamin D for bone and immune health",
+        imageUrl: "https://images.unsplash.com/photo-1608571423902-eed4a5ad8108?w=400",
         rating: "4.7",
-        packageOptions: ["50ml", "100ml"],
+        variants: [
+          { name: "30 Tablets", price: "650" },
+          { name: "60 Tablets", price: "1200" },
+        ],
+        inStock: true,
+      },
+      {
+        name: "Cold Relief Syrup",
+        categoryId: categoryMap.get("Cold & Flu")!,
+        description: "Effective relief for cold and cough symptoms",
+        imageUrl: "https://images.unsplash.com/photo-1587854692152-cbe660dbde88?w=400",
+        rating: "4.4",
+        variants: [
+          { name: "60ml", price: "220" },
+          { name: "120ml", price: "390" },
+        ],
+        inStock: true,
+      },
+      {
+        name: "Antihistamine Tablets",
+        categoryId: categoryMap.get("Cold & Flu")!,
+        description: "Relief from allergies and hay fever",
+        imageUrl: "https://images.unsplash.com/photo-1584308666744-24d5c474f2ae?w=400",
+        rating: "4.5",
+        variants: [
+          { name: "10 Tablets", price: "170" },
+          { name: "20 Tablets", price: "320" },
+        ],
+        inStock: true,
+      },
+      {
+        name: "Blood Glucose Monitor Kit",
+        categoryId: categoryMap.get("Diabetes Care")!,
+        description: "Complete kit for blood sugar monitoring",
+        imageUrl: "https://images.unsplash.com/photo-1603398938378-e54eab446dde?w=400",
+        rating: "4.9",
+        variants: [
+          { name: "With 50 Strips", price: "3500" },
+          { name: "With 100 Strips", price: "5200" },
+        ],
+        inStock: true,
+      },
+      {
+        name: "Insulin Syringes 1ml",
+        categoryId: categoryMap.get("Diabetes Care")!,
+        description: "Sterile syringes for insulin injection",
+        imageUrl: "https://images.unsplash.com/photo-1584515979956-d9f6e5d09982?w=400",
+        rating: "4.6",
+        variants: [
+          { name: "10 Pack", price: "450" },
+          { name: "30 Pack", price: "1250" },
+        ],
+        inStock: true,
+      },
+      {
+        name: "First Aid Kit Complete",
+        categoryId: categoryMap.get("First Aid")!,
+        description: "Comprehensive first aid supplies",
+        imageUrl: "https://images.unsplash.com/photo-1603398938378-e54eab446dde?w=400",
+        rating: "4.7",
+        variants: [
+          { name: "Basic", price: "1200" },
+          { name: "Premium", price: "2500" },
+        ],
+        inStock: true,
+      },
+      {
+        name: "Antiseptic Solution",
+        categoryId: categoryMap.get("First Aid")!,
+        description: "Disinfectant for wounds and cuts",
+        imageUrl: "https://images.unsplash.com/photo-1556228578-8c89e6adf883?w=400",
+        rating: "4.5",
+        variants: [
+          { name: "100ml", price: "180" },
+          { name: "250ml", price: "390" },
+        ],
+        inStock: true,
+      },
+      {
+        name: "Hand Sanitizer",
+        categoryId: categoryMap.get("Personal Care")!,
+        description: "70% alcohol-based hand sanitizer",
+        imageUrl: "https://images.unsplash.com/photo-1584515979956-d9f6e5d09982?w=400",
+        rating: "4.6",
+        variants: [
+          { name: "250ml", price: "320" },
+          { name: "500ml", price: "550" },
+        ],
+        inStock: true,
+      },
+      {
+        name: "Face Masks",
+        categoryId: categoryMap.get("Personal Care")!,
+        description: "Medical grade face masks",
+        imageUrl: "https://images.unsplash.com/photo-1584515979956-d9f6e5d09982?w=400",
+        rating: "4.7",
+        variants: [
+          { name: "50 Pack", price: "850" },
+          { name: "100 Pack", price: "1600" },
+        ],
         inStock: true,
       },
     ];
 
-    for (const product of mockProducts) {
-      await db.execute(
-        sql`INSERT INTO products (name, category_id, price, description, image_url, rating, package_options, in_stock)
-            VALUES (${product.name}, ${product.categoryId}::uuid, ${product.price}, ${product.description}, 
-                    ${product.imageUrl}, ${product.rating}, ${JSON.stringify(product.packageOptions)}::jsonb, ${product.inStock})`
-      );
-    }
-    
-    console.log(`✅ Created ${mockProducts.length} products`);
+    const createdProducts = await db.insert(products).values(mockProducts).returning();
+    console.log(`✅ Created ${createdProducts.length} products`);
+
+    // 5. Create Addresses
+    console.log("Creating addresses...");
+    await db.insert(addresses).values([
+      {
+        userId: testUser[0].id,
+        label: "Home",
+        address: "House 123, Street 5, F-8",
+        city: "Islamabad",
+        province: "Islamabad Capital Territory",
+        postalCode: "44000",
+        isDefault: true,
+      },
+      {
+        userId: testUser[0].id,
+        label: "Office",
+        address: "Office 456, Blue Area",
+        city: "Islamabad",
+        province: "Islamabad Capital Territory",
+        postalCode: "44000",
+        isDefault: false,
+      },
+      {
+        userId: testUser[0].id,
+        label: "Parents Home",
+        address: "House 789, G-11/2",
+        city: "Islamabad",
+        province: "Islamabad Capital Territory",
+        postalCode: "44000",
+        isDefault: false,
+      },
+    ]);
+    console.log("✅ Created 3 addresses");
+
+    // 6. Create Wishlist Items
+    console.log("Creating wishlist items...");
+    await db.insert(wishlistItems).values([
+      { userId: testUser[0].id, productId: createdProducts[1].id },
+      { userId: testUser[0].id, productId: createdProducts[4].id },
+      { userId: testUser[0].id, productId: createdProducts[6].id },
+      { userId: testUser[0].id, productId: createdProducts[11].id },
+    ]);
+    console.log("✅ Created 4 wishlist items");
+
+    // 7. Create Orders
+    console.log("Creating orders...");
+    const order1 = await db.insert(orders).values({
+      userId: testUser[0].id,
+      products: [
+        {
+          productId: createdProducts[0].id,
+          name: "Panadol Extra",
+          quantity: 2,
+          price: "280",
+          variantName: "20 Tablets",
+        },
+      ],
+      totalPrice: "280",
+      deliveryAddress: "House 123, Street 5, F-8, Islamabad",
+      paymentMethod: "Cash on Delivery",
+      status: "delivered",
+      expectedDelivery: new Date(Date.now() - 5 * 24 * 60 * 60 * 1000),
+    }).returning();
+
+    const order2 = await db.insert(orders).values({
+      userId: testUser[0].id,
+      products: [
+        {
+          productId: createdProducts[2].id,
+          name: "Multivitamin Complex",
+          quantity: 1,
+          price: "850",
+          variantName: "30 Capsules",
+        },
+        {
+          productId: createdProducts[3].id,
+          name: "Vitamin D3 5000 IU",
+          quantity: 1,
+          price: "650",
+          variantName: "30 Tablets",
+        },
+      ],
+      totalPrice: "1500",
+      deliveryAddress: "House 123, Street 5, F-8, Islamabad",
+      paymentMethod: "Wallet Payment",
+      paidFromWallet: "1500",
+      status: "delivered",
+      expectedDelivery: new Date(Date.now() - 3 * 24 * 60 * 60 * 1000),
+    }).returning();
+
+    const order3 = await db.insert(orders).values({
+      userId: testUser[0].id,
+      products: [
+        {
+          productId: createdProducts[8].id,
+          name: "First Aid Kit Complete",
+          quantity: 1,
+          price: "1200",
+          variantName: "Basic",
+        },
+      ],
+      totalPrice: "1200",
+      deliveryAddress: "Office 456, Blue Area, Islamabad",
+      paymentMethod: "Cash on Delivery",
+      status: "shipped",
+      expectedDelivery: new Date(Date.now() + 2 * 24 * 60 * 60 * 1000),
+    }).returning();
+
+    const order4 = await db.insert(orders).values({
+      userId: testUser[0].id,
+      products: [
+        {
+          productId: createdProducts[10].id,
+          name: "Hand Sanitizer",
+          quantity: 3,
+          price: "550",
+          variantName: "500ml",
+        },
+      ],
+      totalPrice: "1650",
+      deliveryAddress: "House 123, Street 5, F-8, Islamabad",
+      paymentMethod: "Wallet Payment",
+      paidFromWallet: "1650",
+      status: "processing",
+      expectedDelivery: new Date(Date.now() + 4 * 24 * 60 * 60 * 1000),
+    }).returning();
+
+    const order5 = await db.insert(orders).values({
+      userId: testUser[0].id,
+      products: [
+        {
+          productId: createdProducts[4].id,
+          name: "Cold Relief Syrup",
+          quantity: 1,
+          price: "220",
+          variantName: "60ml",
+        },
+      ],
+      totalPrice: "220",
+      deliveryAddress: "House 123, Street 5, F-8, Islamabad",
+      paymentMethod: "Cash on Delivery",
+      status: "pending",
+      expectedDelivery: new Date(Date.now() + 5 * 24 * 60 * 60 * 1000),
+    }).returning();
+
+    console.log("✅ Created 5 orders");
+
+    // 8. Create Wallet Transactions
+    console.log("Creating wallet transactions...");
+    await db.insert(walletTransactions).values([
+      {
+        userId: testUser[0].id,
+        type: "credit",
+        amount: "2000",
+        description: "Welcome bonus credited",
+        status: "completed",
+      },
+      {
+        userId: testUser[0].id,
+        type: "credit",
+        amount: "500",
+        description: "Affiliate commission earned",
+        status: "completed",
+      },
+      {
+        userId: testUser[0].id,
+        type: "debit",
+        amount: "500",
+        description: "Payment for order",
+        orderId: order1[0].id,
+        status: "completed",
+      },
+      {
+        userId: testUser[0].id,
+        type: "credit",
+        amount: "1500",
+        description: "Referral bonus - 3 successful referrals",
+        status: "completed",
+      },
+      {
+        userId: testUser[0].id,
+        type: "debit",
+        amount: "1000",
+        description: "Payment for order",
+        orderId: order2[0].id,
+        status: "completed",
+      },
+      {
+        userId: testUser[0].id,
+        type: "credit",
+        amount: "1500",
+        description: "Top-up via bank transfer",
+        status: "completed",
+      },
+      {
+        userId: testUser[0].id,
+        type: "credit",
+        amount: "500",
+        description: "Partner commission",
+        status: "pending",
+      },
+    ]);
+    console.log("✅ Created 7 wallet transactions");
+
+    // 9. Create Partners
+    console.log("Creating partners...");
+    await db.insert(partners).values([
+      {
+        userId: testUser[0].id,
+        businessName: "MediCare Pharmacy",
+        businessType: "Pharmacy",
+        commissionRate: "15",
+        totalSales: "25000",
+        status: "active",
+      },
+    ]);
+    console.log("✅ Created 1 partner");
+
+    // 10. Create Referral Stats
+    console.log("Creating referral stats...");
+    await db.insert(referralStats).values([
+      {
+        userId: testUser[0].id,
+        totalReferrals: 5,
+        totalOrders: 12,
+        totalCommission: "2500",
+      },
+    ]);
+    console.log("✅ Created referral stats");
+
+    // 11. Create Payment Accounts
+    console.log("Creating payment accounts...");
+    await db.insert(paymentAccounts).values([
+      {
+        method: "JazzCash",
+        accountName: "MediSwift Operations",
+        accountNumber: "03001234567",
+        isActive: true,
+      },
+      {
+        method: "EasyPaisa",
+        accountName: "MediSwift Operations",
+        accountNumber: "03001234567",
+        isActive: true,
+      },
+      {
+        method: "Raast ID",
+        accountName: "MediSwift Operations",
+        accountNumber: "mediswift@raast",
+        isActive: true,
+      },
+    ]);
+    console.log("✅ Created 3 payment accounts");
+
     console.log("✨ Database seeded successfully!");
+    console.log("\n📋 Demo Credentials:");
+    console.log("Admin: admin@example.com / admin123");
+    console.log("Test User: test@example.com / test123");
+    console.log("Partner: partner@example.com / partner123");
   } catch (error) {
     console.error("❌ Seeding failed:", error);
     throw error;
