@@ -313,9 +313,15 @@ export default function AdminOrders() {
                           </SelectTrigger>
                           <SelectContent>
                             <SelectItem value="pending">Pending</SelectItem>
+                            <SelectItem value="confirmed">Confirmed</SelectItem>
+                            <SelectItem value="processing">Processing</SelectItem>
+                            <SelectItem value="shipped">Shipped</SelectItem>
                             <SelectItem value="in_transit">In Transit</SelectItem>
+                            <SelectItem value="out_for_delivery">Out for Delivery</SelectItem>
                             <SelectItem value="delivered">Delivered</SelectItem>
                             <SelectItem value="cancelled">Cancelled</SelectItem>
+                            <SelectItem value="returned">Returned</SelectItem>
+                            <SelectItem value="refunded">Refunded</SelectItem>
                           </SelectContent>
                         </Select>
                       </TableCell>
