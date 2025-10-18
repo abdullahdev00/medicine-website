@@ -58,7 +58,8 @@ import { useToast } from "@/hooks/use-toast";
 
 const variantSchema = z.object({
   name: z.string().min(1, "Variant name is required"),
-  price: z.string().min(1, "Price is required"),
+  price: z.string().min(1, "Retail price is required"),
+  wholesalePrice: z.string().min(1, "Wholesale price is required"),
 });
 
 const productFormSchema = z.object({
@@ -98,7 +99,7 @@ export default function AdminProducts() {
       imageUrl: "",
       rating: "0",
       inStock: true,
-      variants: [{ name: "", price: "" }],
+      variants: [{ name: "", price: "", wholesalePrice: "" }],
     },
   });
 
@@ -111,7 +112,7 @@ export default function AdminProducts() {
       imageUrl: "",
       rating: "0",
       inStock: true,
-      variants: [{ name: "", price: "" }],
+      variants: [{ name: "", price: "", wholesalePrice: "" }],
     },
   });
 
@@ -516,7 +517,19 @@ export default function AdminProducts() {
                       render={({ field }) => (
                         <FormItem className="flex-1">
                           <FormControl>
-                            <Input placeholder="Price (PKR)" {...field} data-testid={`input-variant-price-${index}`} />
+                            <Input placeholder="Retail Price" {...field} data-testid={`input-variant-price-${index}`} />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                    <FormField
+                      control={addForm.control}
+                      name={`variants.${index}.wholesalePrice`}
+                      render={({ field }) => (
+                        <FormItem className="flex-1">
+                          <FormControl>
+                            <Input placeholder="Wholesale Price" {...field} data-testid={`input-variant-wholesale-${index}`} />
                           </FormControl>
                           <FormMessage />
                         </FormItem>
@@ -715,7 +728,19 @@ export default function AdminProducts() {
                       render={({ field }) => (
                         <FormItem className="flex-1">
                           <FormControl>
-                            <Input placeholder="Price (PKR)" {...field} data-testid={`input-edit-variant-price-${index}`} />
+                            <Input placeholder="Retail Price" {...field} data-testid={`input-edit-variant-price-${index}`} />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                    <FormField
+                      control={editForm.control}
+                      name={`variants.${index}.wholesalePrice`}
+                      render={({ field }) => (
+                        <FormItem className="flex-1">
+                          <FormControl>
+                            <Input placeholder="Wholesale Price" {...field} data-testid={`input-edit-variant-wholesale-${index}`} />
                           </FormControl>
                           <FormMessage />
                         </FormItem>
