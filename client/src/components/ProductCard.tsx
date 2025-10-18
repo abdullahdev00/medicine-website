@@ -35,7 +35,7 @@ export function ProductCard({ product, onAddToCart, onToggleWishlist, isWishlist
       <Card className="overflow-hidden border-none shadow-md hover:shadow-xl transition-all rounded-2xl group">
         <div className="relative aspect-square">
           <img
-            src={product.imageUrl}
+            src={product.images?.[0] || "https://images.unsplash.com/photo-1584308666744-24d5c474f2ae?w=400"}
             alt={product.name}
             className="w-full h-full object-cover"
             data-testid={`img-product-${product.id}`}

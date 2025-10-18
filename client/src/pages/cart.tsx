@@ -134,7 +134,7 @@ export default function Cart() {
                     <div className="flex gap-4">
                       <div className="w-24 h-24 bg-gradient-to-br from-primary/10 to-accent/20 rounded-2xl flex items-center justify-center flex-shrink-0">
                         <img
-                          src={item.product?.imageUrl}
+                          src={item.product?.images?.[0] || "https://images.unsplash.com/photo-1584308666744-24d5c474f2ae?w=400"}
                           alt={item.product?.name}
                           className="w-full h-full object-contain p-2"
                           data-testid={`img-cart-item-${item.id}`}

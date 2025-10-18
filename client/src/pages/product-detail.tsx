@@ -176,7 +176,7 @@ export default function ProductDetail() {
   }
 
   const rating = parseFloat(product.rating || "0");
-  const images = [product.imageUrl];
+  const images = product.images || ["https://images.unsplash.com/photo-1584308666744-24d5c474f2ae?w=400"];
   const isWishlisted = wishlistItems.some((item) => item.productId === id);
   
   const unitPrice = product.variants && product.variants[selectedPackage] 
