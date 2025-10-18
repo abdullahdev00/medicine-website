@@ -11,8 +11,15 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogFooter,
+} from "@/components/ui/dialog";
 import { Badge } from "@/components/ui/badge";
-import { Check, X, Copy, CheckCheck, ExternalLink } from "lucide-react";
+import { Check, X, Copy, CheckCheck } from "lucide-react";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import type { PaymentRequest, UserPaymentAccount, PaymentAccount } from "@shared/schema";
@@ -22,6 +29,7 @@ import { useState } from "react";
 export default function AdminPayments() {
   const { toast } = useToast();
   const [copiedId, setCopiedId] = useState<string | null>(null);
+  const [selectedPayment, setSelectedPayment] = useState<PaymentRequest | null>(null);
 
   const { data: payments, isLoading } = useQuery<PaymentRequest[]>({
     queryKey: ["/api/admin/payment-requests"],
@@ -49,6 +57,7 @@ export default function AdminPayments() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/admin/payment-requests"] });
+      setSelectedPayment(null);
       toast({
         title: "Success",
         description: "Payment request updated successfully",
@@ -119,6 +128,7 @@ export default function AdminPayments() {
                   <TableHead>Type</TableHead>
                   <TableHead>Amount</TableHead>
                   <TableHead>Payment Method</TableHead>
+                  <TableHead>Account Number</TableHead>
                   <TableHead>Receipt/Account</TableHead>
                   <TableHead>Status</TableHead>
                   <TableHead>Date</TableHead>
@@ -129,7 +139,7 @@ export default function AdminPayments() {
                 {isLoading ? (
                   [...Array(5)].map((_, i) => (
                     <TableRow key={i}>
-                      <TableCell colSpan={8}>
+                      <TableCell colSpan={9}>
                         <div className="h-12 bg-gray-200 dark:bg-gray-700 rounded animate-pulse"></div>
                       </TableCell>
                     </TableRow>
@@ -140,7 +150,12 @@ export default function AdminPayments() {
                     const paymentAccount = getPaymentAccount(payment.paymentAccountId);
                     
                     return (
-                    <TableRow key={payment.id} data-testid={`row-payment-${payment.id}`}>
+                    <TableRow 
+                      key={payment.id} 
+                      data-testid={`row-payment-${payment.id}`}
+                      className="cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800"
+                      onClick={() => setSelectedPayment(payment)}
+                    >
                       <TableCell className="font-medium" data-testid="text-payment-id">
                         #{payment.id.slice(0, 8)}
                       </TableCell>
@@ -148,36 +163,41 @@ export default function AdminPayments() {
                       <TableCell data-testid="text-payment-amount">Rs. {payment.amount}</TableCell>
                       <TableCell>{payment.paymentMethod || "N/A"}</TableCell>
                       <TableCell>
-                        {payment.type === "deposit" && payment.receiptUrl ? (
-                          <a 
-                            href={payment.receiptUrl} 
-                            target="_blank" 
-                            rel="noopener noreferrer"
-                            className="flex items-center gap-1 text-blue-600 hover:text-blue-800 dark:text-blue-400 dark:hover:text-blue-300"
-                            data-testid="link-receipt"
+                        {payment.type === "withdrawal" && userAccount ? (
+                          <div 
+                            className="flex items-center gap-2 cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-700 p-2 rounded"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              copyToClipboard(userAccount.raastId, payment.id);
+                            }}
+                            data-testid="button-copy-account-number"
                           >
-                            <ExternalLink className="w-4 h-4" />
-                            View Receipt
-                          </a>
-                        ) : payment.type === "withdraw" && userAccount ? (
-                          <div className="flex items-center gap-2">
-                            <div className="text-sm">
-                              <div className="font-medium">{userAccount.accountName}</div>
-                              <div className="text-gray-500 dark:text-gray-400">{userAccount.raastId}</div>
+                            <div className="text-sm font-medium text-blue-600 dark:text-blue-400">
+                              {userAccount.raastId}
                             </div>
-                            <Button
-                              size="sm"
-                              variant="ghost"
-                              onClick={() => copyToClipboard(userAccount.raastId, payment.id)}
-                              className="h-8 w-8 p-0"
-                              data-testid="button-copy-account"
-                            >
-                              {copiedId === payment.id ? (
-                                <CheckCheck className="w-4 h-4 text-green-600" />
-                              ) : (
-                                <Copy className="w-4 h-4" />
-                              )}
-                            </Button>
+                            {copiedId === payment.id ? (
+                              <CheckCheck className="w-4 h-4 text-green-600" />
+                            ) : (
+                              <Copy className="w-4 h-4 text-gray-400" />
+                            )}
+                          </div>
+                        ) : (
+                          <span className="text-gray-400">N/A</span>
+                        )}
+                      </TableCell>
+                      <TableCell>
+                        {payment.type === "deposit" && payment.receiptUrl ? (
+                          <div className="w-16 h-16 rounded border border-gray-200 dark:border-gray-700 overflow-hidden">
+                            <img 
+                              src={payment.receiptUrl} 
+                              alt="Receipt"
+                              className="w-full h-full object-cover"
+                              data-testid="img-receipt-thumbnail"
+                            />
+                          </div>
+                        ) : payment.type === "withdrawal" && userAccount ? (
+                          <div className="text-sm">
+                            <div className="font-medium text-gray-700 dark:text-gray-300">{userAccount.accountName}</div>
                           </div>
                         ) : (
                           <span className="text-gray-400">N/A</span>
@@ -191,10 +211,10 @@ export default function AdminPayments() {
                       <TableCell>{format(new Date(payment.createdAt), "MMM dd, yyyy")}</TableCell>
                       <TableCell className="text-right">
                         {payment.status === "pending" && (
-                          <div className="flex justify-end gap-2">
+                          <div className="flex justify-end gap-2" onClick={(e) => e.stopPropagation()}>
                             <Button
                               size="sm"
-                              className="bg-green-600 hover:bg-green-700 h-8 w-8 p-0"
+                              className="bg-green-100 hover:bg-green-200 text-green-700 dark:bg-green-200 dark:hover:bg-green-300 dark:text-green-800 h-8 w-8 p-0"
                               onClick={() => 
                                 updatePaymentMutation.mutate({ 
                                   paymentId: payment.id, 
@@ -209,8 +229,7 @@ export default function AdminPayments() {
                             </Button>
                             <Button
                               size="sm"
-                              variant="destructive"
-                              className="h-8 w-8 p-0"
+                              className="bg-red-100 hover:bg-red-200 text-red-700 dark:bg-red-200 dark:hover:bg-red-300 dark:text-red-800 h-8 w-8 p-0"
                               onClick={() => 
                                 updatePaymentMutation.mutate({ 
                                   paymentId: payment.id, 
@@ -232,7 +251,7 @@ export default function AdminPayments() {
                   })
                 ) : (
                   <TableRow>
-                    <TableCell colSpan={8} className="text-center text-gray-500 py-8">
+                    <TableCell colSpan={9} className="text-center text-gray-500 py-8">
                       No payment requests found
                     </TableCell>
                   </TableRow>
@@ -242,6 +261,168 @@ export default function AdminPayments() {
           </div>
         </Card>
       </div>
+
+      {selectedPayment && (
+        <Dialog open={!!selectedPayment} onOpenChange={() => setSelectedPayment(null)}>
+          <DialogContent className="max-w-2xl" data-testid="dialog-payment-details">
+            <DialogHeader>
+              <DialogTitle>Payment Request Details</DialogTitle>
+            </DialogHeader>
+            
+            <div className="space-y-6">
+              {selectedPayment.type === "deposit" && selectedPayment.receiptUrl && (
+                <div className="w-full">
+                  <label className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-2 block">
+                    Receipt Image
+                  </label>
+                  <div className="w-full rounded-lg border-2 border-gray-200 dark:border-gray-700 overflow-hidden bg-gray-50 dark:bg-gray-800">
+                    <img 
+                      src={selectedPayment.receiptUrl} 
+                      alt="Payment Receipt"
+                      className="w-full h-auto max-h-96 object-contain"
+                      data-testid="img-receipt-full"
+                    />
+                  </div>
+                </div>
+              )}
+
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="text-sm font-medium text-gray-500 dark:text-gray-400">Request ID</label>
+                  <p className="text-base font-medium text-gray-900 dark:text-white" data-testid="text-dialog-request-id">
+                    #{selectedPayment.id.slice(0, 8)}
+                  </p>
+                </div>
+
+                <div>
+                  <label className="text-sm font-medium text-gray-500 dark:text-gray-400">Type</label>
+                  <p className="text-base font-medium text-gray-900 dark:text-white capitalize">
+                    {selectedPayment.type}
+                  </p>
+                </div>
+
+                <div>
+                  <label className="text-sm font-medium text-gray-500 dark:text-gray-400">Amount</label>
+                  <p className="text-base font-bold text-cyan-600 dark:text-cyan-400" data-testid="text-dialog-amount">
+                    Rs. {selectedPayment.amount}
+                  </p>
+                </div>
+
+                <div>
+                  <label className="text-sm font-medium text-gray-500 dark:text-gray-400">Payment Method</label>
+                  <p className="text-base font-medium text-gray-900 dark:text-white">
+                    {selectedPayment.paymentMethod || "N/A"}
+                  </p>
+                </div>
+
+                {selectedPayment.type === "withdrawal" && getUserPaymentAccount(selectedPayment.userPaymentAccountId) && (
+                  <>
+                    <div>
+                      <label className="text-sm font-medium text-gray-500 dark:text-gray-400">Account Name</label>
+                      <p className="text-base font-medium text-gray-900 dark:text-white">
+                        {getUserPaymentAccount(selectedPayment.userPaymentAccountId)?.accountName}
+                      </p>
+                    </div>
+
+                    <div>
+                      <label className="text-sm font-medium text-gray-500 dark:text-gray-400">Raast ID / Account Number</label>
+                      <div 
+                        className="flex items-center gap-2 cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-700 p-2 rounded w-fit"
+                        onClick={() => {
+                          const account = getUserPaymentAccount(selectedPayment.userPaymentAccountId);
+                          if (account) {
+                            copyToClipboard(account.raastId, selectedPayment.id);
+                          }
+                        }}
+                        data-testid="button-copy-dialog-account"
+                      >
+                        <p className="text-base font-bold text-blue-600 dark:text-blue-400">
+                          {getUserPaymentAccount(selectedPayment.userPaymentAccountId)?.raastId}
+                        </p>
+                        {copiedId === selectedPayment.id ? (
+                          <CheckCheck className="w-5 h-5 text-green-600" />
+                        ) : (
+                          <Copy className="w-5 h-5 text-gray-400" />
+                        )}
+                      </div>
+                    </div>
+                  </>
+                )}
+
+                <div>
+                  <label className="text-sm font-medium text-gray-500 dark:text-gray-400">Status</label>
+                  <div className="mt-1">
+                    <Badge className={getStatusColor(selectedPayment.status)}>
+                      {selectedPayment.status}
+                    </Badge>
+                  </div>
+                </div>
+
+                <div>
+                  <label className="text-sm font-medium text-gray-500 dark:text-gray-400">Date</label>
+                  <p className="text-base font-medium text-gray-900 dark:text-white">
+                    {format(new Date(selectedPayment.createdAt), "MMM dd, yyyy HH:mm")}
+                  </p>
+                </div>
+
+                {selectedPayment.adminNotes && (
+                  <div className="col-span-2">
+                    <label className="text-sm font-medium text-gray-500 dark:text-gray-400">Admin Notes</label>
+                    <p className="text-base text-gray-900 dark:text-white mt-1">
+                      {selectedPayment.adminNotes}
+                    </p>
+                  </div>
+                )}
+
+                {selectedPayment.rejectionReason && (
+                  <div className="col-span-2">
+                    <label className="text-sm font-medium text-gray-500 dark:text-gray-400">Rejection Reason</label>
+                    <p className="text-base text-red-600 dark:text-red-400 mt-1">
+                      {selectedPayment.rejectionReason}
+                    </p>
+                  </div>
+                )}
+              </div>
+            </div>
+
+            <DialogFooter>
+              {selectedPayment.status === "pending" && (
+                <div className="flex gap-3 w-full justify-end">
+                  <Button
+                    className="bg-green-100 hover:bg-green-200 text-green-700 dark:bg-green-200 dark:hover:bg-green-300 dark:text-green-800"
+                    onClick={() => 
+                      updatePaymentMutation.mutate({ 
+                        paymentId: selectedPayment.id, 
+                        status: "approved" 
+                      })
+                    }
+                    disabled={updatePaymentMutation.isPending}
+                    data-testid="button-dialog-approve"
+                  >
+                    <Check className="w-4 h-4 mr-2" />
+                    Approve
+                  </Button>
+                  <Button
+                    className="bg-red-100 hover:bg-red-200 text-red-700 dark:bg-red-200 dark:hover:bg-red-300 dark:text-red-800"
+                    onClick={() => 
+                      updatePaymentMutation.mutate({ 
+                        paymentId: selectedPayment.id, 
+                        status: "rejected",
+                        rejectionReason: "Review required"
+                      })
+                    }
+                    disabled={updatePaymentMutation.isPending}
+                    data-testid="button-dialog-reject"
+                  >
+                    <X className="w-4 h-4 mr-2" />
+                    Reject
+                  </Button>
+                </div>
+              )}
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+      )}
     </AdminLayout>
     </ProtectedAdminRoute>
   );
