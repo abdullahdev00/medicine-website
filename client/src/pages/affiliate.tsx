@@ -10,6 +10,7 @@ import { EmptyState } from "@/components/EmptyState";
 import { useAuth } from "@/contexts/AuthContext";
 import { useQuery } from "@tanstack/react-query";
 import { format } from "date-fns";
+import { PaymentHelpButton } from "@/components/PaymentHelpButton";
 
 export default function AffiliatePage() {
   const [, setLocation] = useLocation();
@@ -70,22 +71,25 @@ export default function AffiliatePage() {
     <div className="min-h-screen bg-background pb-8">
       <div className="bg-gradient-to-br from-chart-5/10 via-chart-5/5 to-accent/10 border-b">
         <div className="max-w-7xl mx-auto px-6 py-6">
-          <div className="flex items-center gap-4">
-            <Button
-              variant="ghost"
-              size="icon"
-              className="rounded-full w-12 h-12"
-              onClick={() => setLocation("/profile")}
-              data-testid="button-back"
-            >
-              <ArrowLeft className="w-6 h-6" />
-            </Button>
-            <div>
-              <h1 className="font-serif text-2xl font-bold">Affiliate Program</h1>
-              <p className="text-sm text-muted-foreground mt-1">
-                Earn with your referral code
-              </p>
+          <div className="flex items-center justify-between gap-4">
+            <div className="flex items-center gap-4">
+              <Button
+                variant="ghost"
+                size="icon"
+                className="rounded-full w-12 h-12"
+                onClick={() => setLocation("/profile")}
+                data-testid="button-back"
+              >
+                <ArrowLeft className="w-6 h-6" />
+              </Button>
+              <div>
+                <h1 className="font-serif text-2xl font-bold">Affiliate Program</h1>
+                <p className="text-sm text-muted-foreground mt-1">
+                  Earn with your referral code
+                </p>
+              </div>
             </div>
+            <PaymentHelpButton variant="outline" size="default" />
           </div>
         </div>
       </div>
