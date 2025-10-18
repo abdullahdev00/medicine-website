@@ -8,7 +8,7 @@ export function ProtectedAdminRoute({ children }: { children: React.ReactNode })
 
   useEffect(() => {
     if (!isAuthenticated) {
-      setLocation("/login");
+      setLocation("/admin/login");
       return;
     }
 
