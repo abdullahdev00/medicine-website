@@ -35,7 +35,7 @@ export const products = pgTable("products", {
   name: text("name").notNull(),
   categoryId: uuid("category_id").references(() => categories.id).notNull(),
   description: text("description").notNull(),
-  imageUrl: text("image_url").notNull(),
+  images: text("images").array().notNull(),
   rating: decimal("rating", { precision: 3, scale: 2 }).default("0"),
   variants: jsonb("variants").$type<Array<{ name: string; price: string; wholesalePrice: string }>>().notNull(),
   inStock: boolean("in_stock").default(true).notNull(),

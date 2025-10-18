@@ -332,11 +332,12 @@ function OrdersTable({ orders }: { orders: any[] }) {
                 <Badge variant={
                   order.status === 'pending' ? 'secondary' :
                   order.status === 'processing' ? 'outline' :
-                  order.status === 'shipped' ? 'default' :
+                  order.status === 'in-transit' ? 'default' :
                   order.status === 'delivered' ? 'default' :
+                  order.status === 'return' ? 'outline' :
                   'destructive'
                 }>
-                  {order.status}
+                  {order.status === 'in-transit' ? 'In Transit' : order.status.charAt(0).toUpperCase() + order.status.slice(1)}
                 </Badge>
               </TableCell>
               <TableCell>{new Date(order.createdAt).toLocaleDateString()}</TableCell>
@@ -377,8 +378,9 @@ function OrdersTable({ orders }: { orders: any[] }) {
                   <SelectContent>
                     <SelectItem value="pending">Pending</SelectItem>
                     <SelectItem value="processing">Processing</SelectItem>
-                    <SelectItem value="shipped">Shipped</SelectItem>
+                    <SelectItem value="in-transit">In Transit</SelectItem>
                     <SelectItem value="delivered">Delivered</SelectItem>
+                    <SelectItem value="return">Return</SelectItem>
                     <SelectItem value="cancelled">Cancelled</SelectItem>
                   </SelectContent>
                 </Select>

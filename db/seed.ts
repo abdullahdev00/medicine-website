@@ -11,6 +11,8 @@ import {
   partners,
   referralStats,
   paymentAccounts,
+  userPaymentAccounts,
+  paymentRequests,
 } from "@shared/schema";
 import { count, sql } from "drizzle-orm";
 import bcrypt from "bcrypt";
@@ -97,12 +99,12 @@ async function seed() {
         name: "Panadol Extra",
         categoryId: categoryMap.get("Pain Relief")!,
         description: "Fast relief for headaches, fever, and body aches",
-        imageUrl: "https://images.unsplash.com/photo-1584308666744-24d5c474f2ae?w=400",
+        images: ["https://images.unsplash.com/photo-1584308666744-24d5c474f2ae?w=400", "https://images.unsplash.com/photo-1471864190281-a93a3070b6de?w=400"],
         rating: "4.5",
         variants: [
-          { name: "10 Tablets", price: "150" },
-          { name: "20 Tablets", price: "280" },
-          { name: "30 Tablets", price: "400" },
+          { name: "10 Tablets", price: "150", wholesalePrice: "130" },
+          { name: "20 Tablets", price: "280", wholesalePrice: "250" },
+          { name: "30 Tablets", price: "400", wholesalePrice: "360" },
         ],
         inStock: true,
       },
@@ -110,11 +112,11 @@ async function seed() {
         name: "Brufen 400mg",
         categoryId: categoryMap.get("Pain Relief")!,
         description: "Effective pain relief and anti-inflammatory",
-        imageUrl: "https://images.unsplash.com/photo-1471864190281-a93a3070b6de?w=400",
+        images: ["https://images.unsplash.com/photo-1471864190281-a93a3070b6de?w=400", "https://images.unsplash.com/photo-1584308666744-24d5c474f2ae?w=400"],
         rating: "4.6",
         variants: [
-          { name: "10 Tablets", price: "180" },
-          { name: "20 Tablets", price: "340" },
+          { name: "10 Tablets", price: "180", wholesalePrice: "160" },
+          { name: "20 Tablets", price: "340", wholesalePrice: "300" },
         ],
         inStock: true,
       },
@@ -122,12 +124,12 @@ async function seed() {
         name: "Multivitamin Complex",
         categoryId: categoryMap.get("Vitamins & Supplements")!,
         description: "Complete daily multivitamin for overall health",
-        imageUrl: "https://images.unsplash.com/photo-1550572017-4257a8c37e4f?w=400",
+        images: ["https://images.unsplash.com/photo-1550572017-4257a8c37e4f?w=400", "https://images.unsplash.com/photo-1608571423902-eed4a5ad8108?w=400"],
         rating: "4.8",
         variants: [
-          { name: "30 Capsules", price: "850" },
-          { name: "60 Capsules", price: "1500" },
-          { name: "90 Capsules", price: "2100" },
+          { name: "30 Capsules", price: "850", wholesalePrice: "750" },
+          { name: "60 Capsules", price: "1500", wholesalePrice: "1350" },
+          { name: "90 Capsules", price: "2100", wholesalePrice: "1900" },
         ],
         inStock: true,
       },
@@ -135,11 +137,11 @@ async function seed() {
         name: "Vitamin D3 5000 IU",
         categoryId: categoryMap.get("Vitamins & Supplements")!,
         description: "Essential vitamin D for bone and immune health",
-        imageUrl: "https://images.unsplash.com/photo-1608571423902-eed4a5ad8108?w=400",
+        images: ["https://images.unsplash.com/photo-1608571423902-eed4a5ad8108?w=400", "https://images.unsplash.com/photo-1550572017-4257a8c37e4f?w=400"],
         rating: "4.7",
         variants: [
-          { name: "30 Tablets", price: "650" },
-          { name: "60 Tablets", price: "1200" },
+          { name: "30 Tablets", price: "650", wholesalePrice: "580" },
+          { name: "60 Tablets", price: "1200", wholesalePrice: "1080" },
         ],
         inStock: true,
       },
@@ -147,11 +149,11 @@ async function seed() {
         name: "Cold Relief Syrup",
         categoryId: categoryMap.get("Cold & Flu")!,
         description: "Effective relief for cold and cough symptoms",
-        imageUrl: "https://images.unsplash.com/photo-1587854692152-cbe660dbde88?w=400",
+        images: ["https://images.unsplash.com/photo-1587854692152-cbe660dbde88?w=400"],
         rating: "4.4",
         variants: [
-          { name: "60ml", price: "220" },
-          { name: "120ml", price: "390" },
+          { name: "60ml", price: "220", wholesalePrice: "190" },
+          { name: "120ml", price: "390", wholesalePrice: "350" },
         ],
         inStock: true,
       },
@@ -159,11 +161,11 @@ async function seed() {
         name: "Antihistamine Tablets",
         categoryId: categoryMap.get("Cold & Flu")!,
         description: "Relief from allergies and hay fever",
-        imageUrl: "https://images.unsplash.com/photo-1584308666744-24d5c474f2ae?w=400",
+        images: ["https://images.unsplash.com/photo-1584308666744-24d5c474f2ae?w=400"],
         rating: "4.5",
         variants: [
-          { name: "10 Tablets", price: "170" },
-          { name: "20 Tablets", price: "320" },
+          { name: "10 Tablets", price: "170", wholesalePrice: "150" },
+          { name: "20 Tablets", price: "320", wholesalePrice: "280" },
         ],
         inStock: true,
       },
@@ -171,11 +173,11 @@ async function seed() {
         name: "Blood Glucose Monitor Kit",
         categoryId: categoryMap.get("Diabetes Care")!,
         description: "Complete kit for blood sugar monitoring",
-        imageUrl: "https://images.unsplash.com/photo-1603398938378-e54eab446dde?w=400",
+        images: ["https://images.unsplash.com/photo-1603398938378-e54eab446dde?w=400", "https://images.unsplash.com/photo-1584515979956-d9f6e5d09982?w=400"],
         rating: "4.9",
         variants: [
-          { name: "With 50 Strips", price: "3500" },
-          { name: "With 100 Strips", price: "5200" },
+          { name: "With 50 Strips", price: "3500", wholesalePrice: "3200" },
+          { name: "With 100 Strips", price: "5200", wholesalePrice: "4800" },
         ],
         inStock: true,
       },
@@ -183,11 +185,11 @@ async function seed() {
         name: "Insulin Syringes 1ml",
         categoryId: categoryMap.get("Diabetes Care")!,
         description: "Sterile syringes for insulin injection",
-        imageUrl: "https://images.unsplash.com/photo-1584515979956-d9f6e5d09982?w=400",
+        images: ["https://images.unsplash.com/photo-1584515979956-d9f6e5d09982?w=400"],
         rating: "4.6",
         variants: [
-          { name: "10 Pack", price: "450" },
-          { name: "30 Pack", price: "1250" },
+          { name: "10 Pack", price: "450", wholesalePrice: "400" },
+          { name: "30 Pack", price: "1250", wholesalePrice: "1100" },
         ],
         inStock: true,
       },
@@ -195,11 +197,11 @@ async function seed() {
         name: "First Aid Kit Complete",
         categoryId: categoryMap.get("First Aid")!,
         description: "Comprehensive first aid supplies",
-        imageUrl: "https://images.unsplash.com/photo-1603398938378-e54eab446dde?w=400",
+        images: ["https://images.unsplash.com/photo-1603398938378-e54eab446dde?w=400", "https://images.unsplash.com/photo-1556228578-8c89e6adf883?w=400"],
         rating: "4.7",
         variants: [
-          { name: "Basic", price: "1200" },
-          { name: "Premium", price: "2500" },
+          { name: "Basic", price: "1200", wholesalePrice: "1050" },
+          { name: "Premium", price: "2500", wholesalePrice: "2200" },
         ],
         inStock: true,
       },
@@ -207,11 +209,11 @@ async function seed() {
         name: "Antiseptic Solution",
         categoryId: categoryMap.get("First Aid")!,
         description: "Disinfectant for wounds and cuts",
-        imageUrl: "https://images.unsplash.com/photo-1556228578-8c89e6adf883?w=400",
+        images: ["https://images.unsplash.com/photo-1556228578-8c89e6adf883?w=400"],
         rating: "4.5",
         variants: [
-          { name: "100ml", price: "180" },
-          { name: "250ml", price: "390" },
+          { name: "100ml", price: "180", wholesalePrice: "160" },
+          { name: "250ml", price: "390", wholesalePrice: "350" },
         ],
         inStock: true,
       },
@@ -219,11 +221,11 @@ async function seed() {
         name: "Hand Sanitizer",
         categoryId: categoryMap.get("Personal Care")!,
         description: "70% alcohol-based hand sanitizer",
-        imageUrl: "https://images.unsplash.com/photo-1584515979956-d9f6e5d09982?w=400",
+        images: ["https://images.unsplash.com/photo-1584515979956-d9f6e5d09982?w=400", "https://images.unsplash.com/photo-1587854692152-cbe660dbde88?w=400"],
         rating: "4.6",
         variants: [
-          { name: "250ml", price: "320" },
-          { name: "500ml", price: "550" },
+          { name: "250ml", price: "320", wholesalePrice: "280" },
+          { name: "500ml", price: "550", wholesalePrice: "490" },
         ],
         inStock: true,
       },
@@ -231,11 +233,11 @@ async function seed() {
         name: "Face Masks",
         categoryId: categoryMap.get("Personal Care")!,
         description: "Medical grade face masks",
-        imageUrl: "https://images.unsplash.com/photo-1584515979956-d9f6e5d09982?w=400",
+        images: ["https://images.unsplash.com/photo-1584515979956-d9f6e5d09982?w=400"],
         rating: "4.7",
         variants: [
-          { name: "50 Pack", price: "850" },
-          { name: "100 Pack", price: "1600" },
+          { name: "50 Pack", price: "850", wholesalePrice: "750" },
+          { name: "100 Pack", price: "1600", wholesalePrice: "1400" },
         ],
         inStock: true,
       },
@@ -475,7 +477,7 @@ async function seed() {
 
     // 11. Create Payment Accounts
     console.log("Creating payment accounts...");
-    await db.insert(paymentAccounts).values([
+    const createdPaymentAccounts = await db.insert(paymentAccounts).values([
       {
         method: "JazzCash",
         accountName: "MediSwift Operations",
@@ -494,8 +496,79 @@ async function seed() {
         accountNumber: "mediswift@raast",
         isActive: true,
       },
-    ]);
+    ]).returning();
     console.log("✅ Created 3 payment accounts");
+
+    // 12. Create User Payment Accounts
+    console.log("Creating user payment accounts...");
+    const userPaymentAccount = await db.insert(userPaymentAccounts).values([
+      {
+        userId: testUser[0].id,
+        accountName: "Test User",
+        raastId: "testuser@raast",
+        isDefault: true,
+      },
+      {
+        userId: partnerUser[0].id,
+        accountName: "Partner User",
+        raastId: "partner@raast",
+        isDefault: true,
+      },
+    ]).returning();
+    console.log("✅ Created 2 user payment accounts");
+
+    // 13. Create Payment Requests
+    console.log("Creating payment requests...");
+    await db.insert(paymentRequests).values([
+      {
+        userId: testUser[0].id,
+        type: "deposit",
+        amount: "5000",
+        paymentMethod: "JazzCash",
+        paymentAccountId: createdPaymentAccounts[0].id,
+        receiptUrl: "https://images.unsplash.com/photo-1554224311-beee180b1a9d?w=400",
+        status: "pending",
+      },
+      {
+        userId: testUser[0].id,
+        type: "withdrawal",
+        amount: "2000",
+        paymentMethod: "Raast ID",
+        userPaymentAccountId: userPaymentAccount[0].id,
+        status: "approved",
+        adminNotes: "Approved by admin",
+      },
+      {
+        userId: partnerUser[0].id,
+        type: "deposit",
+        amount: "3000",
+        paymentMethod: "EasyPaisa",
+        paymentAccountId: createdPaymentAccounts[1].id,
+        receiptUrl: "https://images.unsplash.com/photo-1554224311-beee180b1a9d?w=400",
+        status: "pending",
+      },
+      {
+        userId: partnerUser[0].id,
+        type: "withdrawal",
+        amount: "1500",
+        paymentMethod: "Raast ID",
+        userPaymentAccountId: userPaymentAccount[1].id,
+        status: "rejected",
+        rejectionReason: "Insufficient balance",
+        adminNotes: "User has insufficient balance for withdrawal",
+      },
+      {
+        userId: testUser[0].id,
+        type: "deposit",
+        amount: "10000",
+        paymentMethod: "JazzCash",
+        paymentAccountId: createdPaymentAccounts[0].id,
+        receiptUrl: "https://images.unsplash.com/photo-1554224311-beee180b1a9d?w=400",
+        status: "approved",
+        adminNotes: "Verified and approved",
+      },
+    ]);
+    console.log("✅ Created 5 payment requests");
 
     console.log("✨ Database seeded successfully!");
     console.log("\n📋 Demo Credentials:");
