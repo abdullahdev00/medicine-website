@@ -20,15 +20,20 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
-import { Search } from "lucide-react";
-import { useState } from "react";
+import { Search, Calendar } from "lucide-react";
+import { useState, useMemo } from "react";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import type { Order } from "@shared/schema";
-import { format } from "date-fns";
+import { format, startOfDay, endOfDay, startOfWeek, endOfWeek, startOfMonth, endOfMonth, startOfYear, endOfYear, isWithinInterval } from "date-fns";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { Calendar as CalendarComponent } from "@/components/ui/calendar";
+import { cn } from "@/lib/utils";
 
 export default function AdminOrders() {
   const [searchTerm, setSearchTerm] = useState("");
+  const [dateFilter, setDateFilter] = useState<"today" | "week" | "month" | "year" | "custom">("today");
+  const [selectedDate, setSelectedDate] = useState<Date | undefined>(new Date());
   const { toast } = useToast();
 
   const { data: orders, isLoading } = useQuery<Order[]>({
@@ -40,8 +45,36 @@ export default function AdminOrders() {
       const res = await apiRequest("PATCH", `/api/admin/orders/${orderId}/status`, { status });
       return await res.json();
     },
+    onMutate: async ({ orderId, status }) => {
+      // Cancel any outgoing refetches
+      await queryClient.cancelQueries({ queryKey: ["/api/admin/orders"] });
+
+      // Snapshot the previous value
+      const previousOrders = queryClient.getQueryData<Order[]>(["/api/admin/orders"]);
+
+      // Optimistically update to the new value
+      queryClient.setQueryData<Order[]>(["/api/admin/orders"], (old) => {
+        if (!old) return old;
+        return old.map((order) =>
+          order.id === orderId ? { ...order, status } : order
+        );
+      });
+
+      // Return a context object with the snapshotted value
+      return { previousOrders };
+    },
+    onError: (err, variables, context) => {
+      // If the mutation fails, use the context returned from onMutate to roll back
+      if (context?.previousOrders) {
+        queryClient.setQueryData(["/api/admin/orders"], context.previousOrders);
+      }
+      toast({
+        title: "Error",
+        description: "Failed to update order status",
+        variant: "destructive",
+      });
+    },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/admin/orders"] });
       toast({
         title: "Success",
         description: "Order status updated successfully",
@@ -64,6 +97,74 @@ export default function AdminOrders() {
     }
   };
 
+  const filteredOrders = useMemo(() => {
+    if (!orders) return [];
+
+    let filtered = orders;
+
+    // Date filter
+    const now = new Date();
+    let dateRange: { start: Date; end: Date } | null = null;
+
+    switch (dateFilter) {
+      case "today":
+        dateRange = {
+          start: startOfDay(now),
+          end: endOfDay(now),
+        };
+        break;
+      case "week":
+        dateRange = {
+          start: startOfWeek(now),
+          end: endOfWeek(now),
+        };
+        break;
+      case "month":
+        dateRange = {
+          start: startOfMonth(now),
+          end: endOfMonth(now),
+        };
+        break;
+      case "year":
+        dateRange = {
+          start: startOfYear(now),
+          end: endOfYear(now),
+        };
+        break;
+      case "custom":
+        if (selectedDate) {
+          dateRange = {
+            start: startOfDay(selectedDate),
+            end: endOfDay(selectedDate),
+          };
+        }
+        break;
+    }
+
+    if (dateRange) {
+      filtered = filtered.filter((order) => {
+        const orderDate = new Date(order.createdAt);
+        return isWithinInterval(orderDate, dateRange);
+      });
+    }
+
+    // Search filter
+    if (searchTerm) {
+      filtered = filtered.filter((order) => {
+        const searchLower = searchTerm.toLowerCase();
+        return (
+          order.id.toLowerCase().includes(searchLower) ||
+          (Array.isArray(order.products) &&
+            order.products.some((p: any) =>
+              p.name?.toLowerCase().includes(searchLower)
+            ))
+        );
+      });
+    }
+
+    return filtered;
+  }, [orders, dateFilter, selectedDate, searchTerm]);
+
   return (
     <ProtectedAdminRoute>
     <AdminLayout>
@@ -77,7 +178,11 @@ export default function AdminOrders() {
               Track and manage all orders
             </p>
           </div>
-          <div className="relative w-full sm:w-64">
+        </div>
+
+        {/* Filters Row */}
+        <div className="flex flex-col sm:flex-row gap-4">
+          <div className="relative flex-1 sm:max-w-xs">
             <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
             <Input
               placeholder="Search orders..."
@@ -86,6 +191,68 @@ export default function AdminOrders() {
               className="pl-10"
               data-testid="input-search-orders"
             />
+          </div>
+
+          <div className="flex gap-2 flex-wrap">
+            <Button
+              variant={dateFilter === "today" ? "default" : "outline"}
+              onClick={() => setDateFilter("today")}
+              data-testid="button-filter-today"
+            >
+              Today
+            </Button>
+            <Button
+              variant={dateFilter === "week" ? "default" : "outline"}
+              onClick={() => setDateFilter("week")}
+              data-testid="button-filter-week"
+            >
+              Week
+            </Button>
+            <Button
+              variant={dateFilter === "month" ? "default" : "outline"}
+              onClick={() => setDateFilter("month")}
+              data-testid="button-filter-month"
+            >
+              Month
+            </Button>
+            <Button
+              variant={dateFilter === "year" ? "default" : "outline"}
+              onClick={() => setDateFilter("year")}
+              data-testid="button-filter-year"
+            >
+              Year
+            </Button>
+            
+            <Popover>
+              <PopoverTrigger asChild>
+                <Button
+                  variant={dateFilter === "custom" ? "default" : "outline"}
+                  className={cn(
+                    "justify-start text-left font-normal",
+                    !selectedDate && "text-muted-foreground"
+                  )}
+                  data-testid="button-filter-custom"
+                >
+                  <Calendar className="mr-2 h-4 w-4" />
+                  {dateFilter === "custom" && selectedDate
+                    ? format(selectedDate, "MMM dd, yyyy")
+                    : "Pick Date"}
+                </Button>
+              </PopoverTrigger>
+              <PopoverContent className="w-auto p-0">
+                <CalendarComponent
+                  mode="single"
+                  selected={selectedDate}
+                  onSelect={(date) => {
+                    setSelectedDate(date);
+                    if (date) {
+                      setDateFilter("custom");
+                    }
+                  }}
+                  initialFocus
+                />
+              </PopoverContent>
+            </Popover>
           </div>
         </div>
 
@@ -112,8 +279,8 @@ export default function AdminOrders() {
                       </TableCell>
                     </TableRow>
                   ))
-                ) : orders && orders.length > 0 ? (
-                  orders.map((order) => (
+                ) : filteredOrders && filteredOrders.length > 0 ? (
+                  filteredOrders.map((order) => (
                     <TableRow key={order.id} data-testid={`row-order-${order.id}`}>
                       <TableCell className="font-medium" data-testid="text-order-id">
                         #{order.id.slice(0, 8)}
@@ -135,7 +302,7 @@ export default function AdminOrders() {
                       <TableCell>{format(new Date(order.createdAt), "MMM dd, yyyy")}</TableCell>
                       <TableCell className="text-right">
                         <Select
-                          defaultValue={order.status}
+                          value={order.status}
                           onValueChange={(value) => 
                             updateStatusMutation.mutate({ orderId: order.id, status: value })
                           }
@@ -157,7 +324,7 @@ export default function AdminOrders() {
                 ) : (
                   <TableRow>
                     <TableCell colSpan={7} className="text-center text-gray-500 py-8">
-                      No orders found
+                      No orders found for selected filter
                     </TableCell>
                   </TableRow>
                 )}
@@ -165,6 +332,10 @@ export default function AdminOrders() {
             </Table>
           </div>
         </Card>
+
+        <div className="text-sm text-gray-500 dark:text-gray-400">
+          Showing {filteredOrders?.length || 0} of {orders?.length || 0} orders
+        </div>
       </div>
     </AdminLayout>
     </ProtectedAdminRoute>
