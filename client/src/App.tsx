@@ -24,6 +24,7 @@ import BecomePartnerPage from "@/pages/become-partner";
 import Wishlist from "@/pages/wishlist";
 import NotFound from "@/pages/not-found";
 
+import AdminLogin from "@/pages/admin/login";
 import AdminDashboard from "@/pages/admin/dashboard";
 import AdminUsers from "@/pages/admin/users";
 import AdminProducts from "@/pages/admin/products";
@@ -53,6 +54,7 @@ function Router() {
       <Route path="/wishlist" component={Wishlist} />
       
       {/* Admin Routes */}
+      <Route path="/admin/login" component={AdminLogin} />
       <Route path="/admin" component={AdminDashboard} />
       <Route path="/admin/users" component={AdminUsers} />
       <Route path="/admin/products" component={AdminProducts} />
