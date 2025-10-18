@@ -1,5 +1,6 @@
 import { useQuery, useMutation } from "@tanstack/react-query";
 import AdminLayout from "@/components/admin/AdminLayout";
+import AdminPageHeader from "@/components/admin/AdminPageHeader";
 import { ProtectedAdminRoute } from "@/components/ProtectedAdminRoute";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -36,7 +37,7 @@ export default function AdminOrders() {
   const [selectedDate, setSelectedDate] = useState<Date | undefined>(new Date());
   const { toast } = useToast();
 
-  const { data: orders, isLoading } = useQuery<Order[]>({
+  const { data: orders, isLoading, refetch } = useQuery<Order[]>({
     queryKey: ["/api/admin/orders"],
   });
 
@@ -169,16 +170,11 @@ export default function AdminOrders() {
     <ProtectedAdminRoute>
     <AdminLayout>
       <div className="space-y-6">
-        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-          <div>
-            <h1 className="text-3xl font-bold text-gray-900 dark:text-white" data-testid="text-orders-title">
-              Orders Management
-            </h1>
-            <p className="text-gray-600 dark:text-gray-400 mt-1">
-              Track and manage all orders
-            </p>
-          </div>
-        </div>
+        <AdminPageHeader 
+          title="Orders Management"
+          description="Track and manage all orders"
+          onRefresh={() => refetch()}
+        />
 
         {/* Filters Row */}
         <div className="flex flex-col sm:flex-row gap-4">

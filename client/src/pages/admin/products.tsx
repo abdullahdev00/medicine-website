@@ -1,5 +1,6 @@
 import { useQuery, useMutation } from "@tanstack/react-query";
 import AdminLayout from "@/components/admin/AdminLayout";
+import AdminPageHeader from "@/components/admin/AdminPageHeader";
 import { ProtectedAdminRoute } from "@/components/ProtectedAdminRoute";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -47,7 +48,7 @@ import {
 } from "@/components/ui/alert-dialog";
 import { Badge } from "@/components/ui/badge";
 import { Textarea } from "@/components/ui/textarea";
-import { Search, Plus, Edit, Trash2, X } from "lucide-react";
+import { Search, Plus, Edit, Trash2, X, ChevronLeft, ChevronRight } from "lucide-react";
 import { useState } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -79,10 +80,12 @@ export default function AdminProducts() {
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
+  const [isViewDialogOpen, setIsViewDialogOpen] = useState(false);
   const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
+  const [currentImageIndex, setCurrentImageIndex] = useState(0);
   const { toast } = useToast();
 
-  const { data: products, isLoading } = useQuery<Product[]>({
+  const { data: products, isLoading, refetch } = useQuery<Product[]>({
     queryKey: ["/api/admin/products"],
   });
 
@@ -242,28 +245,46 @@ export default function AdminProducts() {
     }
   };
 
+  const openViewDialog = (product: Product) => {
+    setSelectedProduct(product);
+    setCurrentImageIndex(0);
+    setIsViewDialogOpen(true);
+  };
+
+  const nextImage = () => {
+    if (selectedProduct && selectedProduct.images) {
+      setCurrentImageIndex((prev) => 
+        prev < selectedProduct.images.length - 1 ? prev + 1 : 0
+      );
+    }
+  };
+
+  const prevImage = () => {
+    if (selectedProduct && selectedProduct.images) {
+      setCurrentImageIndex((prev) => 
+        prev > 0 ? prev - 1 : selectedProduct.images.length - 1
+      );
+    }
+  };
+
   return (
     <ProtectedAdminRoute>
     <AdminLayout>
       <div className="space-y-6">
-        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-          <div>
-            <h1 className="text-3xl font-bold text-gray-900 dark:text-white" data-testid="text-products-title">
-              Products Management
-            </h1>
-            <p className="text-gray-600 dark:text-gray-400 mt-1">
-              Manage your product catalog
-            </p>
-          </div>
+        <AdminPageHeader 
+          title="Products Management"
+          description="Manage your product catalog"
+          onRefresh={() => refetch()}
+        >
           <Button 
-            className="bg-teal-600 hover:bg-teal-700" 
+            className="bg-teal-600 hover:bg-teal-700 dark:bg-teal-700 dark:hover:bg-teal-800" 
             onClick={() => setIsAddDialogOpen(true)}
             data-testid="button-add-product"
           >
             <Plus className="w-4 h-4 mr-2" />
             Add Product
           </Button>
-        </div>
+        </AdminPageHeader>
 
         <div className="relative w-full sm:w-64">
           <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
@@ -301,45 +322,51 @@ export default function AdminProducts() {
                   ))
                 ) : filteredProducts && filteredProducts.length > 0 ? (
                   filteredProducts.map((product) => (
-                    <TableRow key={product.id} data-testid={`row-product-${product.id}`}>
+                    <TableRow 
+                      key={product.id} 
+                      data-testid={`row-product-${product.id}`}
+                      className="cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800/50"
+                      onClick={() => openViewDialog(product)}
+                    >
                       <TableCell>
                         <img 
-                          src={product.imageUrl} 
+                          src={product.images && product.images.length > 0 ? product.images[0] : ""} 
                           alt={product.name}
-                          className="w-12 h-12 object-cover rounded"
+                          className="w-12 h-12 object-cover rounded border border-gray-200 dark:border-gray-700"
                         />
                       </TableCell>
-                      <TableCell className="font-medium" data-testid="text-product-name">
+                      <TableCell className="font-medium text-gray-900 dark:text-gray-100" data-testid="text-product-name">
                         {product.name}
                       </TableCell>
-                      <TableCell>{getCategoryName(product.categoryId)}</TableCell>
-                      <TableCell>{product.variants?.length || 0}</TableCell>
-                      <TableCell>⭐ {product.rating}</TableCell>
+                      <TableCell className="text-gray-700 dark:text-gray-300">{getCategoryName(product.categoryId)}</TableCell>
+                      <TableCell className="text-gray-700 dark:text-gray-300">{product.variants?.length || 0}</TableCell>
+                      <TableCell className="text-gray-700 dark:text-gray-300">⭐ {product.rating}</TableCell>
                       <TableCell>
                         {product.inStock ? (
-                          <Badge className="bg-green-100 text-green-700 dark:bg-green-900 dark:text-green-300">
+                          <Badge className="bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400">
                             In Stock
                           </Badge>
                         ) : (
-                          <Badge className="bg-red-100 text-red-700 dark:bg-red-900 dark:text-red-300">
+                          <Badge className="bg-rose-100 text-rose-700 dark:bg-rose-900/30 dark:text-rose-400">
                             Out of Stock
                           </Badge>
                         )}
                       </TableCell>
                       <TableCell className="text-right">
-                        <div className="flex justify-end gap-2">
+                        <div className="flex justify-end gap-2" onClick={(e) => e.stopPropagation()}>
                           <Button 
                             variant="ghost" 
                             size="sm" 
                             onClick={() => openEditDialog(product)}
                             data-testid="button-edit-product"
+                            className="text-gray-700 dark:text-gray-300"
                           >
                             <Edit className="w-4 h-4" />
                           </Button>
                           <Button 
                             variant="ghost" 
                             size="sm" 
-                            className="text-red-600 hover:text-red-700"
+                            className="text-red-600 dark:text-red-400 hover:text-red-700 dark:hover:text-red-300"
                             onClick={() => openDeleteDialog(product)}
                             data-testid="button-delete-product"
                           >
@@ -786,18 +813,18 @@ export default function AdminProducts() {
 
       {/* Delete Confirmation Dialog */}
       <AlertDialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
-        <AlertDialogContent>
+        <AlertDialogContent className="bg-white dark:bg-gray-900 border-gray-200 dark:border-gray-800">
           <AlertDialogHeader>
-            <AlertDialogTitle>Are you sure?</AlertDialogTitle>
-            <AlertDialogDescription>
+            <AlertDialogTitle className="text-gray-900 dark:text-white">Are you sure?</AlertDialogTitle>
+            <AlertDialogDescription className="text-gray-600 dark:text-gray-400">
               This will permanently delete "{selectedProduct?.name}". This action cannot be undone.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel data-testid="button-cancel-delete">Cancel</AlertDialogCancel>
+            <AlertDialogCancel data-testid="button-cancel-delete" className="border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300">Cancel</AlertDialogCancel>
             <AlertDialogAction
               onClick={handleDeleteProduct}
-              className="bg-red-600 hover:bg-red-700"
+              className="bg-red-600 hover:bg-red-700 dark:bg-red-700 dark:hover:bg-red-800"
               disabled={deleteProductMutation.isPending}
               data-testid="button-confirm-delete"
             >
@@ -806,6 +833,139 @@ export default function AdminProducts() {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      {/* View Product Details Dialog */}
+      {selectedProduct && isViewDialogOpen && (
+        <Dialog open={isViewDialogOpen} onOpenChange={setIsViewDialogOpen}>
+          <DialogContent className="max-w-4xl bg-white dark:bg-gray-900 border-gray-200 dark:border-gray-800" data-testid="dialog-product-details">
+            <DialogHeader>
+              <DialogTitle className="text-gray-900 dark:text-white">Product Details</DialogTitle>
+            </DialogHeader>
+            
+            <div className="space-y-6">
+              {/* Image Carousel */}
+              {selectedProduct.images && selectedProduct.images.length > 0 && (
+                <div className="relative w-full">
+                  <div className="relative w-full h-96 bg-gray-100 dark:bg-gray-800 rounded-lg overflow-hidden">
+                    <img 
+                      src={selectedProduct.images[currentImageIndex]} 
+                      alt={`${selectedProduct.name} - Image ${currentImageIndex + 1}`}
+                      className="w-full h-full object-contain"
+                      data-testid="img-product-carousel"
+                    />
+                    
+                    {selectedProduct.images.length > 1 && (
+                      <>
+                        <button
+                          onClick={prevImage}
+                          className="absolute left-2 top-1/2 -translate-y-1/2 bg-white/90 dark:bg-gray-800/90 hover:bg-white dark:hover:bg-gray-800 p-2 rounded-full shadow-lg"
+                          data-testid="button-prev-image"
+                        >
+                          <ChevronLeft className="w-6 h-6 text-gray-900 dark:text-white" />
+                        </button>
+                        <button
+                          onClick={nextImage}
+                          className="absolute right-2 top-1/2 -translate-y-1/2 bg-white/90 dark:bg-gray-800/90 hover:bg-white dark:hover:bg-gray-800 p-2 rounded-full shadow-lg"
+                          data-testid="button-next-image"
+                        >
+                          <ChevronRight className="w-6 h-6 text-gray-900 dark:text-white" />
+                        </button>
+                        <div className="absolute bottom-4 left-1/2 -translate-x-1/2 bg-black/50 dark:bg-white/20 px-3 py-1 rounded-full text-white text-sm">
+                          {currentImageIndex + 1} / {selectedProduct.images.length}
+                        </div>
+                      </>
+                    )}
+                  </div>
+                </div>
+              )}
+
+              {/* Product Details */}
+              <div className="grid grid-cols-2 gap-4">
+                <div className="col-span-2">
+                  <label className="text-sm font-medium text-gray-500 dark:text-gray-400">Product Name</label>
+                  <p className="text-lg font-bold text-gray-900 dark:text-white">{selectedProduct.name}</p>
+                </div>
+
+                <div>
+                  <label className="text-sm font-medium text-gray-500 dark:text-gray-400">Category</label>
+                  <p className="text-base font-medium text-gray-900 dark:text-white">{getCategoryName(selectedProduct.categoryId)}</p>
+                </div>
+
+                <div>
+                  <label className="text-sm font-medium text-gray-500 dark:text-gray-400">Rating</label>
+                  <p className="text-base font-medium text-gray-900 dark:text-white">⭐ {selectedProduct.rating}</p>
+                </div>
+
+                <div className="col-span-2">
+                  <label className="text-sm font-medium text-gray-500 dark:text-gray-400">Description</label>
+                  <p className="text-base text-gray-700 dark:text-gray-300">{selectedProduct.description}</p>
+                </div>
+
+                <div>
+                  <label className="text-sm font-medium text-gray-500 dark:text-gray-400">Stock Status</label>
+                  <div className="mt-1">
+                    {selectedProduct.inStock ? (
+                      <Badge className="bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400">
+                        In Stock
+                      </Badge>
+                    ) : (
+                      <Badge className="bg-rose-100 text-rose-700 dark:bg-rose-900/30 dark:text-rose-400">
+                        Out of Stock
+                      </Badge>
+                    )}
+                  </div>
+                </div>
+
+                <div className="col-span-2">
+                  <label className="text-sm font-medium text-gray-500 dark:text-gray-400 mb-2 block">Variants</label>
+                  <div className="space-y-2">
+                    {selectedProduct.variants?.map((variant: any, index: number) => (
+                      <div key={index} className="flex justify-between items-center p-3 bg-gray-50 dark:bg-gray-800 rounded-lg">
+                        <span className="font-medium text-gray-900 dark:text-white">{variant.name}</span>
+                        <div className="flex gap-4">
+                          <span className="text-sm text-gray-600 dark:text-gray-400">
+                            Retail: <span className="font-semibold text-gray-900 dark:text-white">Rs. {variant.price}</span>
+                          </span>
+                          <span className="text-sm text-gray-600 dark:text-gray-400">
+                            Wholesale: <span className="font-semibold text-gray-900 dark:text-white">Rs. {variant.wholesalePrice}</span>
+                          </span>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <DialogFooter className="gap-2">
+              <Button
+                variant="outline"
+                onClick={() => {
+                  setIsViewDialogOpen(false);
+                  openEditDialog(selectedProduct);
+                }}
+                className="bg-blue-100 hover:bg-blue-200 text-blue-700 dark:bg-blue-900/30 dark:hover:bg-blue-900/50 dark:text-blue-400 border-0"
+                data-testid="button-view-edit"
+              >
+                <Edit className="w-4 h-4 mr-2" />
+                Edit
+              </Button>
+              <Button
+                variant="outline"
+                onClick={() => {
+                  setIsViewDialogOpen(false);
+                  openDeleteDialog(selectedProduct);
+                }}
+                className="bg-rose-100 hover:bg-rose-200 text-rose-700 dark:bg-rose-900/30 dark:hover:bg-rose-900/50 dark:text-rose-400 border-0"
+                data-testid="button-view-delete"
+              >
+                <Trash2 className="w-4 h-4 mr-2" />
+                Delete
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+      )}
     </AdminLayout>
     </ProtectedAdminRoute>
   );

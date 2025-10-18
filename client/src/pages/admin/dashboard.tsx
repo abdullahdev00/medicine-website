@@ -1,5 +1,6 @@
 import { useQuery } from "@tanstack/react-query";
 import AdminLayout from "@/components/admin/AdminLayout";
+import AdminPageHeader from "@/components/admin/AdminPageHeader";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Users, Package, ShoppingCart, DollarSign, TrendingUp, Clock } from "lucide-react";
 import { ProtectedAdminRoute } from "@/components/ProtectedAdminRoute";
@@ -16,7 +17,7 @@ interface DashboardStats {
 }
 
 export default function AdminDashboard() {
-  const { data: stats, isLoading } = useQuery<DashboardStats>({
+  const { data: stats, isLoading, refetch } = useQuery<DashboardStats>({
     queryKey: ["/api/admin/stats"],
   });
 
@@ -83,14 +84,11 @@ export default function AdminDashboard() {
     <ProtectedAdminRoute>
       <AdminLayout>
         <div className="space-y-6">
-          <div>
-            <h1 className="text-3xl font-bold text-gray-900 dark:text-white" data-testid="text-dashboard-title">
-              Dashboard
-            </h1>
-            <p className="text-gray-600 dark:text-gray-400 mt-1">
-              Overview of your MediSwift platform
-            </p>
-          </div>
+          <AdminPageHeader 
+            title="Dashboard"
+            description="Overview of your MediSwift platform"
+            onRefresh={() => refetch()}
+          />
 
           {isLoading ? (
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">

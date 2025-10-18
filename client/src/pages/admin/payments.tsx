@@ -1,6 +1,7 @@
 import { useQuery, useMutation } from "@tanstack/react-query";
 import AdminLayout from "@/components/admin/AdminLayout";
 import { ProtectedAdminRoute } from "@/components/ProtectedAdminRoute";
+import AdminPageHeader from "@/components/admin/AdminPageHeader";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import {
@@ -18,6 +19,16 @@ import {
   DialogTitle,
   DialogFooter,
 } from "@/components/ui/dialog";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { Badge } from "@/components/ui/badge";
 import { Check, X, Copy, CheckCheck } from "lucide-react";
 import { apiRequest, queryClient } from "@/lib/queryClient";
@@ -30,8 +41,9 @@ export default function AdminPayments() {
   const { toast } = useToast();
   const [copiedId, setCopiedId] = useState<string | null>(null);
   const [selectedPayment, setSelectedPayment] = useState<PaymentRequest | null>(null);
+  const [confirmAction, setConfirmAction] = useState<{type: 'approve' | 'reject', payment: PaymentRequest} | null>(null);
 
-  const { data: payments, isLoading } = useQuery<PaymentRequest[]>({
+  const { data: payments, isLoading, refetch } = useQuery<PaymentRequest[]>({
     queryKey: ["/api/admin/payment-requests"],
   });
 
@@ -58,6 +70,7 @@ export default function AdminPayments() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/admin/payment-requests"] });
       setSelectedPayment(null);
+      setConfirmAction(null);
       toast({
         title: "Success",
         description: "Payment request updated successfully",
@@ -96,13 +109,23 @@ export default function AdminPayments() {
   const getStatusColor = (status: string) => {
     switch (status) {
       case "pending":
-        return "bg-yellow-100 text-yellow-700 dark:bg-yellow-900 dark:text-yellow-300";
+        return "bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400";
       case "approved":
-        return "bg-green-100 text-green-700 dark:bg-green-900 dark:text-green-300";
+        return "bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400";
       case "rejected":
-        return "bg-red-100 text-red-700 dark:bg-red-900 dark:text-red-300";
+        return "bg-rose-100 text-rose-700 dark:bg-rose-900/30 dark:text-rose-400";
       default:
-        return "bg-gray-100 text-gray-700 dark:bg-gray-900 dark:text-gray-300";
+        return "bg-gray-100 text-gray-700 dark:bg-gray-800 dark:text-gray-300";
+    }
+  };
+
+  const handleConfirmAction = () => {
+    if (confirmAction) {
+      updatePaymentMutation.mutate({ 
+        paymentId: confirmAction.payment.id, 
+        status: confirmAction.type === 'approve' ? "approved" : "rejected",
+        rejectionReason: confirmAction.type === 'reject' ? "Review required" : undefined
+      });
     }
   };
 
@@ -110,35 +133,32 @@ export default function AdminPayments() {
     <ProtectedAdminRoute>
     <AdminLayout>
       <div className="space-y-6">
-        <div>
-          <h1 className="text-3xl font-bold text-gray-900 dark:text-white" data-testid="text-payments-title">
-            Payment Requests
-          </h1>
-          <p className="text-gray-600 dark:text-gray-400 mt-1">
-            Review and process payment requests
-          </p>
-        </div>
+        <AdminPageHeader 
+          title="Payment Requests"
+          description="Review and process payment requests"
+          onRefresh={() => refetch()}
+        />
 
-        <Card>
+        <Card className="border-gray-200 dark:border-gray-800">
           <div className="overflow-x-auto">
             <Table>
               <TableHeader>
-                <TableRow>
-                  <TableHead>Request ID</TableHead>
-                  <TableHead>Type</TableHead>
-                  <TableHead>Amount</TableHead>
-                  <TableHead>Payment Method</TableHead>
-                  <TableHead>Account Number</TableHead>
-                  <TableHead>Receipt/Account</TableHead>
-                  <TableHead>Status</TableHead>
-                  <TableHead>Date</TableHead>
-                  <TableHead className="text-right">Actions</TableHead>
+                <TableRow className="border-gray-200 dark:border-gray-800 hover:bg-gray-50 dark:hover:bg-gray-800/50">
+                  <TableHead className="text-gray-700 dark:text-gray-300">Request ID</TableHead>
+                  <TableHead className="text-gray-700 dark:text-gray-300">Type</TableHead>
+                  <TableHead className="text-gray-700 dark:text-gray-300">Amount</TableHead>
+                  <TableHead className="text-gray-700 dark:text-gray-300">Payment Method</TableHead>
+                  <TableHead className="text-gray-700 dark:text-gray-300">Account Number</TableHead>
+                  <TableHead className="text-gray-700 dark:text-gray-300">Receipt/Account</TableHead>
+                  <TableHead className="text-gray-700 dark:text-gray-300">Status</TableHead>
+                  <TableHead className="text-gray-700 dark:text-gray-300">Date</TableHead>
+                  <TableHead className="text-right text-gray-700 dark:text-gray-300">Actions</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
                 {isLoading ? (
                   [...Array(5)].map((_, i) => (
-                    <TableRow key={i}>
+                    <TableRow key={i} className="border-gray-200 dark:border-gray-800">
                       <TableCell colSpan={9}>
                         <div className="h-12 bg-gray-200 dark:bg-gray-700 rounded animate-pulse"></div>
                       </TableCell>
@@ -153,15 +173,15 @@ export default function AdminPayments() {
                     <TableRow 
                       key={payment.id} 
                       data-testid={`row-payment-${payment.id}`}
-                      className="cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800"
+                      className="cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800/50 border-gray-200 dark:border-gray-800"
                       onClick={() => setSelectedPayment(payment)}
                     >
-                      <TableCell className="font-medium" data-testid="text-payment-id">
+                      <TableCell className="font-medium text-gray-900 dark:text-gray-100" data-testid="text-payment-id">
                         #{payment.id.slice(0, 8)}
                       </TableCell>
-                      <TableCell className="capitalize">{payment.type}</TableCell>
-                      <TableCell data-testid="text-payment-amount">Rs. {payment.amount}</TableCell>
-                      <TableCell>{payment.paymentMethod || "N/A"}</TableCell>
+                      <TableCell className="capitalize text-gray-700 dark:text-gray-300">{payment.type}</TableCell>
+                      <TableCell className="text-gray-900 dark:text-gray-100 font-semibold" data-testid="text-payment-amount">Rs. {payment.amount}</TableCell>
+                      <TableCell className="text-gray-700 dark:text-gray-300">{payment.paymentMethod || "N/A"}</TableCell>
                       <TableCell>
                         {payment.type === "withdrawal" && userAccount ? (
                           <div 
@@ -176,13 +196,13 @@ export default function AdminPayments() {
                               {userAccount.raastId}
                             </div>
                             {copiedId === payment.id ? (
-                              <CheckCheck className="w-4 h-4 text-green-600" />
+                              <CheckCheck className="w-4 h-4 text-green-600 dark:text-green-400" />
                             ) : (
-                              <Copy className="w-4 h-4 text-gray-400" />
+                              <Copy className="w-4 h-4 text-gray-400 dark:text-gray-500" />
                             )}
                           </div>
                         ) : (
-                          <span className="text-gray-400">N/A</span>
+                          <span className="text-gray-400 dark:text-gray-600">N/A</span>
                         )}
                       </TableCell>
                       <TableCell>
@@ -200,7 +220,7 @@ export default function AdminPayments() {
                             <div className="font-medium text-gray-700 dark:text-gray-300">{userAccount.accountName}</div>
                           </div>
                         ) : (
-                          <span className="text-gray-400">N/A</span>
+                          <span className="text-gray-400 dark:text-gray-600">N/A</span>
                         )}
                       </TableCell>
                       <TableCell>
@@ -208,19 +228,14 @@ export default function AdminPayments() {
                           {payment.status}
                         </Badge>
                       </TableCell>
-                      <TableCell>{format(new Date(payment.createdAt), "MMM dd, yyyy")}</TableCell>
+                      <TableCell className="text-gray-700 dark:text-gray-300">{format(new Date(payment.createdAt), "MMM dd, yyyy")}</TableCell>
                       <TableCell className="text-right">
                         {payment.status === "pending" && (
                           <div className="flex justify-end gap-2" onClick={(e) => e.stopPropagation()}>
                             <Button
                               size="sm"
-                              className="bg-green-100 hover:bg-green-200 text-green-700 dark:bg-green-200 dark:hover:bg-green-300 dark:text-green-800 h-8 w-8 p-0"
-                              onClick={() => 
-                                updatePaymentMutation.mutate({ 
-                                  paymentId: payment.id, 
-                                  status: "approved" 
-                                })
-                              }
+                              className="bg-emerald-100 hover:bg-emerald-200 text-emerald-700 dark:bg-emerald-900/30 dark:hover:bg-emerald-900/50 dark:text-emerald-400 h-8 w-8 p-0"
+                              onClick={() => setConfirmAction({type: 'approve', payment})}
                               disabled={updatePaymentMutation.isPending}
                               data-testid="button-approve-payment"
                               title="Approve"
@@ -229,14 +244,8 @@ export default function AdminPayments() {
                             </Button>
                             <Button
                               size="sm"
-                              className="bg-red-100 hover:bg-red-200 text-red-700 dark:bg-red-200 dark:hover:bg-red-300 dark:text-red-800 h-8 w-8 p-0"
-                              onClick={() => 
-                                updatePaymentMutation.mutate({ 
-                                  paymentId: payment.id, 
-                                  status: "rejected",
-                                  rejectionReason: "Review required"
-                                })
-                              }
+                              className="bg-rose-100 hover:bg-rose-200 text-rose-700 dark:bg-rose-900/30 dark:hover:bg-rose-900/50 dark:text-rose-400 h-8 w-8 p-0"
+                              onClick={() => setConfirmAction({type: 'reject', payment})}
                               disabled={updatePaymentMutation.isPending}
                               data-testid="button-reject-payment"
                               title="Reject"
@@ -250,8 +259,8 @@ export default function AdminPayments() {
                     );
                   })
                 ) : (
-                  <TableRow>
-                    <TableCell colSpan={9} className="text-center text-gray-500 py-8">
+                  <TableRow className="border-gray-200 dark:border-gray-800">
+                    <TableCell colSpan={9} className="text-center text-gray-500 dark:text-gray-400 py-8">
                       No payment requests found
                     </TableCell>
                   </TableRow>
@@ -262,11 +271,12 @@ export default function AdminPayments() {
         </Card>
       </div>
 
+      {/* View Details Dialog */}
       {selectedPayment && (
         <Dialog open={!!selectedPayment} onOpenChange={() => setSelectedPayment(null)}>
-          <DialogContent className="max-w-2xl" data-testid="dialog-payment-details">
+          <DialogContent className="max-w-2xl bg-white dark:bg-gray-900 border-gray-200 dark:border-gray-800" data-testid="dialog-payment-details">
             <DialogHeader>
-              <DialogTitle>Payment Request Details</DialogTitle>
+              <DialogTitle className="text-gray-900 dark:text-white">Payment Request Details</DialogTitle>
             </DialogHeader>
             
             <div className="space-y-6">
@@ -340,9 +350,9 @@ export default function AdminPayments() {
                           {getUserPaymentAccount(selectedPayment.userPaymentAccountId)?.raastId}
                         </p>
                         {copiedId === selectedPayment.id ? (
-                          <CheckCheck className="w-5 h-5 text-green-600" />
+                          <CheckCheck className="w-5 h-5 text-green-600 dark:text-green-400" />
                         ) : (
-                          <Copy className="w-5 h-5 text-gray-400" />
+                          <Copy className="w-5 h-5 text-gray-400 dark:text-gray-500" />
                         )}
                       </div>
                     </div>
@@ -389,13 +399,8 @@ export default function AdminPayments() {
               {selectedPayment.status === "pending" && (
                 <div className="flex gap-3 w-full justify-end">
                   <Button
-                    className="bg-green-100 hover:bg-green-200 text-green-700 dark:bg-green-200 dark:hover:bg-green-300 dark:text-green-800"
-                    onClick={() => 
-                      updatePaymentMutation.mutate({ 
-                        paymentId: selectedPayment.id, 
-                        status: "approved" 
-                      })
-                    }
+                    className="bg-emerald-100 hover:bg-emerald-200 text-emerald-700 dark:bg-emerald-900/30 dark:hover:bg-emerald-900/50 dark:text-emerald-400"
+                    onClick={() => setConfirmAction({type: 'approve', payment: selectedPayment})}
                     disabled={updatePaymentMutation.isPending}
                     data-testid="button-dialog-approve"
                   >
@@ -403,14 +408,8 @@ export default function AdminPayments() {
                     Approve
                   </Button>
                   <Button
-                    className="bg-red-100 hover:bg-red-200 text-red-700 dark:bg-red-200 dark:hover:bg-red-300 dark:text-red-800"
-                    onClick={() => 
-                      updatePaymentMutation.mutate({ 
-                        paymentId: selectedPayment.id, 
-                        status: "rejected",
-                        rejectionReason: "Review required"
-                      })
-                    }
+                    className="bg-rose-100 hover:bg-rose-200 text-rose-700 dark:bg-rose-900/30 dark:hover:bg-rose-900/50 dark:text-rose-400"
+                    onClick={() => setConfirmAction({type: 'reject', payment: selectedPayment})}
                     disabled={updatePaymentMutation.isPending}
                     data-testid="button-dialog-reject"
                   >
@@ -423,6 +422,38 @@ export default function AdminPayments() {
           </DialogContent>
         </Dialog>
       )}
+
+      {/* Confirmation Dialog */}
+      <AlertDialog open={!!confirmAction} onOpenChange={() => setConfirmAction(null)}>
+        <AlertDialogContent className="bg-white dark:bg-gray-900 border-gray-200 dark:border-gray-800">
+          <AlertDialogHeader>
+            <AlertDialogTitle className="text-gray-900 dark:text-white">
+              {confirmAction?.type === 'approve' ? 'Approve Payment Request?' : 'Reject Payment Request?'}
+            </AlertDialogTitle>
+            <AlertDialogDescription className="text-gray-600 dark:text-gray-400">
+              {confirmAction?.type === 'approve' 
+                ? `Are you sure you want to approve this ${confirmAction.payment.type} request for Rs. ${confirmAction.payment.amount}?`
+                : `Are you sure you want to reject this ${confirmAction?.payment.type} request for Rs. ${confirmAction?.payment.amount}?`
+              }
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel className="border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300">
+              Cancel
+            </AlertDialogCancel>
+            <AlertDialogAction
+              onClick={handleConfirmAction}
+              className={confirmAction?.type === 'approve' 
+                ? "bg-emerald-600 hover:bg-emerald-700 dark:bg-emerald-700 dark:hover:bg-emerald-800" 
+                : "bg-rose-600 hover:bg-rose-700 dark:bg-rose-700 dark:hover:bg-rose-800"
+              }
+              disabled={updatePaymentMutation.isPending}
+            >
+              {updatePaymentMutation.isPending ? "Processing..." : "Confirm"}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </AdminLayout>
     </ProtectedAdminRoute>
   );
