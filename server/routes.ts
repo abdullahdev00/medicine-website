@@ -620,6 +620,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  app.get("/api/admin/user-payment-accounts", async (req, res) => {
+    try {
+      const accounts = await storage.getAllUserPaymentAccounts();
+      res.json(accounts);
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+
   app.get("/api/admin/products", async (req, res) => {
     try {
       const products = await storage.getProducts();

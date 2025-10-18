@@ -51,6 +51,7 @@ export interface IStorage {
   getPaymentAccounts(): Promise<PaymentAccount[]>;
   
   getUserPaymentAccounts(userId: string): Promise<UserPaymentAccount[]>;
+  getAllUserPaymentAccounts(): Promise<UserPaymentAccount[]>;
   createUserPaymentAccount(account: InsertUserPaymentAccount): Promise<UserPaymentAccount>;
   updateUserPaymentAccount(id: string, updates: Partial<InsertUserPaymentAccount>): Promise<UserPaymentAccount | undefined>;
   deleteUserPaymentAccount(id: string): Promise<void>;
@@ -238,6 +239,10 @@ export class DatabaseStorage implements IStorage {
 
   async getUserPaymentAccounts(userId: string): Promise<UserPaymentAccount[]> {
     return await db.select().from(userPaymentAccounts).where(eq(userPaymentAccounts.userId, userId)).orderBy(desc(userPaymentAccounts.isDefault));
+  }
+
+  async getAllUserPaymentAccounts(): Promise<UserPaymentAccount[]> {
+    return await db.select().from(userPaymentAccounts);
   }
 
   async createUserPaymentAccount(account: InsertUserPaymentAccount): Promise<UserPaymentAccount> {
