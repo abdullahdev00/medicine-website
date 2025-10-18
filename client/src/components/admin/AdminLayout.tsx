@@ -41,11 +41,11 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
         });
         
         if (!response.ok) {
-          // Not authenticated, redirect to login
-          setLocation("/login");
+          // Not authenticated, redirect to admin login
+          setLocation("/admin/login");
         }
       } catch (error) {
-        setLocation("/login");
+        setLocation("/admin/login");
       } finally {
         setIsChecking(false);
       }
@@ -59,7 +59,7 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
       method: "POST",
       credentials: 'include',
     });
-    window.location.href = "/login";
+    window.location.href = "/admin/login";
   };
 
   if (isChecking) {

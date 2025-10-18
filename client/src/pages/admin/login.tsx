@@ -37,11 +37,15 @@ export default function AdminLogin() {
       
       const adminData = await adminResponse.json();
       login({ ...adminData, userType: 'admin' });
-      setLocation("/admin");
+      
       toast({
         title: "Welcome Admin!",
         description: "Redirecting to admin dashboard...",
       });
+      
+      setTimeout(() => {
+        setLocation("/admin");
+      }, 100);
     } catch (error: any) {
       toast({
         title: "Login failed",
