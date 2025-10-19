@@ -11,13 +11,12 @@ import { useToast } from "@/hooks/use-toast";
 import { motion } from "framer-motion";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { queryClient } from "@/lib/queryClient";
-import { useSession } from "next-auth/react";
+import { useAuth } from "@/lib/providers";
 
 export default function EditProfile() {
   const router = useRouter();
   const { toast } = useToast();
-  const { data: session } = useSession();
-  const user = session?.user;
+  const { user, updateUser, isAuthenticated } = useAuth();
 
   const [formData, setFormData] = useState({
     fullName: "",
@@ -26,26 +25,16 @@ export default function EditProfile() {
     whatsappNumber: "",
   });
 
-  const { data: userData, isLoading } = useQuery({
-    queryKey: ["/api/users", user?.id],
-    enabled: !!user,
-    queryFn: async () => {
-      const res = await fetch(`/api/users/${user?.id}`);
-      if (!res.ok) throw new Error("Failed to fetch user");
-      return res.json();
-    },
-  });
-
   useEffect(() => {
-    if (userData) {
+    if (user) {
       setFormData({
-        fullName: userData.fullName || "",
-        email: userData.email || "",
-        phoneNumber: userData.phoneNumber || "",
-        whatsappNumber: userData.whatsappNumber || "",
+        fullName: user.fullName || "",
+        email: user.email || "",
+        phoneNumber: user.phoneNumber || "",
+        whatsappNumber: user.whatsappNumber || "",
       });
     }
-  }, [userData]);
+  }, [user]);
 
   const updateProfileMutation = useMutation({
     mutationFn: async (data: typeof formData) => {
@@ -57,8 +46,8 @@ export default function EditProfile() {
       if (!res.ok) throw new Error("Failed to update profile");
       return res.json();
     },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/users", user?.id] });
+    onSuccess: (updatedUser) => {
+      updateUser(updatedUser);
       toast({
         title: "Profile updated",
         description: "Your profile has been updated successfully.",
@@ -82,15 +71,9 @@ export default function EditProfile() {
     setFormData((prev) => ({ ...prev, [field]: value }));
   };
 
-  if (isLoading) {
-    return (
-      <div className="min-h-screen bg-background flex items-center justify-center">
-        <div className="text-center">
-          <div className="w-16 h-16 border-4 border-primary border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
-          <p className="text-muted-foreground">Loading profile...</p>
-        </div>
-      </div>
-    );
+  if (!isAuthenticated) {
+    router.push("/login");
+    return null;
   }
 
   return (
