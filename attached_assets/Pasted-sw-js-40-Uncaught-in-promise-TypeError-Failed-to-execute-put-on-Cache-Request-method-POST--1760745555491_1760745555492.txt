@@ -1,0 +1,37 @@
+sw.js:40 Uncaught (in promise) TypeError: Failed to execute 'put' on 'Cache': Request method 'POST' is unsupported
+    at sw.js:40:19
+sw.js:40 Uncaught (in promise) TypeError: Failed to execute 'put' on 'Cache': Request method 'POST' is unsupported
+    at sw.js:40:19
+chunk-RPCDYKBN.js?v=cd1f03e0:21551 Download the React DevTools for a better development experience: https://reactjs.org/link/react-devtools
+main.tsx:10 Service Worker registered: ServiceWorkerRegistration
+sw.js:14 Opened cache
+sw.js:40 Uncaught (in promise) TypeError: Failed to execute 'put' on 'Cache': Request method 'POST' is unsupported
+    at sw.js:40:19
+(anonymous) @ sw.js:40
+Promise.then
+(anonymous) @ sw.js:39
+Promise.then
+(anonymous) @ sw.js:28
+queryClient.ts:32  GET https://f37df5d9-cac0-4531-8c97-30bd636d3531-00-1qdn80obm3g2n.picard.replit.dev/api/admin/stats 401 (Unauthorized)
+(anonymous) @ queryClient.ts:32
+fetchFn @ @tanstack_react-query.js?v=cd1f03e0:840
+run @ @tanstack_react-query.js?v=cd1f03e0:494
+start @ @tanstack_react-query.js?v=cd1f03e0:536
+fetch @ @tanstack_react-query.js?v=cd1f03e0:926
+executeFetch_fn @ @tanstack_react-query.js?v=cd1f03e0:2211
+onSubscribe @ @tanstack_react-query.js?v=cd1f03e0:1898
+subscribe @ @tanstack_react-query.js?v=cd1f03e0:24
+(anonymous) @ @tanstack_react-query.js?v=cd1f03e0:3022
+subscribeToStore @ chunk-RPCDYKBN.js?v=cd1f03e0:11984
+commitHookEffectListMount @ chunk-RPCDYKBN.js?v=cd1f03e0:16915
+commitPassiveMountOnFiber @ chunk-RPCDYKBN.js?v=cd1f03e0:18156
+commitPassiveMountEffects_complete @ chunk-RPCDYKBN.js?v=cd1f03e0:18129
+commitPassiveMountEffects_begin @ chunk-RPCDYKBN.js?v=cd1f03e0:18119
+commitPassiveMountEffects @ chunk-RPCDYKBN.js?v=cd1f03e0:18109
+flushPassiveEffectsImpl @ chunk-RPCDYKBN.js?v=cd1f03e0:19490
+flushPassiveEffects @ chunk-RPCDYKBN.js?v=cd1f03e0:19447
+commitRootImpl @ chunk-RPCDYKBN.js?v=cd1f03e0:19416
+commitRoot @ chunk-RPCDYKBN.js?v=cd1f03e0:19277
+performSyncWorkOnRoot @ chunk-RPCDYKBN.js?v=cd1f03e0:18895
+flushSyncCallbacks @ chunk-RPCDYKBN.js?v=cd1f03e0:9119
+(anonymous) @ chunk-RPCDYKBN.js?v=cd1f03e0:18627
