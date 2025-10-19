@@ -1,7 +1,7 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { useSession } from "next-auth/react";
+import { useAuth } from "@/lib/providers";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -12,8 +12,7 @@ import { format } from "date-fns";
 
 export default function MyOrders() {
   const router = useRouter();
-  const { data: session } = useSession();
-  const user = session?.user;
+  const { user, isAuthenticated } = useAuth();
 
   const { data: orders = [], isLoading } = useQuery({
     queryKey: ["/api/orders", user?.id],

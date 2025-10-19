@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { useSession } from "next-auth/react";
+import { useAuth } from "@/lib/providers";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -16,8 +16,7 @@ import { queryClient } from "@/lib/queryClient";
 export default function MyAddresses() {
   const router = useRouter();
   const { toast } = useToast();
-  const { data: session } = useSession();
-  const user = session?.user;
+  const { user, isAuthenticated } = useAuth();
 
   const [isAdding, setIsAdding] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);

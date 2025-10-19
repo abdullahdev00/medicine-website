@@ -1,7 +1,7 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { useSession } from "next-auth/react";
+import { useAuth } from "@/lib/providers";
 import { ArrowLeft, Ticket, Copy, Check, Calendar, Tag } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { useQuery } from "@tanstack/react-query";
@@ -29,8 +29,7 @@ type Voucher = {
 export default function VouchersPage() {
   const router = useRouter();
   const { toast } = useToast();
-  const { data: session } = useSession();
-  const user = session?.user;
+  const { user, isAuthenticated } = useAuth();
   const [copiedCode, setCopiedCode] = useState<string | null>(null);
 
   const { data: vouchers = [], isLoading } = useQuery<Voucher[]>({
