@@ -129,8 +129,7 @@ export default function AdminPayments() {
   };
 
   return (
-    
-    
+    <>
       <div className="space-y-6">
         <AdminPageHeader 
           title="Payment Requests"
@@ -453,7 +452,6 @@ export default function AdminPayments() {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
-    
-    
+    </>
   );
 }

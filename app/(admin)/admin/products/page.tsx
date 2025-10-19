@@ -267,8 +267,7 @@ export default function AdminProducts() {
   };
 
   return (
-    
-    
+    <>
       <div className="space-y-6">
         <AdminPageHeader 
           title="Products Management"
@@ -965,7 +964,6 @@ export default function AdminProducts() {
           </DialogContent>
         </Dialog>
       )}
-    
-    
+    </>
   );
 }

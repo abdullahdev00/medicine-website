@@ -50,8 +50,7 @@ export default function AdminPartners() {
   };
 
   return (
-    
-    
+    <>
       <div className="space-y-6">
         <AdminPageHeader 
           title="Partners Management"
@@ -215,7 +214,6 @@ export default function AdminPartners() {
           </DialogContent>
         </Dialog>
       )}
-    
-    
+    </>
   );
 }

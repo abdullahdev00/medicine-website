@@ -38,7 +38,8 @@ export default function AdminUsers() {
   );
 
   return (
-    <div className="space-y-6">
+    <>
+      <div className="space-y-6">
         <AdminPageHeader 
           title="Users Management"
           description="Manage all registered users"
@@ -248,6 +249,6 @@ export default function AdminUsers() {
           </DialogContent>
         </Dialog>
       )}
-    </div>
+    </>
   );
 }
