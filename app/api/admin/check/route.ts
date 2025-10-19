@@ -1,28 +1,30 @@
 import { NextRequest, NextResponse } from "next/server";
-import { storage } from "@/server/storage";
+import { auth } from "@/lib/auth";
 
 export async function GET(request: NextRequest) {
   try {
-    const searchParams = request.nextUrl.searchParams;
-    const adminId = searchParams.get('adminId');
+    const session = await auth();
     
-    if (!adminId) {
+    if (!session || !session.user) {
       return NextResponse.json(
-        { message: "Admin ID is required" },
-        { status: 400 }
-      );
-    }
-
-    const admin = await storage.getAdminById(adminId);
-    if (!admin) {
-      return NextResponse.json(
-        { message: "Admin not found" },
+        { message: "Not authenticated" },
         { status: 401 }
       );
     }
+
+    const userRole = (session.user as any).role;
     
-    const { password: _, ...adminData } = admin;
-    return NextResponse.json({ ...adminData, isAdmin: true });
+    if (userRole !== "admin") {
+      return NextResponse.json(
+        { message: "Not authorized. Admin access required." },
+        { status: 403 }
+      );
+    }
+    
+    return NextResponse.json({ 
+      isAdmin: true,
+      user: session.user 
+    });
   } catch (error: any) {
     return NextResponse.json(
       { message: error.message },
