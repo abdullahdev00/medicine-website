@@ -96,7 +96,7 @@ async function seed() {
         name: 'Paracetamol 500mg',
         categoryId: painReliefCat.id,
         description: 'Effective pain relief and fever reducer. Suitable for headaches, muscle aches, and minor pains.',
-        images: ['/images/paracetamol.jpg'],
+        images: ['/images/placeholder.svg'],
         rating: '4.5',
         variants: [
           { name: '10 Tablets', price: '250', wholesalePrice: '200' },
@@ -109,7 +109,7 @@ async function seed() {
         name: 'Ibuprofen 400mg',
         categoryId: painReliefCat.id,
         description: 'Anti-inflammatory pain reliever for mild to moderate pain, fever, and inflammation.',
-        images: ['/images/ibuprofen.jpg'],
+        images: ['/images/placeholder.svg'],
         rating: '4.7',
         variants: [
           { name: '10 Tablets', price: '350', wholesalePrice: '280' },
@@ -121,7 +121,7 @@ async function seed() {
         name: 'Vitamin C 1000mg',
         categoryId: vitaminsCat.id,
         description: 'Immune system support with high-potency vitamin C. Promotes healthy skin and antioxidant protection.',
-        images: ['/images/vitamin-c.jpg'],
+        images: ['/images/placeholder.svg'],
         rating: '4.8',
         variants: [
           { name: '30 Tablets', price: '800', wholesalePrice: '650' },
@@ -134,7 +134,7 @@ async function seed() {
         name: 'Multivitamin Complex',
         categoryId: vitaminsCat.id,
         description: 'Complete daily multivitamin with essential vitamins and minerals for overall health.',
-        images: ['/images/multivitamin.jpg'],
+        images: ['/images/placeholder.svg'],
         rating: '4.6',
         variants: [
           { name: '30 Capsules', price: '1200', wholesalePrice: '1000' },
@@ -146,7 +146,7 @@ async function seed() {
         name: 'Cold Relief Syrup',
         categoryId: coldFluCat.id,
         description: 'Relieves cold symptoms including cough, congestion, and sore throat.',
-        images: ['/images/cold-syrup.jpg'],
+        images: ['/images/placeholder.svg'],
         rating: '4.4',
         variants: [
           { name: '100ml Bottle', price: '450', wholesalePrice: '370' },
@@ -158,7 +158,7 @@ async function seed() {
         name: 'Antihistamine Tablets',
         categoryId: coldFluCat.id,
         description: 'Fast-acting allergy relief for sneezing, runny nose, and itchy eyes.',
-        images: ['/images/antihistamine.jpg'],
+        images: ['/images/placeholder.svg'],
         rating: '4.5',
         variants: [
           { name: '10 Tablets', price: '400', wholesalePrice: '330' },
@@ -170,7 +170,7 @@ async function seed() {
         name: 'Adhesive Bandages (Band-Aid)',
         categoryId: firstAidCat.id,
         description: 'Sterile adhesive bandages for minor cuts and wounds. Various sizes included.',
-        images: ['/images/bandages.jpg'],
+        images: ['/images/placeholder.svg'],
         rating: '4.7',
         variants: [
           { name: '20 Pack', price: '300', wholesalePrice: '240' },
@@ -183,7 +183,7 @@ async function seed() {
         name: 'Antiseptic Solution',
         categoryId: firstAidCat.id,
         description: 'Antiseptic for cleaning and preventing infection in minor cuts and scrapes.',
-        images: ['/images/antiseptic.jpg'],
+        images: ['/images/placeholder.svg'],
         rating: '4.6',
         variants: [
           { name: '100ml Bottle', price: '350', wholesalePrice: '280' },
@@ -195,7 +195,7 @@ async function seed() {
         name: 'Blood Glucose Test Strips',
         categoryId: diabetesCat.id,
         description: 'Accurate blood glucose monitoring test strips compatible with most meters.',
-        images: ['/images/glucose-strips.jpg'],
+        images: ['/images/placeholder.svg'],
         rating: '4.8',
         variants: [
           { name: '25 Strips', price: '1500', wholesalePrice: '1250' },
@@ -208,7 +208,7 @@ async function seed() {
         name: 'Digital Thermometer',
         categoryId: firstAidCat.id,
         description: 'Fast and accurate digital thermometer for oral, rectal, or underarm use.',
-        images: ['/images/thermometer.jpg'],
+        images: ['/images/placeholder.svg'],
         rating: '4.5',
         variants: [
           { name: 'Standard', price: '850', wholesalePrice: '700' },
@@ -220,7 +220,7 @@ async function seed() {
         name: 'Moisturizing Cream',
         categoryId: skincareCat.id,
         description: 'Hydrating cream for dry skin. Non-greasy formula suitable for daily use.',
-        images: ['/images/moisturizer.jpg'],
+        images: ['/images/placeholder.svg'],
         rating: '4.6',
         variants: [
           { name: '50g Tube', price: '500', wholesalePrice: '400' },
@@ -232,7 +232,7 @@ async function seed() {
         name: 'Sunscreen SPF 50+',
         categoryId: skincareCat.id,
         description: 'Broad spectrum protection against UVA and UVB rays. Water resistant.',
-        images: ['/images/sunscreen.jpg'],
+        images: ['/images/placeholder.svg'],
         rating: '4.7',
         variants: [
           { name: '50ml', price: '650', wholesalePrice: '520' },

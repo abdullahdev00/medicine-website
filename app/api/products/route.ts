@@ -3,6 +3,8 @@ import { storage } from "@/server/storage";
 import { insertProductSchema } from "@shared/schema";
 import { z } from "zod";
 
+export const revalidate = 60; // Cache for 60 seconds
+
 export async function GET(request: NextRequest) {
   try {
     const searchParams = request.nextUrl.searchParams;
@@ -15,7 +17,11 @@ export async function GET(request: NextRequest) {
       products = await storage.getProducts();
     }
     
-    return NextResponse.json(products);
+    return NextResponse.json(products, {
+      headers: {
+        'Cache-Control': 'public, s-maxage=60, stale-while-revalidate=120',
+      },
+    });
   } catch (error: any) {
     return NextResponse.json(
       { message: error.message },
