@@ -47,11 +47,24 @@ export const queryClient = new QueryClient({
       queryFn: getQueryFn({ on401: "throw" }),
       refetchInterval: false,
       refetchOnWindowFocus: false,
-      staleTime: Infinity,
-      retry: false,
+      staleTime: 5 * 60 * 1000, // 5 minutes - allow cached data reuse
+      gcTime: 10 * 60 * 1000, // 10 minutes - keep unused data in cache
+      retry: (failureCount, error: any) => {
+        if (error?.message?.includes('401') || error?.message?.includes('403')) {
+          return false; // Don't retry auth errors
+        }
+        return failureCount < 2; // Retry failed requests up to 2 times
+      },
+      retryDelay: (attemptIndex) => Math.min(1000 * 2 ** attemptIndex, 30000),
     },
     mutations: {
       retry: false,
+      onError: (error: any) => {
+        // Don't log sensitive mutation errors in production
+        if (process.env.NODE_ENV === 'development') {
+          console.error('Mutation error:', error);
+        }
+      },
     },
   },
 });

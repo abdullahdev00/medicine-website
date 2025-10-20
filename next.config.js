@@ -11,24 +11,31 @@ const withPWA = withPWAInit({
 
 /** @type {import('next').NextConfig} */
 const nextConfig = {
-  reactStrictMode: false,
+  reactStrictMode: true,
   
   images: {
     remotePatterns: [
       {
         protocol: 'https',
-        hostname: '**',
+        hostname: 'images.unsplash.com',
+      },
+      {
+        protocol: 'https',
+        hostname: '**.replit.dev',
       },
     ],
-    unoptimized: true,
+    formats: ['image/webp', 'image/avif'],
+    deviceSizes: [640, 750, 828, 1080, 1200],
+    imageSizes: [16, 32, 48, 64, 96, 128, 256, 384],
+    minimumCacheTTL: 60,
   },
   
   typescript: {
-    ignoreBuildErrors: true,
+    ignoreBuildErrors: false,
   },
   
   eslint: {
-    ignoreDuringBuilds: true,
+    ignoreDuringBuilds: false,
   },
   
   experimental: {
@@ -36,19 +43,56 @@ const nextConfig = {
       bodySizeLimit: '10mb',
     },
     webpackMemoryOptimizations: true,
-    cpus: 1,
-    workerThreads: false,
+    cpus: 4,
+    optimizePackageImports: ['lucide-react', 'recharts', '@radix-ui/react-icons'],
   },
   
-  webpack: (config, { dev }) => {
+  compiler: {
+    removeConsole: process.env.NODE_ENV === 'production' ? {
+      exclude: ['error', 'warn'],
+    } : false,
+  },
+  
+  webpack: (config, { dev, isServer }) => {
     if (dev) {
-      config.cache = false;
       config.watchOptions = {
         ...config.watchOptions,
         poll: false,
         ignored: /node_modules/,
       };
     }
+    
+    if (!isServer) {
+      config.optimization = {
+        ...config.optimization,
+        splitChunks: {
+          chunks: 'all',
+          cacheGroups: {
+            default: false,
+            vendors: false,
+            commons: {
+              name: 'commons',
+              chunks: 'all',
+              minChunks: 2,
+            },
+            lib: {
+              test: /[\\/]node_modules[\\/]/,
+              name(module) {
+                const packageName = module.context.match(/[\\/]node_modules[\\/](.*?)([\\/]|$)/)[1];
+                return `lib.${packageName.replace('@', '')}`;
+              },
+              priority: 10,
+            },
+            react: {
+              test: /[\\/]node_modules[\\/](react|react-dom)[\\/]/,
+              name: 'react',
+              priority: 20,
+            },
+          },
+        },
+      };
+    }
+    
     return config;
   },
 }

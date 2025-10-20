@@ -22,6 +22,7 @@ import {
 } from "@shared/schema";
 import { eq, and, desc, sql, count } from "drizzle-orm";
 import bcrypt from "bcrypt";
+import { cache } from "./cache";
 
 export interface IStorage {
   getUser(id: string): Promise<User | undefined>;
@@ -133,22 +134,33 @@ export class DatabaseStorage implements IStorage {
   }
 
   async getCategories(): Promise<Category[]> {
+    const cacheKey = 'categories:all';
+    const cached = cache.get<Category[]>(cacheKey);
+    if (cached) return cached;
+    
     const result = await db.execute<Category>(sql`SELECT id::text as id, name, icon, description FROM categories`);
-    return result.rows as Category[];
+    const categories = result.rows as Category[];
+    cache.set(cacheKey, categories, 10 * 60 * 1000); // Cache for 10 minutes
+    return categories;
   }
 
   async createCategory(category: InsertCategory): Promise<Category> {
     const result = await db.insert(categories).values(category).returning();
+    cache.invalidate('categories:all'); // Invalidate cache when creating
     return result[0];
   }
 
   async getProducts(): Promise<Product[]> {
+    const cacheKey = 'products:all';
+    const cached = cache.get<Product[]>(cacheKey);
+    if (cached) return cached;
+    
     const result = await db.execute<Product>(
       sql`SELECT id::text as id, name, category_id::text as category_id, description, 
           images, rating, variants, in_stock::boolean as in_stock, created_at 
           FROM products ORDER BY created_at DESC`
     );
-    return result.rows.map(row => ({
+    const products = result.rows.map(row => ({
       ...row,
       categoryId: (row as any).category_id,
       images: (row as any).images,
@@ -156,9 +168,15 @@ export class DatabaseStorage implements IStorage {
       inStock: (row as any).in_stock === true || (row as any).in_stock === 't',
       createdAt: (row as any).created_at,
     })) as Product[];
+    cache.set(cacheKey, products, 5 * 60 * 1000); // Cache for 5 minutes
+    return products;
   }
 
   async getProductById(id: string): Promise<Product | undefined> {
+    const cacheKey = `product:${id}`;
+    const cached = cache.get<Product>(cacheKey);
+    if (cached) return cached;
+    
     const result = await db.execute<Product>(
       sql`SELECT id::text as id, name, category_id::text as category_id, description, 
           images, rating, variants, in_stock::boolean as in_stock, created_at 
@@ -166,7 +184,7 @@ export class DatabaseStorage implements IStorage {
     );
     if (result.rows.length === 0) return undefined;
     const row = result.rows[0];
-    return {
+    const product = {
       ...row,
       categoryId: (row as any).category_id,
       images: (row as any).images,
@@ -174,6 +192,8 @@ export class DatabaseStorage implements IStorage {
       inStock: (row as any).in_stock === true || (row as any).in_stock === 't',
       createdAt: (row as any).created_at,
     } as Product;
+    cache.set(cacheKey, product, 5 * 60 * 1000); // Cache for 5 minutes
+    return product;
   }
 
   async getProductsByCategory(categoryId: string): Promise<Product[]> {
@@ -182,6 +202,7 @@ export class DatabaseStorage implements IStorage {
 
   async createProduct(product: InsertProduct): Promise<Product> {
     const result = await db.insert(products).values(product).returning();
+    cache.invalidate('products:all'); // Invalidate cache when creating
     return result[0];
   }
 
