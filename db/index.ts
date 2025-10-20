@@ -7,7 +7,7 @@ if (!process.env.DATABASE_URL) {
 }
 
 const client = postgres(process.env.DATABASE_URL, {
-  ssl: false,
+  ssl: 'require',
   max: 10,
 });
 

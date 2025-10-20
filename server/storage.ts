@@ -309,7 +309,6 @@ export class DatabaseStorage implements IStorage {
           amount: request.amount,
           description: `Withdrawal request - ${request.paymentMethod}`,
           status: "completed",
-          paymentRequestId: result[0].id,
         });
       }
     }
@@ -430,7 +429,7 @@ export class DatabaseStorage implements IStorage {
       totalProducts: totalProducts[0]?.count || 0,
       totalOrders: totalOrders[0]?.count || 0,
       pendingOrders: pendingOrders[0]?.count || 0,
-      totalRevenue: revenueResult.rows[0]?.total || '0',
+      totalRevenue: (revenueResult[0] as any)?.total || '0',
       pendingPayments: pendingPayments[0]?.count || 0,
       activePartners: activePartners[0]?.count || 0,
       newUsersToday: newUsersToday[0]?.count || 0,
@@ -456,7 +455,7 @@ export class DatabaseStorage implements IStorage {
       ORDER BY p.created_at DESC`
     );
 
-    return result.rows.map(row => ({
+    return (result as any[]).map((row: any) => ({
       id: row.id,
       userId: row.userId,
       businessName: row.businessName,
