@@ -2,27 +2,28 @@ import { drizzle } from 'drizzle-orm/neon-http';
 import { neon } from '@neondatabase/serverless';
 import * as schema from '../shared/schema';
 import bcrypt from 'bcrypt';
+import { sql } from 'drizzle-orm';
 
 if (!process.env.DATABASE_URL) {
   throw new Error('DATABASE_URL is not set');
 }
 
-const sql = neon(process.env.DATABASE_URL);
-const db = drizzle(sql, { schema });
+const sqlClient = neon(process.env.DATABASE_URL);
+const db = drizzle(sqlClient, { schema });
 
-async function seed() {
-  console.log('🌱 Seeding database...');
-
+async function seedDatabase() {
   try {
-    // Hash password for demo users
+    console.log('🌱 Starting comprehensive database seeding...\n');
+
+    // Hash passwords
     const hashedPassword = await bcrypt.hash('password123', 10);
     const hashedAdminPassword = await bcrypt.hash('admin123', 10);
 
-    // 1. Create Admin Users
-    console.log('Creating admin users...');
-    const adminUsers = await db.insert(schema.admins).values([
+    // ===== STEP 1: Create Admin Users =====
+    console.log('👨‍💼 Step 1: Creating admin users...');
+    const admins = await db.insert(schema.admins).values([
       {
-        fullName: 'Admin User',
+        fullName: 'Super Admin',
         email: 'admin@pharmacy.com',
         password: hashedAdminPassword,
         isActive: true,
@@ -34,67 +35,32 @@ async function seed() {
         isActive: true,
       },
     ]).returning();
-    console.log(`✓ Created ${adminUsers.length} admin users`);
+    console.log(`✅ Created ${admins.length} admin users\n`);
 
-    // 2. Create Categories
-    console.log('Creating categories...');
-    const categoriesData = await db.insert(schema.categories).values([
-      {
-        name: 'Pain Relief',
-        icon: 'pill',
-        description: 'Over-the-counter pain relief medications',
-      },
-      {
-        name: 'Vitamins & Supplements',
-        icon: 'capsule',
-        description: 'Daily vitamins and dietary supplements',
-      },
-      {
-        name: 'Cold & Flu',
-        icon: 'thermometer',
-        description: 'Cold, flu, and allergy medications',
-      },
-      {
-        name: 'First Aid',
-        icon: 'bandage',
-        description: 'First aid supplies and wound care',
-      },
-      {
-        name: 'Diabetes Care',
-        icon: 'syringe',
-        description: 'Diabetes management and monitoring',
-      },
-      {
-        name: 'Skincare',
-        icon: 'spray-can',
-        description: 'Skincare and dermatology products',
-      },
-      {
-        name: 'Baby Care',
-        icon: 'baby',
-        description: 'Baby health and wellness products',
-      },
-      {
-        name: 'Heart Health',
-        icon: 'heart-pulse',
-        description: 'Cardiovascular health supplements',
-      },
+    // ===== STEP 2: Create Categories =====
+    console.log('📂 Step 2: Creating categories...');
+    const categories = await db.insert(schema.categories).values([
+      { name: 'Pain Relief', icon: 'Zap', description: 'Over-the-counter pain relief medications' },
+      { name: 'Vitamins & Supplements', icon: 'Pill', description: 'Daily vitamins and dietary supplements' },
+      { name: 'Cold & Flu', icon: 'Thermometer', description: 'Cold, flu, and allergy medications' },
+      { name: 'First Aid', icon: 'Heart', description: 'First aid supplies and wound care' },
+      { name: 'Diabetes Care', icon: 'Activity', description: 'Diabetes management and monitoring' },
+      { name: 'Skincare', icon: 'Droplets', description: 'Skincare and dermatology products' },
+      { name: 'Baby Care', icon: 'Baby', description: 'Baby health and wellness products' },
+      { name: 'Heart Health', icon: 'HeartPulse', description: 'Cardiovascular health supplements' },
+      { name: 'Personal Care', icon: 'User', description: 'Personal hygiene products' },
     ]).returning();
-    console.log(`✓ Created ${categoriesData.length} categories`);
+    console.log(`✅ Created ${categories.length} categories\n`);
 
-    // 3. Create Products
-    console.log('Creating products...');
-    const painReliefCat = categoriesData.find(c => c.name === 'Pain Relief')!;
-    const vitaminsCat = categoriesData.find(c => c.name === 'Vitamins & Supplements')!;
-    const coldFluCat = categoriesData.find(c => c.name === 'Cold & Flu')!;
-    const firstAidCat = categoriesData.find(c => c.name === 'First Aid')!;
-    const diabetesCat = categoriesData.find(c => c.name === 'Diabetes Care')!;
-    const skincareCat = categoriesData.find(c => c.name === 'Skincare')!;
+    const categoryMap = new Map(categories.map(c => [c.name, c.id]));
 
+    // ===== STEP 3: Create Products =====
+    console.log('🛍️ Step 3: Creating products...');
     const products = await db.insert(schema.products).values([
+      // Pain Relief
       {
         name: 'Paracetamol 500mg',
-        categoryId: painReliefCat.id,
+        categoryId: categoryMap.get('Pain Relief')!,
         description: 'Effective pain relief and fever reducer. Suitable for headaches, muscle aches, and minor pains.',
         images: ['/images/placeholder.svg'],
         rating: '4.5',
@@ -107,7 +73,7 @@ async function seed() {
       },
       {
         name: 'Ibuprofen 400mg',
-        categoryId: painReliefCat.id,
+        categoryId: categoryMap.get('Pain Relief')!,
         description: 'Anti-inflammatory pain reliever for mild to moderate pain, fever, and inflammation.',
         images: ['/images/placeholder.svg'],
         rating: '4.7',
@@ -117,9 +83,10 @@ async function seed() {
         ],
         inStock: true,
       },
+      // Vitamins
       {
         name: 'Vitamin C 1000mg',
-        categoryId: vitaminsCat.id,
+        categoryId: categoryMap.get('Vitamins & Supplements')!,
         description: 'Immune system support with high-potency vitamin C. Promotes healthy skin and antioxidant protection.',
         images: ['/images/placeholder.svg'],
         rating: '4.8',
@@ -132,7 +99,7 @@ async function seed() {
       },
       {
         name: 'Multivitamin Complex',
-        categoryId: vitaminsCat.id,
+        categoryId: categoryMap.get('Vitamins & Supplements')!,
         description: 'Complete daily multivitamin with essential vitamins and minerals for overall health.',
         images: ['/images/placeholder.svg'],
         rating: '4.6',
@@ -143,8 +110,21 @@ async function seed() {
         inStock: true,
       },
       {
+        name: 'Vitamin D3 5000 IU',
+        categoryId: categoryMap.get('Vitamins & Supplements')!,
+        description: 'High-potency vitamin D for bone health and immune support.',
+        images: ['/images/placeholder.svg'],
+        rating: '4.7',
+        variants: [
+          { name: '30 Tablets', price: '650', wholesalePrice: '520' },
+          { name: '60 Tablets', price: '1200', wholesalePrice: '960' },
+        ],
+        inStock: true,
+      },
+      // Cold & Flu
+      {
         name: 'Cold Relief Syrup',
-        categoryId: coldFluCat.id,
+        categoryId: categoryMap.get('Cold & Flu')!,
         description: 'Relieves cold symptoms including cough, congestion, and sore throat.',
         images: ['/images/placeholder.svg'],
         rating: '4.4',
@@ -156,7 +136,7 @@ async function seed() {
       },
       {
         name: 'Antihistamine Tablets',
-        categoryId: coldFluCat.id,
+        categoryId: categoryMap.get('Cold & Flu')!,
         description: 'Fast-acting allergy relief for sneezing, runny nose, and itchy eyes.',
         images: ['/images/placeholder.svg'],
         rating: '4.5',
@@ -166,9 +146,10 @@ async function seed() {
         ],
         inStock: true,
       },
+      // First Aid
       {
         name: 'Adhesive Bandages (Band-Aid)',
-        categoryId: firstAidCat.id,
+        categoryId: categoryMap.get('First Aid')!,
         description: 'Sterile adhesive bandages for minor cuts and wounds. Various sizes included.',
         images: ['/images/placeholder.svg'],
         rating: '4.7',
@@ -181,7 +162,7 @@ async function seed() {
       },
       {
         name: 'Antiseptic Solution',
-        categoryId: firstAidCat.id,
+        categoryId: categoryMap.get('First Aid')!,
         description: 'Antiseptic for cleaning and preventing infection in minor cuts and scrapes.',
         images: ['/images/placeholder.svg'],
         rating: '4.6',
@@ -192,8 +173,21 @@ async function seed() {
         inStock: true,
       },
       {
+        name: 'First Aid Kit Complete',
+        categoryId: categoryMap.get('First Aid')!,
+        description: 'Comprehensive first aid kit for home and travel.',
+        images: ['/images/placeholder.svg'],
+        rating: '4.8',
+        variants: [
+          { name: 'Basic Kit', price: '1200', wholesalePrice: '960' },
+          { name: 'Premium Kit', price: '2500', wholesalePrice: '2000' },
+        ],
+        inStock: true,
+      },
+      // Diabetes Care
+      {
         name: 'Blood Glucose Test Strips',
-        categoryId: diabetesCat.id,
+        categoryId: categoryMap.get('Diabetes Care')!,
         description: 'Accurate blood glucose monitoring test strips compatible with most meters.',
         images: ['/images/placeholder.svg'],
         rating: '4.8',
@@ -205,8 +199,20 @@ async function seed() {
         inStock: true,
       },
       {
+        name: 'Blood Glucose Monitor Kit',
+        categoryId: categoryMap.get('Diabetes Care')!,
+        description: 'Complete kit for monitoring blood glucose levels at home.',
+        images: ['/images/placeholder.svg'],
+        rating: '4.9',
+        variants: [
+          { name: 'With 50 Test Strips', price: '3500', wholesalePrice: '2800' },
+          { name: 'With 100 Test Strips', price: '5200', wholesalePrice: '4160' },
+        ],
+        inStock: true,
+      },
+      {
         name: 'Digital Thermometer',
-        categoryId: firstAidCat.id,
+        categoryId: categoryMap.get('First Aid')!,
         description: 'Fast and accurate digital thermometer for oral, rectal, or underarm use.',
         images: ['/images/placeholder.svg'],
         rating: '4.5',
@@ -216,9 +222,10 @@ async function seed() {
         ],
         inStock: true,
       },
+      // Skincare
       {
         name: 'Moisturizing Cream',
-        categoryId: skincareCat.id,
+        categoryId: categoryMap.get('Skincare')!,
         description: 'Hydrating cream for dry skin. Non-greasy formula suitable for daily use.',
         images: ['/images/placeholder.svg'],
         rating: '4.6',
@@ -230,7 +237,7 @@ async function seed() {
       },
       {
         name: 'Sunscreen SPF 50+',
-        categoryId: skincareCat.id,
+        categoryId: categoryMap.get('Skincare')!,
         description: 'Broad spectrum protection against UVA and UVB rays. Water resistant.',
         images: ['/images/placeholder.svg'],
         rating: '4.7',
@@ -240,12 +247,37 @@ async function seed() {
         ],
         inStock: true,
       },
+      // Personal Care
+      {
+        name: 'Hand Sanitizer',
+        categoryId: categoryMap.get('Personal Care')!,
+        description: '70% alcohol-based sanitizer that kills 99.9% of germs.',
+        images: ['/images/placeholder.svg'],
+        rating: '4.7',
+        variants: [
+          { name: '250ml', price: '320', wholesalePrice: '255' },
+          { name: '500ml', price: '550', wholesalePrice: '440' },
+        ],
+        inStock: true,
+      },
+      {
+        name: 'Face Masks',
+        categoryId: categoryMap.get('Personal Care')!,
+        description: '3-layer surgical face masks for protection.',
+        images: ['/images/placeholder.svg'],
+        rating: '4.6',
+        variants: [
+          { name: '50 Pack', price: '850', wholesalePrice: '680' },
+          { name: '100 Pack', price: '1600', wholesalePrice: '1280' },
+        ],
+        inStock: true,
+      },
     ]).returning();
-    console.log(`✓ Created ${products.length} products`);
+    console.log(`✅ Created ${products.length} products\n`);
 
-    // 4. Create Demo Users
-    console.log('Creating demo users...');
-    const users = await db.insert(schema.users).values([
+    // ===== STEP 4: Create Demo Users =====
+    console.log('👥 Step 4: Creating demo users...');
+    const mainUsers = await db.insert(schema.users).values([
       {
         fullName: 'John Doe',
         email: 'john@example.com',
@@ -295,10 +327,50 @@ async function seed() {
         isPartner: false,
       },
     ]).returning();
-    console.log(`✓ Created ${users.length} demo users`);
 
-    // 5. Create Vouchers
-    console.log('Creating vouchers...');
+    // Create referred users
+    const referredUsers = await db.insert(schema.users).values([
+      {
+        fullName: 'Fatima Hassan',
+        email: 'fatima@example.com',
+        password: hashedPassword,
+        phoneNumber: '+92-300-5678901',
+        whatsappNumber: '+92-300-5678901',
+        address: '101 Model Town',
+        city: 'Faisalabad',
+        province: 'Punjab',
+        postalCode: '38000',
+        affiliateCode: 'FATIMA2024',
+        referredBy: mainUsers[0].id,
+        walletBalance: '1500',
+        totalEarnings: '2000',
+        pendingEarnings: '200',
+        isPartner: false,
+      },
+      {
+        fullName: 'Ahmed Raza',
+        email: 'ahmed@example.com',
+        password: hashedPassword,
+        phoneNumber: '+92-300-6789012',
+        whatsappNumber: '+92-300-6789012',
+        address: '202 Defence Area',
+        city: 'Multan',
+        province: 'Punjab',
+        postalCode: '60000',
+        affiliateCode: 'AHMED2024',
+        referredBy: mainUsers[0].id,
+        walletBalance: '800',
+        totalEarnings: '1500',
+        pendingEarnings: '100',
+        isPartner: false,
+      },
+    ]).returning();
+
+    const users = [...mainUsers, ...referredUsers];
+    console.log(`✅ Created ${users.length} demo users (${referredUsers.length} referred)\n`);
+
+    // ===== STEP 5: Create Vouchers =====
+    console.log('🎟️ Step 5: Creating vouchers...');
     const vouchers = await db.insert(schema.vouchers).values([
       {
         code: 'WELCOME25',
@@ -320,7 +392,6 @@ async function seed() {
         discountType: 'fixed',
         discountValue: '200',
         minOrderAmount: '2000',
-        maxDiscount: null,
         expiryDate: new Date('2025-11-30'),
         isActive: true,
         usageLimit: 200,
@@ -339,24 +410,11 @@ async function seed() {
         usageLimit: 500,
         usedCount: 156,
       },
-      {
-        code: 'EXPIRED50',
-        title: 'Expired Voucher',
-        description: 'This voucher has expired',
-        discountType: 'percentage',
-        discountValue: '50',
-        minOrderAmount: '1000',
-        maxDiscount: '1000',
-        expiryDate: new Date('2024-01-01'),
-        isActive: false,
-        usageLimit: 50,
-        usedCount: 50,
-      },
     ]).returning();
-    console.log(`✓ Created ${vouchers.length} vouchers`);
+    console.log(`✅ Created ${vouchers.length} vouchers\n`);
 
-    // 6. Create Payment Accounts
-    console.log('Creating payment accounts...');
+    // ===== STEP 6: Create Payment Accounts =====
+    console.log('💳 Step 6: Creating payment accounts...');
     const paymentAccounts = await db.insert(schema.paymentAccounts).values([
       {
         method: 'JazzCash',
@@ -377,10 +435,54 @@ async function seed() {
         isActive: true,
       },
     ]).returning();
-    console.log(`✓ Created ${paymentAccounts.length} payment accounts`);
+    console.log(`✅ Created ${paymentAccounts.length} payment accounts\n`);
 
-    // 7. Create some sample orders
-    console.log('Creating sample orders...');
+    // ===== STEP 7: Create Addresses =====
+    console.log('🏠 Step 7: Creating addresses...');
+    await db.insert(schema.addresses).values([
+      {
+        userId: users[0].id,
+        label: 'Home',
+        address: '123 Main Street, Block A',
+        city: 'Karachi',
+        province: 'Sindh',
+        postalCode: '75500',
+        isDefault: true,
+      },
+      {
+        userId: users[0].id,
+        label: 'Office',
+        address: 'Office 456, Business Center',
+        city: 'Karachi',
+        province: 'Sindh',
+        postalCode: '75500',
+        isDefault: false,
+      },
+      {
+        userId: users[1].id,
+        label: 'Home',
+        address: '456 Garden Road',
+        city: 'Lahore',
+        province: 'Punjab',
+        postalCode: '54000',
+        isDefault: true,
+      },
+    ]);
+    console.log('✅ Created 3 addresses\n');
+
+    // ===== STEP 8: Create Wishlist Items =====
+    console.log('💚 Step 8: Creating wishlist items...');
+    await db.insert(schema.wishlistItems).values([
+      { userId: users[0].id, productId: products[1].id },
+      { userId: users[0].id, productId: products[4].id },
+      { userId: users[0].id, productId: products[6].id },
+      { userId: users[1].id, productId: products[2].id },
+      { userId: users[1].id, productId: products[11].id },
+    ]);
+    console.log('✅ Created 5 wishlist items\n');
+
+    // ===== STEP 9: Create Orders =====
+    console.log('📦 Step 9: Creating sample orders...');
     const orders = await db.insert(schema.orders).values([
       {
         userId: users[0].id,
@@ -405,7 +507,6 @@ async function seed() {
         paymentMethod: 'JazzCash',
         paymentInfo: '0300-1234567',
         paidFromWallet: '0',
-        usedAffiliateCode: null,
         status: 'delivered',
         expectedDelivery: new Date('2025-10-25'),
       },
@@ -435,8 +536,8 @@ async function seed() {
         userId: users[2].id,
         products: [
           {
-            productId: products[8].id,
-            name: products[8].name,
+            productId: products[10].id,
+            name: products[10].name,
             quantity: 1,
             price: '1500',
             variantName: '25 Strips',
@@ -445,7 +546,6 @@ async function seed() {
         totalPrice: '1500',
         deliveryAddress: '789 University Road, Islamabad, ICT',
         paymentMethod: 'Cash on Delivery',
-        paymentInfo: null,
         paidFromWallet: '500',
         usedAffiliateCode: 'SARAH2024',
         affiliateUserId: users[1].id,
@@ -454,11 +554,11 @@ async function seed() {
         expectedDelivery: new Date('2025-10-28'),
       },
     ]).returning();
-    console.log(`✓ Created ${orders.length} sample orders`);
+    console.log(`✅ Created ${orders.length} orders\n`);
 
-    // 8. Create wallet transactions
-    console.log('Creating wallet transactions...');
-    const transactions = await db.insert(schema.walletTransactions).values([
+    // ===== STEP 10: Create Wallet Transactions =====
+    console.log('💰 Step 10: Creating wallet transactions...');
+    await db.insert(schema.walletTransactions).values([
       {
         userId: users[0].id,
         type: 'credit',
@@ -488,11 +588,18 @@ async function seed() {
         orderId: orders[2].id,
         status: 'completed',
       },
-    ]).returning();
-    console.log(`✓ Created ${transactions.length} wallet transactions`);
+      {
+        userId: users[0].id,
+        type: 'credit',
+        amount: '2000',
+        description: 'Welcome bonus credited',
+        status: 'completed',
+      },
+    ]);
+    console.log('✅ Created 5 wallet transactions\n');
 
-    // 9. Create partner for user[0]
-    console.log('Creating partner...');
+    // ===== STEP 11: Create Partner =====
+    console.log('🤝 Step 11: Creating partner...');
     await db.insert(schema.partners).values({
       userId: users[0].id,
       programType: 'affiliate',
@@ -502,31 +609,65 @@ async function seed() {
       totalSales: '5000',
       status: 'active',
     });
-    console.log('✓ Created partner');
+    console.log('✅ Created partner\n');
 
-    console.log('\n✅ Database seeded successfully!');
-    console.log('\n📊 Summary:');
-    console.log(`- ${adminUsers.length} admin users (admin@pharmacy.com / admin123)`);
-    console.log(`- ${categoriesData.length} categories`);
-    console.log(`- ${products.length} products`);
-    console.log(`- ${users.length} users (password: password123)`);
-    console.log(`- ${vouchers.length} vouchers`);
-    console.log(`- ${paymentAccounts.length} payment accounts`);
-    console.log(`- ${orders.length} sample orders`);
-    console.log(`- ${transactions.length} wallet transactions`);
-    console.log('\n💡 Login credentials:');
-    console.log('Admin: admin@pharmacy.com / admin123');
-    console.log('User: john@example.com / password123');
-    
+    // ===== STEP 12: Create Referral Stats =====
+    console.log('📊 Step 12: Creating referral stats...');
+    await db.insert(schema.referralStats).values({
+      userId: users[0].id,
+      totalReferrals: 2,
+      totalOrders: 5,
+      totalCommission: '2500',
+    });
+    console.log('✅ Created referral stats\n');
+
+    // ===== STEP 13: Create User Payment Accounts =====
+    console.log('💳 Step 13: Creating user payment accounts...');
+    await db.insert(schema.userPaymentAccounts).values({
+      userId: users[0].id,
+      accountName: 'John Doe',
+      raastId: 'john@jazzcash',
+      isDefault: true,
+    });
+    console.log('✅ Created user payment account\n');
+
+    console.log('✅ Database seeded successfully!\n');
+    console.log('═══════════════════════════════════════════════════');
+    console.log('📊 SUMMARY:');
+    console.log('═══════════════════════════════════════════════════');
+    console.log(`✓ ${admins.length} admin users`);
+    console.log(`✓ ${categories.length} categories`);
+    console.log(`✓ ${products.length} products`);
+    console.log(`✓ ${users.length} demo users`);
+    console.log(`✓ ${vouchers.length} vouchers`);
+    console.log(`✓ ${paymentAccounts.length} payment accounts`);
+    console.log(`✓ ${orders.length} orders`);
+    console.log(`✓ 3 addresses`);
+    console.log(`✓ 5 wishlist items`);
+    console.log(`✓ 5 wallet transactions`);
+    console.log(`✓ 1 partner`);
+    console.log(`✓ 1 referral stats`);
+    console.log(`✓ 1 user payment account`);
+    console.log('═══════════════════════════════════════════════════');
+    console.log('\n💡 LOGIN CREDENTIALS:');
+    console.log('═══════════════════════════════════════════════════');
+    console.log('👨‍💼 Admin Panel:');
+    console.log('   Email: admin@pharmacy.com');
+    console.log('   Password: admin123');
+    console.log('\n👤 User Accounts:');
+    console.log('   Email: john@example.com / sarah@example.com / ali@example.com');
+    console.log('   Password: password123');
+    console.log('═══════════════════════════════════════════════════\n');
+
   } catch (error) {
     console.error('❌ Error seeding database:', error);
     throw error;
   }
 }
 
-seed()
+seedDatabase()
   .then(() => {
-    console.log('✨ Seed completed');
+    console.log('✨ Seed completed successfully');
     process.exit(0);
   })
   .catch((error) => {
