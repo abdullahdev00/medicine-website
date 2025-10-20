@@ -417,11 +417,20 @@ export class DatabaseStorage implements IStorage {
       .set(updates)
       .where(eq(products.id, id))
       .returning();
+    
+    // Invalidate caches
+    cache.invalidate('products:all');
+    cache.invalidate(`product:${id}`);
+    
     return result[0];
   }
 
   async deleteProduct(id: string): Promise<void> {
     await db.delete(products).where(eq(products.id, id));
+    
+    // Invalidate caches
+    cache.invalidate('products:all');
+    cache.invalidate(`product:${id}`);
   }
 
   async getAdminStats(): Promise<any> {
