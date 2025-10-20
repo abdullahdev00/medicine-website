@@ -138,10 +138,9 @@ export class DatabaseStorage implements IStorage {
     const cached = cache.get<Category[]>(cacheKey);
     if (cached) return cached;
     
-    const result = await db.execute<Category>(sql`SELECT id::text as id, name, icon, description FROM categories`);
-    const categories = result.rows as Category[];
-    cache.set(cacheKey, categories, 10 * 60 * 1000); // Cache for 10 minutes
-    return categories;
+    const result = await db.select().from(categories);
+    cache.set(cacheKey, result, 10 * 60 * 1000); // Cache for 10 minutes
+    return result;
   }
 
   async createCategory(category: InsertCategory): Promise<Category> {
@@ -155,21 +154,9 @@ export class DatabaseStorage implements IStorage {
     const cached = cache.get<Product[]>(cacheKey);
     if (cached) return cached;
     
-    const result = await db.execute<Product>(
-      sql`SELECT id::text as id, name, category_id::text as category_id, description, 
-          images, rating, variants, in_stock::boolean as in_stock, created_at 
-          FROM products ORDER BY created_at DESC`
-    );
-    const products = result.rows.map(row => ({
-      ...row,
-      categoryId: (row as any).category_id,
-      images: (row as any).images,
-      variants: (row as any).variants,
-      inStock: (row as any).in_stock === true || (row as any).in_stock === 't',
-      createdAt: (row as any).created_at,
-    })) as Product[];
-    cache.set(cacheKey, products, 5 * 60 * 1000); // Cache for 5 minutes
-    return products;
+    const result = await db.select().from(products).orderBy(desc(products.createdAt));
+    cache.set(cacheKey, result, 5 * 60 * 1000); // Cache for 5 minutes
+    return result;
   }
 
   async getProductById(id: string): Promise<Product | undefined> {
@@ -177,21 +164,9 @@ export class DatabaseStorage implements IStorage {
     const cached = cache.get<Product>(cacheKey);
     if (cached) return cached;
     
-    const result = await db.execute<Product>(
-      sql`SELECT id::text as id, name, category_id::text as category_id, description, 
-          images, rating, variants, in_stock::boolean as in_stock, created_at 
-          FROM products WHERE id = ${id}::uuid LIMIT 1`
-    );
-    if (result.rows.length === 0) return undefined;
-    const row = result.rows[0];
-    const product = {
-      ...row,
-      categoryId: (row as any).category_id,
-      images: (row as any).images,
-      variants: (row as any).variants,
-      inStock: (row as any).in_stock === true || (row as any).in_stock === 't',
-      createdAt: (row as any).created_at,
-    } as Product;
+    const result = await db.select().from(products).where(eq(products.id, id)).limit(1);
+    if (result.length === 0) return undefined;
+    const product = result[0];
     cache.set(cacheKey, product, 5 * 60 * 1000); // Cache for 5 minutes
     return product;
   }

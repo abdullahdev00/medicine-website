@@ -133,10 +133,10 @@ importers:
         version: 3.6.0
       drizzle-orm:
         specifier: ^0.39.1
-        version: 0.39.3(@neondatabase/serverless@0.10.4)(@types/pg@8.15.5)(pg@8.16.3)
+        version: 0.39.3(@neondatabase/serverless@0.10.4)(@types/pg@8.15.5)(pg@8.16.3)(postgres@3.4.7)
       drizzle-zod:
         specifier: ^0.7.0
-        version: 0.7.1(drizzle-orm@0.39.3(@neondatabase/serverless@0.10.4)(@types/pg@8.15.5)(pg@8.16.3))(zod@3.25.76)
+        version: 0.7.1(drizzle-orm@0.39.3(@neondatabase/serverless@0.10.4)(@types/pg@8.15.5)(pg@8.16.3)(postgres@3.4.7))(zod@3.25.76)
       embla-carousel-react:
         specifier: ^8.6.0
         version: 8.6.0(react@19.2.0)
@@ -173,6 +173,9 @@ importers:
       passport-local:
         specifier: ^1.0.0
         version: 1.0.0
+      postgres:
+        specifier: ^3.4.7
+        version: 3.4.7
       react:
         specifier: ^19.2.0
         version: 19.2.0
@@ -3717,6 +3720,10 @@ packages:
   postgres-range@1.1.4:
     resolution: {integrity: sha512-i/hbxIE9803Alj/6ytL7UHQxRvZkI9O4Sy+J3HGc4F4oo/2eQAjTSNJ0bfxyse3bH0nuVesCk+3IRLaMtG3H6w==}
 
+  postgres@3.4.7:
+    resolution: {integrity: sha512-Jtc2612XINuBjIl/QTWsV5UvE8UHuNblcO3vVADSrKsrc6RqGX6lOW1cEo3CM2v0XG4Nat8nI+YM7/f26VxXLw==}
+    engines: {node: '>=12'}
+
   preact-render-to-string@6.5.11:
     resolution: {integrity: sha512-ubnauqoGczeGISiOh6RjX0/cdaF8v/oDXIjO85XALCQjwQP+SB4RDXXtvZ6yTYSjG+PC1QRP2AhPgCEsM2EvUw==}
     peerDependencies:
@@ -6932,15 +6939,16 @@ snapshots:
     transitivePeerDependencies:
       - supports-color
 
-  drizzle-orm@0.39.3(@neondatabase/serverless@0.10.4)(@types/pg@8.15.5)(pg@8.16.3):
+  drizzle-orm@0.39.3(@neondatabase/serverless@0.10.4)(@types/pg@8.15.5)(pg@8.16.3)(postgres@3.4.7):
     optionalDependencies:
       '@neondatabase/serverless': 0.10.4
       '@types/pg': 8.15.5
       pg: 8.16.3
+      postgres: 3.4.7
 
-  drizzle-zod@0.7.1(drizzle-orm@0.39.3(@neondatabase/serverless@0.10.4)(@types/pg@8.15.5)(pg@8.16.3))(zod@3.25.76):
+  drizzle-zod@0.7.1(drizzle-orm@0.39.3(@neondatabase/serverless@0.10.4)(@types/pg@8.15.5)(pg@8.16.3)(postgres@3.4.7))(zod@3.25.76):
     dependencies:
-      drizzle-orm: 0.39.3(@neondatabase/serverless@0.10.4)(@types/pg@8.15.5)(pg@8.16.3)
+      drizzle-orm: 0.39.3(@neondatabase/serverless@0.10.4)(@types/pg@8.15.5)(pg@8.16.3)(postgres@3.4.7)
       zod: 3.25.76
 
   dunder-proto@1.0.1:
@@ -7963,6 +7971,8 @@ snapshots:
   postgres-interval@3.0.0: {}
 
   postgres-range@1.1.4: {}
+
+  postgres@3.4.7: {}
 
   preact-render-to-string@6.5.11(preact@10.24.3):
     dependencies:
