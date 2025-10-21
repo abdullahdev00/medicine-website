@@ -47,15 +47,22 @@ export const queryClient = new QueryClient({
       queryFn: getQueryFn({ on401: "throw" }),
       refetchInterval: false,
       refetchOnWindowFocus: false,
+      refetchOnMount: false,
+      refetchOnReconnect: false,
       staleTime: 5 * 60 * 1000, // 5 minutes - allow cached data reuse
       gcTime: 10 * 60 * 1000, // 10 minutes - keep unused data in cache
       retry: (failureCount, error: any) => {
-        if (error?.message?.includes('401') || error?.message?.includes('403')) {
-          return false; // Don't retry auth errors
+        // Stop infinite retries on CORS errors
+        if (error?.message?.includes('CORS') || 
+            error?.message?.includes('Cross-Origin') ||
+            error?.message?.includes('blocked') ||
+            error?.message?.includes('401') || 
+            error?.message?.includes('403')) {
+          return false; // Don't retry CORS or auth errors
         }
-        return failureCount < 2; // Retry failed requests up to 2 times
+        return failureCount < 1; // Only retry once to prevent infinite loops
       },
-      retryDelay: (attemptIndex) => Math.min(1000 * 2 ** attemptIndex, 30000),
+      retryDelay: (attemptIndex) => Math.min(2000 * 2 ** attemptIndex, 10000), // Slower retry
     },
     mutations: {
       retry: false,

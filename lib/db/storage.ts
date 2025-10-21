@@ -134,7 +134,7 @@ export class DatabaseStorage implements IStorage {
 
   async getCategories(): Promise<Category[]> {
     const result = await db.execute<Category>(sql`SELECT id::text as id, name, icon, description FROM categories`);
-    return result.rows as Category[];
+    return result as Category[];
   }
 
   async createCategory(category: InsertCategory): Promise<Category> {
@@ -148,7 +148,7 @@ export class DatabaseStorage implements IStorage {
           images, rating, variants, in_stock::boolean as in_stock, created_at 
           FROM products ORDER BY created_at DESC`
     );
-    return result.rows.map(row => ({
+    return result.map((row: any) => ({
       ...row,
       categoryId: (row as any).category_id,
       images: (row as any).images,
@@ -164,8 +164,8 @@ export class DatabaseStorage implements IStorage {
           images, rating, variants, in_stock::boolean as in_stock, created_at 
           FROM products WHERE id = ${id}::uuid LIMIT 1`
     );
-    if (result.rows.length === 0) return undefined;
-    const row = result.rows[0];
+    if (result.length === 0) return undefined;
+    const row = result[0];
     return {
       ...row,
       categoryId: (row as any).category_id,
@@ -424,7 +424,7 @@ export class DatabaseStorage implements IStorage {
       totalProducts: totalProducts[0]?.count || 0,
       totalOrders: totalOrders[0]?.count || 0,
       pendingOrders: pendingOrders[0]?.count || 0,
-      totalRevenue: revenueResult.rows[0]?.total || '0',
+      totalRevenue: revenueResult[0]?.total || '0',
       pendingPayments: pendingPayments[0]?.count || 0,
       activePartners: activePartners[0]?.count || 0,
       newUsersToday: newUsersToday[0]?.count || 0,
@@ -450,7 +450,7 @@ export class DatabaseStorage implements IStorage {
       ORDER BY p.created_at DESC`
     );
 
-    return result.rows.map(row => ({
+    return result.map((row: any) => ({
       id: row.id,
       userId: row.userId,
       businessName: row.businessName,

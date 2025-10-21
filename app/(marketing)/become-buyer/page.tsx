@@ -15,6 +15,7 @@ import { useAuth } from "@/lib/providers";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { format } from "date-fns";
+import { EmailInput } from "@/components/auth/EmailInput";
 
 type Application = {
   id: string;
@@ -180,20 +181,20 @@ export default function BecomeBuyerPage() {
             <Card className="shadow-xl rounded-3xl border-none">
               <CardContent className="p-8">
                 <div className="flex items-center gap-4 mb-6">
-                  <div className={`w-16 h-16 rounded-full ${statusDetails!.bgColor} flex items-center justify-center`}>
-                    <statusDetails.icon className={`w-8 h-8 ${statusDetails!.color}`} />
+                  <div className={`w-16 h-16 rounded-full ${statusDetails?.bgColor} flex items-center justify-center`}>
+                    {statusDetails?.icon && <statusDetails.icon className={`w-8 h-8 ${statusDetails.color}`} />}
                   </div>
                   <div>
                     <h3 className="font-serif text-xl font-bold">Application Status</h3>
                     <Badge
-                      className={`mt-2 rounded-full px-4 py-1 text-sm font-semibold border ${statusDetails!.bgColor} ${statusDetails!.color} ${statusDetails!.borderColor}`}
+                      className={`mt-2 rounded-full px-4 py-1 text-sm font-semibold border ${statusDetails?.bgColor} ${statusDetails?.color} ${statusDetails?.borderColor}`}
                     >
-                      {statusDetails!.label}
+                      {statusDetails?.label}
                     </Badge>
                   </div>
                 </div>
                 <p className="text-muted-foreground leading-relaxed">
-                  {statusDetails!.message}
+                  {statusDetails?.message}
                 </p>
               </CardContent>
             </Card>
@@ -301,13 +302,12 @@ export default function BecomeBuyerPage() {
                     <Label htmlFor="email" className="text-base font-semibold">
                       Email Address <span className="text-destructive">*</span>
                     </Label>
-                    <Input
+                    <EmailInput
                       id="email"
-                      type="email"
                       placeholder="business@example.com"
                       value={formData.email}
-                      onChange={(e) => handleChange("email", e.target.value)}
-                      className="rounded-full h-14 px-6 text-base shadow-sm"
+                      onChange={(e: React.ChangeEvent<HTMLInputElement>) => handleChange("email", e.target.value)}
+                      className="rounded-full h-12 px-4"
                       data-testid="input-email"
                     />
                   </div>

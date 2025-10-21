@@ -9,33 +9,34 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { ArrowLeft, Check, Copy, Upload, X, Plus } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { useQuery, useMutation } from "@tanstack/react-query";
+import { useCart } from "@/hooks/use-cart";
 import { queryClient } from "@/lib/queryClient";
 import { Label } from "@/components/ui/label";
 import { motion, AnimatePresence } from "framer-motion";
+import { createClient } from '@supabase/supabase-js';
+
+// Initialize Supabase client
+const supabase = createClient(
+  process.env.NEXT_PUBLIC_SUPABASE_URL!,
+  process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
+);
 
 export default function Checkout() {
   const router = useRouter();
   const { toast } = useToast();
   const { user } = useAuth();
 
-  const [selectedAddressId, setSelectedAddressId] = useState<string>("");
-  const [paymentMethod, setPaymentMethod] = useState("cod");
+  const [selectedAddressId, setSelectedAddressId] = useState<string | undefined>(undefined);
+  const [paymentMethod, setPaymentMethod] = useState<string>("cod");
   const [selectedPaymentAccount, setSelectedPaymentAccount] = useState<any>(null);
   const [receiptFile, setReceiptFile] = useState<File | null>(null);
   const [receiptPreview, setReceiptPreview] = useState<string>("");
+  const [receiptUrl, setReceiptUrl] = useState<string>(""); // Supabase storage URL
   const [isProcessing, setIsProcessing] = useState(false);
+  const [isUploadingReceipt, setIsUploadingReceipt] = useState(false);
   const [dragActive, setDragActive] = useState(false);
   const [copiedId, setCopiedId] = useState<string | null>(null);
-
-  const { data: cartItems = [] } = useQuery<any[]>({
-    queryKey: ["/api/cart", user?.id],
-    enabled: !!user,
-    queryFn: async () => {
-      const res = await fetch(`/api/cart?userId=${user?.id}`);
-      if (!res.ok) return [];
-      return res.json();
-    },
-  });
+  const { cartItems } = useCart();
 
   const { data: addresses = [] } = useQuery<any[]>({
     queryKey: ["/api/addresses", user?.id],
@@ -112,18 +113,86 @@ export default function Checkout() {
     }
   }, []);
 
-  const handleFileChange = (file: File) => {
+  const uploadReceiptToSupabase = async (file: File): Promise<string | null> => {
+    try {
+      setIsUploadingReceipt(true);
+      
+      // Generate unique filename
+      const fileExt = file.name.split('.').pop();
+      const fileName = `receipt_${user?.id}_${Date.now()}.${fileExt}`;
+      
+      // Upload to Supabase Storage
+      const { data, error } = await supabase.storage
+        .from('receipts')
+        .upload(fileName, file, {
+          cacheControl: '3600',
+          upsert: false
+        });
+      
+      if (error) {
+        console.error('Upload error:', error);
+        toast({
+          title: "Upload failed",
+          description: "Failed to upload receipt. Please try again.",
+          variant: "destructive",
+        });
+        return null;
+      }
+      
+      // Get public URL
+      const { data: { publicUrl } } = supabase.storage
+        .from('receipts')
+        .getPublicUrl(fileName);
+      
+      toast({
+        title: "Receipt uploaded",
+        description: "Receipt uploaded successfully!",
+      });
+      
+      return publicUrl;
+    } catch (error) {
+      console.error('Upload error:', error);
+      toast({
+        title: "Upload failed",
+        description: "Failed to upload receipt. Please try again.",
+        variant: "destructive",
+      });
+      return null;
+    } finally {
+      setIsUploadingReceipt(false);
+    }
+  };
+
+  const handleFileChange = async (file: File) => {
     if (file && file.type.startsWith("image/")) {
+      // Check file size (max 10MB)
+      if (file.size > 10 * 1024 * 1024) {
+        toast({
+          title: "File too large",
+          description: "Please upload an image smaller than 10MB",
+          variant: "destructive",
+        });
+        return;
+      }
+      
       setReceiptFile(file);
+      
+      // Create preview
       const reader = new FileReader();
       reader.onloadend = () => {
         setReceiptPreview(reader.result as string);
       };
       reader.readAsDataURL(file);
+      
+      // Upload to Supabase Storage
+      const uploadedUrl = await uploadReceiptToSupabase(file);
+      if (uploadedUrl) {
+        setReceiptUrl(uploadedUrl);
+      }
     } else {
       toast({
         title: "Invalid file",
-        description: "Please upload an image file",
+        description: "Please upload an image file (PNG, JPG, JPEG)",
         variant: "destructive",
       });
     }
@@ -139,7 +208,7 @@ export default function Checkout() {
           amount: total.toString(),
           paymentMethod: "online",
           paymentAccountId: selectedPaymentAccount?.id,
-          receiptUrl: receiptPreview,
+          receiptUrl: receiptUrl, // Use Supabase Storage URL instead of base64
           orderId: data.orderId,
           orderData: data,
           status: "pending",
@@ -218,10 +287,20 @@ export default function Checkout() {
     };
 
     if (needsPaymentRequest) {
-      if (!receiptFile) {
+      if (!receiptUrl) {
         toast({
           title: "Receipt required",
-          description: "Please upload payment receipt",
+          description: "Please upload payment receipt and wait for upload to complete",
+          variant: "destructive",
+        });
+        setIsProcessing(false);
+        return;
+      }
+      
+      if (isUploadingReceipt) {
+        toast({
+          title: "Upload in progress",
+          description: "Please wait for receipt upload to complete",
           variant: "destructive",
         });
         setIsProcessing(false);
@@ -330,7 +409,7 @@ export default function Checkout() {
                   </Button>
                 </div>
               ) : (
-                <RadioGroup value={selectedAddressId} onValueChange={setSelectedAddressId}>
+                <RadioGroup value={selectedAddressId || ""} onValueChange={setSelectedAddressId}>
                   {addresses.map((address) => (
                     <div
                       key={address.id}
@@ -416,7 +495,7 @@ export default function Checkout() {
                     <div>
                       <p className="font-medium mb-3">Payment Account Details:</p>
                       <RadioGroup
-                        value={selectedPaymentAccount?.id}
+                        value={selectedPaymentAccount?.id || ""}
                         onValueChange={(val) => {
                           const account = paymentAccounts.find((acc) => acc.id === val);
                           setSelectedPaymentAccount(account);
@@ -491,17 +570,28 @@ export default function Checkout() {
                             onDrop={handleDrop}
                             className={`border-2 border-dashed rounded-2xl p-8 text-center cursor-pointer transition-colors ${
                               dragActive ? "border-primary bg-primary/5" : "border-border hover:border-primary"
-                            }`}
-                            onClick={() => document.getElementById("receipt-upload")?.click()}
+                            } ${isUploadingReceipt ? "pointer-events-none opacity-50" : ""}`}
+                            onClick={() => !isUploadingReceipt && document.getElementById("receipt-upload")?.click()}
                           >
-                            <Upload className="w-12 h-12 mx-auto mb-4 text-muted-foreground" />
-                            <p className="text-sm font-medium mb-1">Drop receipt here or click to browse</p>
-                            <p className="text-xs text-muted-foreground">PNG, JPG up to 10MB</p>
+                            {isUploadingReceipt ? (
+                              <>
+                                <div className="w-12 h-12 mx-auto mb-4 border-4 border-primary border-t-transparent rounded-full animate-spin"></div>
+                                <p className="text-sm font-medium mb-1">Uploading receipt...</p>
+                                <p className="text-xs text-muted-foreground">Please wait</p>
+                              </>
+                            ) : (
+                              <>
+                                <Upload className="w-12 h-12 mx-auto mb-4 text-muted-foreground" />
+                                <p className="text-sm font-medium mb-1">Drop receipt here or click to browse</p>
+                                <p className="text-xs text-muted-foreground">PNG, JPG up to 10MB</p>
+                              </>
+                            )}
                             <input
                               id="receipt-upload"
                               type="file"
                               accept="image/*"
                               className="hidden"
+                              disabled={isUploadingReceipt}
                               onChange={(e) => e.target.files && handleFileChange(e.target.files[0])}
                             />
                           </div>
@@ -512,15 +602,35 @@ export default function Checkout() {
                               variant="ghost"
                               size="sm"
                               className="absolute top-2 right-2 z-10"
+                              disabled={isUploadingReceipt}
                               onClick={() => {
                                 setReceiptFile(null);
                                 setReceiptPreview("");
+                                setReceiptUrl("");
                               }}
                             >
                               <X className="w-4 h-4" />
                             </Button>
-                            <img src={receiptPreview} alt="Receipt preview" className="w-full h-auto rounded-lg" />
-                            <p className="text-sm text-muted-foreground mt-2 text-center">{receiptFile?.name}</p>
+                            <img 
+                              src={receiptUrl || receiptPreview} 
+                              alt="Receipt preview" 
+                              className="w-full h-auto rounded-lg" 
+                            />
+                            <div className="mt-2 text-center">
+                              <p className="text-sm text-muted-foreground">{receiptFile?.name}</p>
+                              {receiptUrl && (
+                                <div className="flex items-center justify-center gap-2 mt-1">
+                                  <div className="w-2 h-2 bg-green-500 rounded-full"></div>
+                                  <p className="text-xs text-green-600">Uploaded successfully</p>
+                                </div>
+                              )}
+                              {isUploadingReceipt && (
+                                <div className="flex items-center justify-center gap-2 mt-1">
+                                  <div className="w-2 h-2 bg-blue-500 rounded-full animate-pulse"></div>
+                                  <p className="text-xs text-blue-600">Uploading...</p>
+                                </div>
+                              )}
+                            </div>
                           </div>
                         )}
                       </div>

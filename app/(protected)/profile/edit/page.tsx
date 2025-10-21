@@ -12,6 +12,7 @@ import { motion } from "framer-motion";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { queryClient } from "@/lib/queryClient";
 import { useAuth } from "@/lib/providers";
+import { EmailInput } from "@/components/auth/EmailInput";
 
 export default function EditProfile() {
   const router = useRouter();
@@ -30,8 +31,8 @@ export default function EditProfile() {
       setFormData({
         fullName: user.fullName || "",
         email: user.email || "",
-        phoneNumber: user.phoneNumber || "",
-        whatsappNumber: user.whatsappNumber || "",
+        phoneNumber: (user as any).phoneNumber || "",
+        whatsappNumber: (user as any).whatsappNumber || "",
       });
     }
   }, [user]);
@@ -139,13 +140,12 @@ export default function EditProfile() {
                   <Label htmlFor="email" className="text-base font-semibold">
                     Email Address
                   </Label>
-                  <Input
+                  <EmailInput
                     id="email"
-                    type="email"
                     value={formData.email}
-                    onChange={(e) => handleChange("email", e.target.value)}
+                    onChange={(e: React.ChangeEvent<HTMLInputElement>) => handleChange("email", e.target.value)}
                     placeholder="Enter your email"
-                    className="h-14 rounded-2xl text-base"
+                    className="rounded-full h-12 px-4"
                     data-testid="input-email"
                   />
                 </div>

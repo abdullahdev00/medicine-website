@@ -1,8 +1,7 @@
-import { auth } from "../auth";
+import { getCurrentUser as getSupabaseUser } from "../auth-client";
 
 export async function getCurrentUser() {
-  const session = await auth();
-  return session?.user;
+  return await getSupabaseUser();
 }
 
 export async function requireAuth() {

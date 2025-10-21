@@ -14,10 +14,14 @@ export default function ProtectedLayout({
   const { isAuthenticated, user } = useAuth();
 
   useEffect(() => {
+    console.log('🔍 Protected Layout - isAuthenticated:', isAuthenticated, 'user:', user);
     if (!isAuthenticated) {
+      console.log('❌ Not authenticated, redirecting to login');
       router.push("/login");
+    } else {
+      console.log('✅ User is authenticated, allowing access');
     }
-  }, [isAuthenticated, router]);
+  }, [isAuthenticated, router, user]);
 
   if (!isAuthenticated || !user) {
     return (

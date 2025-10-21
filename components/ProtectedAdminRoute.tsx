@@ -1,22 +1,22 @@
 import { useEffect } from "react";
-import { useLocation } from "wouter";
-import { useAuth } from "@/contexts/AuthContext";
+import { useRouter } from "next/navigation";
+import { useAuth } from "@/lib/providers";
 
 export function ProtectedAdminRoute({ children }: { children: React.ReactNode }) {
   const { user, isAuthenticated } = useAuth();
-  const [, setLocation] = useLocation();
+  const router = useRouter();
 
   useEffect(() => {
     if (!isAuthenticated) {
-      setLocation("/admin/login");
+      router.push("/admin/login");
       return;
     }
 
     if (user?.userType !== 'admin') {
-      setLocation("/home");
+      router.push("/");
       return;
     }
-  }, [isAuthenticated, user, setLocation]);
+  }, [isAuthenticated, user, router]);
 
   if (!isAuthenticated || user?.userType !== 'admin') {
     return null;

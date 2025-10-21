@@ -35,14 +35,26 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
   useEffect(() => {
     const checkAdminAuth = async () => {
       try {
+        const token = localStorage.getItem('adminToken');
+        
+        if (!token) {
+          router.push("/admin-login");
+          return;
+        }
+        
         const response = await fetch('/api/admin/check', {
+          headers: {
+            'Authorization': `Bearer ${token}`,
+          },
           credentials: 'include',
         });
         
         if (!response.ok) {
+          localStorage.removeItem('adminToken');
           router.push("/admin-login");
         }
       } catch (error) {
+        localStorage.removeItem('adminToken');
         router.push("/admin-login");
       } finally {
         setIsChecking(false);
@@ -53,10 +65,15 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
   }, [router]);
 
   const handleLogout = async () => {
+    const token = localStorage.getItem('adminToken');
+    
     await fetch("/api/admin/logout", { 
       method: "POST",
+      headers: token ? { 'Authorization': `Bearer ${token}` } : {},
       credentials: 'include',
     });
+    
+    localStorage.removeItem('adminToken');
     router.push("/admin-login");
   };
 

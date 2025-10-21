@@ -8,94 +8,13 @@ import { BottomNav } from "@/components/BottomNav";
 import { useToast } from "@/hooks/use-toast";
 import { EmptyState } from "@/components/EmptyState";
 import { useAuth } from "@/lib/providers";
-import { useQuery, useMutation } from "@tanstack/react-query";
-import { apiRequest, queryClient } from "@/lib/queryClient";
+import { useCart } from "@/hooks/use-cart";
 
 export default function CartPage() {
   const router = useRouter();
   const { toast } = useToast();
   const { user, isAuthenticated } = useAuth();
-
-  const { data: cartItems = [], isLoading } = useQuery<any[]>({
-    queryKey: ["/api/cart", user?.id],
-    enabled: isAuthenticated && !!user,
-    queryFn: async () => {
-      const res = await fetch(`/api/cart?userId=${user?.id}`);
-      if (!res.ok) return [];
-      return res.json();
-    },
-  });
-
-  const updateQuantityMutation = useMutation({
-    mutationFn: async ({ id, quantity }: { id: string; quantity: number }) => {
-      const res = await apiRequest("PATCH", `/api/cart/${id}?userId=${user?.id}`, { quantity });
-      return res.json();
-    },
-    onMutate: async ({ id, quantity }) => {
-      await queryClient.cancelQueries({ queryKey: ["/api/cart", user?.id] });
-      const previousCart = queryClient.getQueryData(["/api/cart", user?.id]);
-      
-      queryClient.setQueryData(["/api/cart", user?.id], (old: any[]) =>
-        old.map((item) => item.id === id ? { ...item, quantity } : item)
-      );
-      
-      return { previousCart };
-    },
-    onError: (err, variables, context: any) => {
-      queryClient.setQueryData(["/api/cart", user?.id], context.previousCart);
-      toast({
-        title: "Error",
-        description: "Failed to update quantity. Please try again.",
-        variant: "destructive",
-      });
-    },
-    onSettled: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/cart", user?.id] });
-    },
-  });
-
-  const removeItemMutation = useMutation({
-    mutationFn: async (id: string) => {
-      await apiRequest("DELETE", `/api/cart/${id}?userId=${user?.id}`);
-    },
-    onMutate: async (id) => {
-      await queryClient.cancelQueries({ queryKey: ["/api/cart", user?.id] });
-      const previousCart = queryClient.getQueryData(["/api/cart", user?.id]);
-      
-      queryClient.setQueryData(["/api/cart", user?.id], (old: any[]) =>
-        old.filter((item) => item.id !== id)
-      );
-      
-      return { previousCart };
-    },
-    onError: (err, variables, context: any) => {
-      queryClient.setQueryData(["/api/cart", user?.id], context.previousCart);
-      toast({
-        title: "Error",
-        description: "Failed to remove item. Please try again.",
-        variant: "destructive",
-      });
-    },
-    onSettled: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/cart", user?.id] });
-    },
-  });
-
-  const updateQuantity = (id: string, delta: number) => {
-    const item = cartItems.find((item) => item.id === id);
-    if (!item) return;
-    const newQuantity = item.quantity + delta;
-    
-    if (newQuantity <= 0) {
-      removeItemMutation.mutate(id);
-    } else {
-      updateQuantityMutation.mutate({ id, quantity: newQuantity });
-    }
-  };
-
-  const removeItem = (id: string) => {
-    removeItemMutation.mutate(id);
-  };
+  const { cartItems, isLoading, updateQuantity, removeItem, isUpdatingQuantity, isRemovingItem } = useCart();
 
   const subtotal = cartItems.reduce(
     (sum, item) => sum + parseFloat(item.selectedPackage?.price || "0") * item.quantity,
@@ -155,6 +74,7 @@ export default function CartPage() {
                             size="icon"
                             className="rounded-full h-9 w-9 text-destructive hover:bg-destructive/10"
                             onClick={() => removeItem(item.id)}
+                            disabled={isRemovingItem}
                             data-testid={`button-remove-${item.id}`}
                           >
                             <Trash2 className="w-4 h-4" />
@@ -167,6 +87,7 @@ export default function CartPage() {
                               size="icon"
                               className="rounded-full h-8 w-8 hover:bg-background"
                               onClick={() => updateQuantity(item.id, -1)}
+                              disabled={isUpdatingQuantity}
                               data-testid={`button-decrease-${item.id}`}
                             >
                               <Minus className="w-3 h-3" />
@@ -179,6 +100,7 @@ export default function CartPage() {
                               size="icon"
                               className="rounded-full h-8 w-8 hover:bg-background"
                               onClick={() => updateQuantity(item.id, 1)}
+                              disabled={isUpdatingQuantity}
                               data-testid={`button-increase-${item.id}`}
                             >
                               <Plus className="w-3 h-3" />

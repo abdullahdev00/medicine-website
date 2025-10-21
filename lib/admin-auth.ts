@@ -1,20 +1,20 @@
-import { auth } from "@/lib/auth";
+import { getCurrentUser } from "@/lib/auth-client";
 import { NextResponse } from "next/server";
 
 export async function checkAdminAuth() {
-  const session = await auth();
+  const user = await getCurrentUser();
   
-  if (!session || !session.user) {
+  if (!user) {
     return {
       error: NextResponse.json(
         { message: "Not authenticated" },
         { status: 401 }
       ),
-      session: null,
+      user: null,
     };
   }
 
-  const userRole = (session.user as any).role;
+  const userRole = (user as any).user_metadata?.role;
   
   if (userRole !== "admin") {
     return {
@@ -22,12 +22,12 @@ export async function checkAdminAuth() {
         { message: "Not authorized. Admin access required." },
         { status: 403 }
       ),
-      session: null,
+      user: null,
     };
   }
   
   return {
     error: null,
-    session,
+    user,
   };
 }

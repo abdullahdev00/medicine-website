@@ -1,10 +1,17 @@
-import { neon } from '@neondatabase/serverless';
+import postgres from 'postgres';
 
 if (!process.env.DATABASE_URL) {
   throw new Error('DATABASE_URL is not set');
 }
 
-const sql = neon(process.env.DATABASE_URL);
+// Supabase connection for RLS setup
+const sql = postgres(process.env.DATABASE_URL, {
+  ssl: 'require',
+  max: 1,
+  connection: {
+    options: `--search_path=public`,
+  },
+});
 
 async function enableRLS() {
   try {

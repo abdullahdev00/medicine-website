@@ -13,6 +13,7 @@ import { BottomNav } from "@/components/BottomNav";
 import { motion } from "framer-motion";
 import { useAuth } from "@/lib/providers";
 import { useToast } from "@/hooks/use-toast";
+import { useCart } from "@/hooks/use-cart";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import type { Product, Category } from "@shared/schema";
 
@@ -26,6 +27,7 @@ export function HomeClient({ initialProducts, initialCategories }: HomeClientPro
   const [searchQuery, setSearchQuery] = useState("");
   const { user, isAuthenticated } = useAuth();
   const { toast } = useToast();
+  const { addToCart, cartItems, cartCount } = useCart();
 
   const { data: products = initialProducts } = useQuery<Product[]>({
     queryKey: ["/api/products"],
@@ -49,15 +51,6 @@ export function HomeClient({ initialProducts, initialCategories }: HomeClientPro
     },
   });
 
-  const { data: cartItems = [] } = useQuery<any[]>({
-    queryKey: ["/api/cart", user?.id],
-    enabled: isAuthenticated && !!user,
-    queryFn: async () => {
-      const res = await fetch(`/api/cart?userId=${user?.id}`);
-      if (!res.ok) return [];
-      return res.json();
-    },
-  });
 
   const addToWishlistMutation = useMutation({
     mutationFn: async (productId: string) => {
@@ -83,44 +76,6 @@ export function HomeClient({ initialProducts, initialCategories }: HomeClientPro
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/wishlist", user?.id] });
-    },
-  });
-
-  const addToCartMutation = useMutation({
-    mutationFn: async (productId: string) => {
-      if (!user) throw new Error("Not authenticated");
-      const product = products.find(p => p.id === productId);
-      if (!product || !product.variants || product.variants.length === 0) {
-        throw new Error("Product not found or has no variants");
-      }
-      const selectedPackage = product.variants[0];
-      const res = await apiRequest("POST", "/api/cart", { userId: user.id, productId, quantity: 1, selectedPackage });
-      return res.json();
-    },
-    onMutate: async (productId) => {
-      await queryClient.cancelQueries({ queryKey: ["/api/cart", user?.id] });
-      const product = products.find((p) => p.id === productId);
-      const selectedPackage = product?.variants?.[0];
-      
-      queryClient.setQueryData(["/api/cart", user?.id], (old: any[] = []) => {
-        const existing = old.find((item) => item.productId === productId);
-        if (existing) {
-          return old.map((item) => 
-            item.productId === productId ? { ...item, quantity: item.quantity + 1 } : item
-          );
-        }
-        return [...old, {
-          id: 'temp-' + Date.now(),
-          userId: user?.id,
-          productId,
-          quantity: 1,
-          selectedPackage,
-          product,
-        }];
-      });
-    },
-    onSettled: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/cart", user?.id] });
     },
   });
 
@@ -154,7 +109,10 @@ export function HomeClient({ initialProducts, initialCategories }: HomeClientPro
       return;
     }
 
-    addToCartMutation.mutate(productId);
+    const product = products.find(p => p.id === productId);
+    if (product && product.variants && product.variants.length > 0) {
+      addToCart(productId, product.variants[0], 1);
+    }
   };
 
   const filteredProducts = products.filter(product =>
@@ -182,9 +140,9 @@ export function HomeClient({ initialProducts, initialCategories }: HomeClientPro
             data-testid="button-cart"
           >
             <ShoppingCart className="w-5 h-5" />
-            {cartItems.length > 0 && (
+            {cartCount > 0 && (
               <span className="absolute -top-1 -right-1 bg-destructive text-destructive-foreground text-xs font-bold rounded-full w-5 h-5 flex items-center justify-center" data-testid="text-cart-count">
-                {cartItems.length}
+                {cartCount}
               </span>
             )}
           </Button>
@@ -260,14 +218,13 @@ export function HomeClient({ initialProducts, initialCategories }: HomeClientPro
             {filteredProducts.slice(0, 8).map((product) => {
               const isWishlisted = wishlistItems.some((item) => item.productId === product.id);
               return (
-                <div key={product.id}>
+                <div key={product.id} onClick={() => router.push(`/products/${product.id}`)} className="cursor-pointer">
                   <ProductCard
                     product={{
                       ...product,
-                      price: parseFloat(product.price),
+                      price: parseFloat((product as any).price || product.variants?.[0]?.price || "0"),
                       rating: parseFloat(product.rating || "0"),
                     } as any}
-                    onClick={() => router.push(`/products/${product.id}`)}
                     onToggleWishlist={() => handleToggleWishlist(product.id)}
                     onAddToCart={() => handleAddToCart(product.id)}
                     isWishlisted={isWishlisted}
@@ -279,7 +236,7 @@ export function HomeClient({ initialProducts, initialCategories }: HomeClientPro
         </div>
       </div>
 
-      <BottomNav cartCount={cartItems.length} />
+      <BottomNav />
     </div>
   );
 }

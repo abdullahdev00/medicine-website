@@ -9,6 +9,9 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Shield } from "lucide-react";
 import { motion } from "framer-motion";
 import { useToast } from "@/hooks/use-toast";
+import { EmailInput } from "@/components/auth/EmailInput";
+import Link from "next/link";
+import { getSupabaseClient } from '@/lib/supabase-client';
 
 export default function AdminLogin() {
   const router = useRouter();
@@ -24,15 +27,34 @@ export default function AdminLogin() {
     const password = formData.get('password') as string;
 
     try {
-      const adminResponse = await fetch('/api/admin/login', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email, password }),
-        credentials: 'include',
-      });
+      const supabase = getSupabaseClient();
       
-      if (!adminResponse.ok) {
-        throw new Error('Invalid credentials');
+      // Use Supabase Auth for login
+      const { data, error } = await supabase.auth.signInWithPassword({
+        email: email,
+        password: password,
+      });
+
+      if (error) {
+        throw error;
+      }
+
+      // Check if user is an admin
+      const { data: adminUser } = await supabase
+        .from('admin_users')
+        .select('*')
+        .eq('user_id', data.user?.id)
+        .eq('is_active', true)
+        .single();
+
+      if (!adminUser) {
+        await supabase.auth.signOut();
+        throw new Error('Access denied. Admin privileges required.');
+      }
+
+      // Store session token
+      if (data.session) {
+        localStorage.setItem('adminToken', data.session.access_token);
       }
       
       toast({
@@ -46,7 +68,7 @@ export default function AdminLogin() {
     } catch (error: any) {
       toast({
         title: "Login failed",
-        description: "Invalid admin credentials",
+        description: error.message || "Invalid admin credentials",
         variant: "destructive",
       });
     } finally {
@@ -85,14 +107,13 @@ export default function AdminLogin() {
                 <Label htmlFor="email" className="text-slate-300">
                   Email Address
                 </Label>
-                <Input
+                <EmailInput
                   id="email"
                   name="email"
-                  type="email"
                   placeholder="admin@mediswift.pk"
                   required
                   className="h-12 rounded-xl bg-slate-700/50 border-slate-600 text-white placeholder:text-slate-400"
-                  data-testid="input-email"
+                  data-testid="input-admin-email"
                 />
               </div>
               <div className="space-y-2">
@@ -117,6 +138,17 @@ export default function AdminLogin() {
               >
                 {isLoading ? "Logging in..." : "Sign In"}
               </Button>
+              {/* Signup link hidden for security - admins must have secret key */}
+              {process.env.NODE_ENV === 'development' && (
+                <div className="text-center pt-4">
+                  <Link 
+                    href="/admin-signup" 
+                    className="text-sm text-slate-400 hover:text-white transition-colors"
+                  >
+                    Need an admin account? Sign Up
+                  </Link>
+                </div>
+              )}
             </form>
           </CardContent>
         </Card>

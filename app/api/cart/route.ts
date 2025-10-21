@@ -1,6 +1,12 @@
 import { NextRequest, NextResponse } from "next/server";
-import { storage } from "@/server/storage";
+import { createClient } from '@supabase/supabase-js';
 import { inMemoryCart } from "@/lib/cart/in-memory-cart";
+
+// Initialize Supabase client
+const supabase = createClient(
+  process.env.NEXT_PUBLIC_SUPABASE_URL!,
+  process.env.SUPABASE_SERVICE_ROLE_KEY!
+);
 
 export async function GET(request: NextRequest) {
   try {
@@ -14,15 +20,36 @@ export async function GET(request: NextRequest) {
     const userCart = inMemoryCart.get(userId);
     const cartWithProducts = await Promise.all(
       userCart.map(async (item) => {
-        const product = await storage.getProductById(item.productId);
-        return { ...item, product };
+        // Get product from Supabase
+        const { data: product } = await supabase
+          .from('products')
+          .select('*')
+          .eq('id', item.productId)
+          .single();
+        
+        if (product) {
+          // Transform to match frontend expectations
+          const transformedProduct = {
+            id: product.id,
+            name: product.name,
+            description: product.description,
+            categoryId: product.category_id,
+            images: product.images || [],
+            rating: product.rating,
+            variants: product.variants || [],
+            inStock: product.in_stock,
+          };
+          return { ...item, product: transformedProduct };
+        }
+        return item;
       })
     );
     
     return NextResponse.json(cartWithProducts);
   } catch (error: any) {
+    console.error('Get cart error:', error);
     return NextResponse.json(
-      { message: error.message },
+      { message: error.message || "Failed to get cart" },
       { status: 500 }
     );
   }
@@ -40,7 +67,36 @@ export async function POST(request: NextRequest) {
     }
 
     const userCart = inMemoryCart.add(userId, { productId, quantity, selectedPackage });
-    return NextResponse.json({ success: true, cart: userCart });
+    
+    // Enrich cart items with product details like GET endpoint does
+    const cartWithProducts = await Promise.all(
+      userCart.map(async (item) => {
+        // Get product from Supabase
+        const { data: product } = await supabase
+          .from('products')
+          .select('*')
+          .eq('id', item.productId)
+          .single();
+        
+        if (product) {
+          // Transform to match frontend expectations
+          const transformedProduct = {
+            id: product.id,
+            name: product.name,
+            description: product.description,
+            categoryId: product.category_id,
+            images: product.images || [],
+            rating: product.rating,
+            variants: product.variants || [],
+            inStock: product.in_stock,
+          };
+          return { ...item, product: transformedProduct };
+        }
+        return item;
+      })
+    );
+    
+    return NextResponse.json({ success: true, cart: cartWithProducts });
   } catch (error: any) {
     return NextResponse.json(
       { message: error.message },

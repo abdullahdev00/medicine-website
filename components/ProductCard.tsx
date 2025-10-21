@@ -4,6 +4,8 @@ import { Button } from "@/components/ui/button";
 import { ShoppingCart, Star, Check } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { FavoriteButton } from "@/components/FavoriteButton";
+import { CachedImage } from "@/components/CachedImage";
+import { useCart } from "@/hooks/use-cart";
 import type { Product } from "@shared/schema";
 
 interface ProductCardProps {
@@ -14,17 +16,40 @@ interface ProductCardProps {
 }
 
 export function ProductCard({ product, onAddToCart, onToggleWishlist, isWishlisted }: ProductCardProps) {
-  const [isAdded, setIsAdded] = useState(false);
+  const [showSuccess, setShowSuccess] = useState(false);
+  const { addToCart, isAddingToCart } = useCart();
+  
   const rating = parseFloat(product.rating || "0");
   const lowestPrice = product.variants && product.variants.length > 0
     ? Math.min(...product.variants.map(v => parseFloat(v.price)))
     : 0;
+  
+  const imageUrl = product.images?.[0];
+  const fallbackImage = "https://images.unsplash.com/photo-1584308666744-24d5c474f2ae?w=400&h=400&fit=crop";
 
   const handleAddToCart = (e: React.MouseEvent) => {
     e.stopPropagation();
-    setIsAdded(true);
-    onAddToCart?.();
-    setTimeout(() => setIsAdded(false), 1500);
+    e.preventDefault();
+    
+    // Prevent double clicks while request is pending
+    if (isAddingToCart) return;
+    
+    // Use custom onAddToCart if provided, otherwise use default cart logic
+    if (onAddToCart) {
+      setShowSuccess(true);
+      onAddToCart();
+      // Reset success state after brief animation
+      setTimeout(() => setShowSuccess(false), 800);
+    } else {
+      // Default add to cart with first variant
+      const defaultVariant = product.variants?.[0];
+      if (defaultVariant) {
+        setShowSuccess(true);
+        addToCart(product.id, defaultVariant, 1);
+        // Reset success state after brief animation
+        setTimeout(() => setShowSuccess(false), 800);
+      }
+    }
   };
   
   return (
@@ -34,11 +59,14 @@ export function ProductCard({ product, onAddToCart, onToggleWishlist, isWishlist
     >
       <Card className="overflow-hidden border-none shadow-md hover:shadow-xl transition-all rounded-2xl group">
         <div className="relative aspect-square">
-          <img
-            src={product.images?.[0] || "/images/placeholder.svg"}
+          <CachedImage
+            src={imageUrl}
             alt={product.name}
+            fallbackSrc={fallbackImage}
+            productId={product.id}
             className="w-full h-full object-cover"
-            loading="lazy"
+            objectFit="cover"
+            quality={0.85}
             data-testid={`img-product-${product.id}`}
           />
           <FavoriteButton
@@ -86,11 +114,11 @@ export function ProductCard({ product, onAddToCart, onToggleWishlist, isWishlist
             <Button
               className="w-full rounded-full h-12 flex items-center justify-between px-5 gap-3 shadow-lg relative overflow-hidden"
               onClick={handleAddToCart}
-              disabled={!product.inStock}
+              disabled={!product.inStock || isAddingToCart}
               data-testid={`button-add-to-cart-${product.id}`}
             >
               <AnimatePresence mode="wait">
-                {isAdded ? (
+                {showSuccess ? (
                   <motion.div
                     key="added"
                     initial={{ scale: 0, opacity: 0 }}

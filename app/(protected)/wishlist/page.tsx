@@ -98,7 +98,7 @@ export default function Wishlist() {
         )}
       </div>
 
-      <BottomNav cartCount={cartItems.length} />
+      <BottomNav/>
     </div>
   );
 }

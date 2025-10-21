@@ -8,11 +8,11 @@ export async function PATCH(
 ) {
   try {
     await requireAdmin();
-    const user = await storage.toggleUserStatus((await params).id);
-    if (!user) {
-      return NextResponse.json({ message: "User not found" }, { status: 404 });
-    }
-    return NextResponse.json(user);
+    const body = await request.json();
+    const { isActive } = body;
+    
+    await storage.toggleUserStatus((await params).id, isActive);
+    return NextResponse.json({ message: "User status updated successfully" });
   } catch (error: any) {
     if (error.message === "Unauthorized" || error.message === "Admin access required") {
       return NextResponse.json({ message: error.message }, { status: 401 });

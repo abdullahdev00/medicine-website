@@ -10,6 +10,7 @@ import { BottomNav } from "@/components/BottomNav";
 import { FavoriteButton } from "@/components/FavoriteButton";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/lib/providers";
+import { useCart } from "@/hooks/use-cart";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { motion } from "framer-motion";
 import type { Product } from "@shared/schema";
@@ -20,6 +21,7 @@ export default function ProductDetailPage() {
   const router = useRouter();
   const { toast } = useToast();
   const { user, isAuthenticated } = useAuth();
+  const { addToCart, isAddingToCart } = useCart();
   const [selectedPackage, setSelectedPackage] = useState(0);
   const [quantity, setQuantity] = useState(1);
   const [currentImageIndex, setCurrentImageIndex] = useState(0);
@@ -39,15 +41,7 @@ export default function ProductDetailPage() {
     },
   });
 
-  const { data: cartItems = [] } = useQuery<any[]>({
-    queryKey: ["/api/cart", user?.id],
-    enabled: isAuthenticated && !!user,
-    queryFn: async () => {
-      const res = await fetch(`/api/cart?userId=${user?.id}`);
-      if (!res.ok) return [];
-      return res.json();
-    },
-  });
+  // Cart items are now handled by useCart hook
 
   const addToWishlistMutation = useMutation({
     mutationFn: async (productId: string) => {
@@ -83,53 +77,10 @@ export default function ProductDetailPage() {
     },
   });
 
-  const addToCartMutation = useMutation({
-    mutationFn: async () => {
-      if (!user) throw new Error("Not authenticated");
-      return await apiRequest("POST", "/api/cart", {
-        userId: user.id,
-        productId: id,
-        quantity: quantity,
-        selectedPackage: product?.variants?.[selectedPackage],
-      });
-    },
-    onMutate: async () => {
-      await queryClient.cancelQueries({ queryKey: ["/api/cart", user?.id] });
-      const previousCart = queryClient.getQueryData(["/api/cart", user?.id]);
-      
-      queryClient.setQueryData(["/api/cart", user?.id], (old: any[] = []) => {
-        const existing = old.find((item) => item.productId === id);
-        if (existing) {
-          return old.map((item) => 
-            item.productId === id 
-              ? { ...item, quantity: item.quantity + quantity }
-              : item
-          );
-        }
-        return [...old, {
-          id: 'temp-' + Date.now(),
-          userId: user?.id,
-          productId: id,
-          quantity,
-          selectedPackage: product?.variants?.[selectedPackage],
-          product,
-        }];
-      });
-      
-      return { previousCart };
-    },
-    onError: (err, variables, context: any) => {
-      queryClient.setQueryData(["/api/cart", user?.id], context.previousCart);
-      toast({
-        title: "Error",
-        description: "Failed to add item to cart. Please try again.",
-        variant: "destructive",
-      });
-    },
-    onSettled: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/cart", user?.id] });
-    },
-  });
+  const handleAddToCart = () => {
+    if (!product?.variants?.[selectedPackage]) return;
+    addToCart(id, product.variants[selectedPackage], quantity);
+  };
 
   const handleToggleWishlist = (e: React.MouseEvent) => {
     e.stopPropagation();
@@ -318,8 +269,8 @@ export default function ProductDetailPage() {
         <Button
           size="lg"
           className="w-full rounded-xl h-14 flex items-center justify-between px-6 gap-4"
-          onClick={() => addToCartMutation.mutate()}
-          disabled={!product.inStock || addToCartMutation.isPending}
+          onClick={handleAddToCart}
+          disabled={!product.inStock || isAddingToCart}
           data-testid="button-add-to-cart"
         >
           <div className="flex items-center gap-2 flex-shrink-0">

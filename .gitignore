@@ -6,5 +6,5 @@ vite.config.ts.*
 *.tar.gz
 .next
 out
-.env*.local
+.env
 *.log

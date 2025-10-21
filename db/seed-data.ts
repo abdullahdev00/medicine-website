@@ -1,5 +1,5 @@
-import { drizzle } from 'drizzle-orm/neon-http';
-import { neon } from '@neondatabase/serverless';
+import { drizzle } from 'drizzle-orm/postgres-js';
+import postgres from 'postgres';
 import * as schema from '../shared/schema';
 import bcrypt from 'bcrypt';
 import { sql } from 'drizzle-orm';
@@ -8,8 +8,15 @@ if (!process.env.DATABASE_URL) {
   throw new Error('DATABASE_URL is not set');
 }
 
-const sqlClient = neon(process.env.DATABASE_URL);
-const db = drizzle(sqlClient, { schema });
+// Supabase connection for seeding
+const client = postgres(process.env.DATABASE_URL, {
+  ssl: 'require',
+  max: 10,
+  connection: {
+    options: `--search_path=public`,
+  },
+});
+const db = drizzle(client, { schema });
 
 async function seedDatabase() {
   try {

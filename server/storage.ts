@@ -1,4 +1,3 @@
-import { db } from "../db";
 import { 
   users, products, categories, wishlistItems, orders, addresses, walletTransactions,
   paymentAccounts, paymentRequests, userPaymentAccounts, admins, activityLogs, partners,
@@ -23,6 +22,7 @@ import {
 import { eq, and, desc, sql, count } from "drizzle-orm";
 import bcrypt from "bcrypt";
 import { cache } from "./cache";
+import { db } from "../db";
 
 export interface IStorage {
   getUser(id: string): Promise<User | undefined>;
@@ -103,42 +103,73 @@ export interface IStorage {
 
 export class DatabaseStorage implements IStorage {
   async getUser(id: string): Promise<User | undefined> {
+    console.log('DatabaseStorage: Getting user by ID from Supabase:', id);
     const result = await db.select().from(users).where(eq(users.id, id)).limit(1);
+    console.log('DatabaseStorage: User found:', !!result[0]);
     return result[0];
   }
 
   async getUserByEmail(email: string): Promise<User | undefined> {
-    const result = await db.select().from(users).where(eq(users.email, email)).limit(1);
-    return result[0];
+    try {
+      console.log('DatabaseStorage: Getting user by email:', email);
+      const result = await db.select().from(users).where(eq(users.email, email)).limit(1);
+      console.log('DatabaseStorage: User found:', !!result[0]);
+      return result[0];
+    } catch (error) {
+      console.error('DatabaseStorage: Error getting user by email:', error);
+      throw new Error(`Failed to get user by email: ${error instanceof Error ? error.message : 'Unknown error'}`);
+    }
   }
 
   async createUser(insertUser: InsertUser): Promise<User> {
-    let affiliateCode: string;
-    let isUnique = false;
-    
-    while (!isUnique) {
-      affiliateCode = Math.floor(100000 + Math.random() * 900000).toString();
-      const existing = await db.select().from(users).where(eq(users.affiliateCode, affiliateCode)).limit(1);
-      if (existing.length === 0) {
-        isUnique = true;
+    try {
+      console.log('DatabaseStorage: Creating user:', insertUser.email);
+      
+      let affiliateCode: string;
+      let isUnique = false;
+      
+      while (!isUnique) {
+        affiliateCode = Math.floor(100000 + Math.random() * 900000).toString();
+        const existing = await db.select().from(users).where(eq(users.affiliateCode, affiliateCode)).limit(1);
+        if (existing.length === 0) {
+          isUnique = true;
+        }
       }
+
+      const user = {
+        ...insertUser,
+        affiliateCode: affiliateCode!,
+        walletBalance: "0.00",
+        totalEarnings: "0.00",
+        pendingEarnings: "0.00",
+        isPartner: false,
+        createdAt: new Date(),
+        updatedAt: new Date(),
+      };
+
+      const hashedPassword = await bcrypt.hash(user.password, 10);
+      user.password = hashedPassword;
+
+      const result = await db.insert(users).values(user).returning();
+      console.log('DatabaseStorage: User created successfully:', result[0].id);
+      return result[0];
+    } catch (error) {
+      console.error('DatabaseStorage: Error creating user:', error);
+      throw new Error(`Failed to create user: ${error instanceof Error ? error.message : 'Unknown error'}`);
     }
-    
-    const hashedPassword = await bcrypt.hash(insertUser.password, 10);
-    const result = await db.insert(users).values({ 
-      ...insertUser, 
-      password: hashedPassword,
-      affiliateCode: affiliateCode!
-    }).returning();
-    return result[0];
   }
 
   async getCategories(): Promise<Category[]> {
+    console.log('DatabaseStorage: Getting categories from Supabase');
     const cacheKey = 'categories:all';
     const cached = cache.get<Category[]>(cacheKey);
-    if (cached) return cached;
+    if (cached) {
+      console.log('DatabaseStorage: Returning cached categories:', cached.length);
+      return cached;
+    }
     
     const result = await db.select().from(categories);
+    console.log('DatabaseStorage: Found categories:', result.length);
     cache.set(cacheKey, result, 10 * 60 * 1000); // Cache for 10 minutes
     return result;
   }
@@ -150,11 +181,16 @@ export class DatabaseStorage implements IStorage {
   }
 
   async getProducts(): Promise<Product[]> {
+    console.log('DatabaseStorage: Getting products from Supabase');
     const cacheKey = 'products:all';
     const cached = cache.get<Product[]>(cacheKey);
-    if (cached) return cached;
+    if (cached) {
+      console.log('DatabaseStorage: Returning cached products:', cached.length);
+      return cached;
+    }
     
     const result = await db.select().from(products).orderBy(desc(products.createdAt));
+    console.log('DatabaseStorage: Found products:', result.length);
     cache.set(cacheKey, result, 5 * 60 * 1000); // Cache for 5 minutes
     return result;
   }
@@ -182,7 +218,10 @@ export class DatabaseStorage implements IStorage {
   }
 
   async getWishlistItems(userId: string): Promise<WishlistItem[]> {
-    return await db.select().from(wishlistItems).where(eq(wishlistItems.userId, userId));
+    console.log('DatabaseStorage: Getting wishlist items for user from Supabase:', userId);
+    const result = await db.select().from(wishlistItems).where(eq(wishlistItems.userId, userId));
+    console.log('DatabaseStorage: Found wishlist items:', result.length);
+    return result;
   }
 
   async addToWishlist(item: InsertWishlistItem): Promise<WishlistItem> {

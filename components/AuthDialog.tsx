@@ -7,7 +7,8 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { useAuth } from "@/contexts/AuthContext";
+import { EmailInput } from "@/components/auth/EmailInput";
+import { useAuth } from "@/lib/providers";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/queryClient";
 import { Activity } from "lucide-react";
@@ -103,10 +104,9 @@ export function AuthDialog({ open, onOpenChange, onSuccess }: AuthDialogProps) {
             <form onSubmit={handleLogin} className="space-y-4">
               <div className="space-y-2">
                 <Label htmlFor="dialog-login-email">Email</Label>
-                <Input
+                <EmailInput
                   id="dialog-login-email"
                   name="email"
-                  type="email"
                   placeholder="your.email@example.com"
                   required
                   className="rounded-full h-12 px-4"
@@ -152,10 +152,9 @@ export function AuthDialog({ open, onOpenChange, onSuccess }: AuthDialogProps) {
               </div>
               <div className="space-y-2">
                 <Label htmlFor="dialog-signup-email">Email</Label>
-                <Input
+                <EmailInput
                   id="dialog-signup-email"
                   name="email"
-                  type="email"
                   placeholder="your.email@example.com"
                   required
                   className="rounded-full h-12 px-4"

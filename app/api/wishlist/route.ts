@@ -25,8 +25,25 @@ export async function GET(request: NextRequest) {
     
     return NextResponse.json(itemsWithProducts);
   } catch (error: any) {
+    console.error('Wishlist API error:', error);
+    
+    // Check if it's a database connection error
+    if (error.code === 'ENOTFOUND' || error.message?.includes('getaddrinfo')) {
+      return NextResponse.json(
+        { 
+          message: "Database connection error. Please check your internet connection and try again.",
+          error: "DATABASE_CONNECTION_ERROR",
+          items: [] // Return empty array as fallback
+        },
+        { status: 503 } // Service Unavailable
+      );
+    }
+    
     return NextResponse.json(
-      { message: error.message },
+      { 
+        message: error.message || "An unexpected error occurred",
+        error: "INTERNAL_SERVER_ERROR"
+      },
       { status: 500 }
     );
   }

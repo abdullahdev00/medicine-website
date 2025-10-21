@@ -35,7 +35,7 @@ export default function ProductsPage() {
       return false;
     }
     
-    const price = parseFloat(p.price);
+    const price = parseFloat(p.variants?.[0]?.price || "0");
     if (price < priceRange[0] || price > priceRange[1]) {
       return false;
     }
@@ -53,8 +53,8 @@ export default function ProductsPage() {
   });
 
   const sortedProducts = [...filteredProducts].sort((a, b) => {
-    if (sortBy === "price-asc") return parseFloat(a.price) - parseFloat(b.price);
-    if (sortBy === "price-desc") return parseFloat(b.price) - parseFloat(a.price);
+    if (sortBy === "price-asc") return parseFloat(a.variants?.[0]?.price || "0") - parseFloat(b.variants?.[0]?.price || "0");
+    if (sortBy === "price-desc") return parseFloat(b.variants?.[0]?.price || "0") - parseFloat(a.variants?.[0]?.price || "0");
     if (sortBy === "rating") return parseFloat(b.rating || "0") - parseFloat(a.rating || "0");
     if (sortBy === "name") return a.name.localeCompare(b.name);
     return 0;
@@ -134,7 +134,7 @@ export default function ProductsPage() {
         onClearFilters={handleClearFilters}
       />
 
-      <BottomNav cartCount={0} />
+      <BottomNav />
     </div>
   );
 }
