@@ -10,8 +10,6 @@ import { Shield } from "lucide-react";
 import { motion } from "framer-motion";
 import { useToast } from "@/hooks/use-toast";
 import { EmailInput } from "@/components/auth/EmailInput";
-import Link from "next/link";
-import { getSupabaseClient } from '@/lib/supabase-client';
 
 export default function AdminLogin() {
   const router = useRouter();
@@ -27,34 +25,15 @@ export default function AdminLogin() {
     const password = formData.get('password') as string;
 
     try {
-      const supabase = getSupabaseClient();
-      
-      // Use Supabase Auth for login
-      const { data, error } = await supabase.auth.signInWithPassword({
-        email: email,
-        password: password,
+      const adminResponse = await fetch('/api/admin/login', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email, password }),
+        credentials: 'include',
       });
-
-      if (error) {
-        throw error;
-      }
-
-      // Check if user is an admin
-      const { data: adminUser } = await supabase
-        .from('admin_users')
-        .select('*')
-        .eq('user_id', data.user?.id)
-        .eq('is_active', true)
-        .single();
-
-      if (!adminUser) {
-        await supabase.auth.signOut();
-        throw new Error('Access denied. Admin privileges required.');
-      }
-
-      // Store session token
-      if (data.session) {
-        localStorage.setItem('adminToken', data.session.access_token);
+      
+      if (!adminResponse.ok) {
+        throw new Error('Invalid credentials');
       }
       
       toast({
@@ -68,7 +47,7 @@ export default function AdminLogin() {
     } catch (error: any) {
       toast({
         title: "Login failed",
-        description: error.message || "Invalid admin credentials",
+        description: "Invalid admin credentials",
         variant: "destructive",
       });
     } finally {
@@ -138,17 +117,6 @@ export default function AdminLogin() {
               >
                 {isLoading ? "Logging in..." : "Sign In"}
               </Button>
-              {/* Signup link hidden for security - admins must have secret key */}
-              {process.env.NODE_ENV === 'development' && (
-                <div className="text-center pt-4">
-                  <Link 
-                    href="/admin-signup" 
-                    className="text-sm text-slate-400 hover:text-white transition-colors"
-                  >
-                    Need an admin account? Sign Up
-                  </Link>
-                </div>
-              )}
             </form>
           </CardContent>
         </Card>

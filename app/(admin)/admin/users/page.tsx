@@ -27,13 +27,21 @@ export default function AdminUsers() {
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedUser, setSelectedUser] = useState<User | null>(null);
 
-  const { data: users, isLoading, refetch } = useQuery<User[]>({
+  const { data: response, isLoading, refetch } = useQuery({
     queryKey: ["/api/admin/users"],
+    queryFn: async () => {
+      const res = await fetch("/api/admin/users");
+      if (!res.ok) {
+        throw new Error('Failed to fetch users');
+      }
+      return res.json();
+    },
   });
 
-  const filteredUsers = users?.filter((user) =>
-    user.fullName.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    user.email.toLowerCase().includes(searchTerm.toLowerCase()) ||
+  const users = response?.users || [];
+  const filteredUsers = users.filter((user: any) =>
+    user.fullName?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    user.email?.toLowerCase().includes(searchTerm.toLowerCase()) ||
     user.phoneNumber?.includes(searchTerm)
   );
 
@@ -80,7 +88,7 @@ export default function AdminUsers() {
                     </TableRow>
                   ))
                 ) : filteredUsers && filteredUsers.length > 0 ? (
-                  filteredUsers.map((user) => (
+                  filteredUsers.map((user: any) => (
                     <TableRow 
                       key={user.id} 
                       data-testid={`row-user-${user.id}`}

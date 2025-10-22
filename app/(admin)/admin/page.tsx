@@ -20,10 +20,7 @@ export default function AdminDashboard() {
   const { data: stats, isLoading, refetch } = useQuery<DashboardStats>({
     queryKey: ["/api/admin/stats"],
     queryFn: async () => {
-      const token = localStorage.getItem('adminToken');
-      const res = await fetch("/api/admin/dashboard/stats", {
-        headers: token ? { 'Authorization': `Bearer ${token}` } : {},
-      });
+      const res = await fetch("/api/admin/dashboard/stats");
       if (!res.ok) throw new Error("Failed to fetch stats");
       return res.json();
     },

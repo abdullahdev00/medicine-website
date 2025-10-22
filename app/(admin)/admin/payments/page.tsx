@@ -42,17 +42,31 @@ export default function AdminPayments() {
   const [selectedPayment, setSelectedPayment] = useState<PaymentRequest | null>(null);
   const [confirmAction, setConfirmAction] = useState<{type: 'approve' | 'reject', payment: PaymentRequest} | null>(null);
 
-  const { data: payments, isLoading, refetch } = useQuery<PaymentRequest[]>({
+  const { data: paymentsResponse, isLoading, refetch } = useQuery({
     queryKey: ["/api/admin/payment-requests"],
+    queryFn: async () => {
+      const res = await fetch("/api/admin/payment-requests");
+      if (!res.ok) throw new Error('Failed to fetch payment requests');
+      return res.json();
+    },
   });
 
-  const { data: userPaymentAccounts } = useQuery<UserPaymentAccount[]>({
+  const { data: accountsResponse } = useQuery({
     queryKey: ["/api/admin/user-payment-accounts"],
+    queryFn: async () => {
+      const res = await fetch("/api/admin/user-payment-accounts");
+      if (!res.ok) throw new Error('Failed to fetch payment accounts');
+      return res.json();
+    },
   });
 
   const { data: paymentAccounts } = useQuery<PaymentAccount[]>({
     queryKey: ["/api/payment-accounts"],
   });
+  
+  // Extract data from response objects
+  const payments = paymentsResponse?.requests || [];
+  const userPaymentAccounts = accountsResponse?.accounts || [];
 
   const updatePaymentMutation = useMutation({
     mutationFn: async ({ paymentId, status, rejectionReason }: { 
@@ -97,12 +111,12 @@ export default function AdminPayments() {
 
   const getUserPaymentAccount = (accountId: string | null) => {
     if (!accountId || !userPaymentAccounts) return null;
-    return userPaymentAccounts.find(acc => acc.id === accountId);
+    return userPaymentAccounts.find((acc: UserPaymentAccount) => acc.id === accountId);
   };
 
   const getPaymentAccount = (accountId: string | null) => {
     if (!accountId || !paymentAccounts) return null;
-    return paymentAccounts.find(acc => acc.id === accountId);
+    return paymentAccounts.find((acc: PaymentAccount) => acc.id === accountId);
   };
 
   const getStatusColor = (status: string) => {
@@ -163,7 +177,7 @@ export default function AdminPayments() {
                     </TableRow>
                   ))
                 ) : payments && payments.length > 0 ? (
-                  payments.map((payment) => {
+                  payments.map((payment: PaymentRequest) => {
                     const userAccount = getUserPaymentAccount(payment.userPaymentAccountId);
                     const paymentAccount = getPaymentAccount(payment.paymentAccountId);
                     

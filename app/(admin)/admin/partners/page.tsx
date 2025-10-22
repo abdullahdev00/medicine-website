@@ -32,9 +32,18 @@ interface PartnerWithUser extends Partner {
 export default function AdminPartners() {
   const [selectedPartner, setSelectedPartner] = useState<PartnerWithUser | null>(null);
 
-  const { data: partners, isLoading, refetch } = useQuery<PartnerWithUser[]>({
+  const { data: partnersResponse, isLoading, refetch } = useQuery({
     queryKey: ["/api/admin/partners"],
+    queryFn: async () => {
+      const res = await fetch("/api/admin/partners");
+      if (!res.ok) {
+        throw new Error('Failed to fetch partners');
+      }
+      return res.json();
+    },
   });
+
+  const partners = partnersResponse?.partners || [];
 
   const getStatusColor = (status: string) => {
     switch (status) {
@@ -81,7 +90,7 @@ export default function AdminPartners() {
                     </TableRow>
                   ))
                 ) : partners && partners.length > 0 ? (
-                  partners.map((partner) => (
+                  partners.map((partner: any) => (
                     <TableRow 
                       key={partner.id} 
                       data-testid={`row-partner-${partner.id}`}

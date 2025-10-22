@@ -36,9 +36,18 @@ export default function AdminOrders() {
   const [selectedDate, setSelectedDate] = useState<Date | undefined>(new Date());
   const { toast } = useToast();
 
-  const { data: orders, isLoading, refetch } = useQuery<Order[]>({
+  const { data: ordersResponse, isLoading, refetch } = useQuery({
     queryKey: ["/api/admin/orders"],
+    queryFn: async () => {
+      const res = await fetch("/api/admin/orders");
+      if (!res.ok) {
+        throw new Error('Failed to fetch orders');
+      }
+      return res.json();
+    },
   });
+
+  const orders = ordersResponse?.orders || [];
 
   const updateStatusMutation = useMutation({
     mutationFn: async ({ orderId, status }: { orderId: string; status: string }) => {
@@ -142,7 +151,7 @@ export default function AdminOrders() {
     }
 
     if (dateRange) {
-      filtered = filtered.filter((order) => {
+      filtered = filtered.filter((order: any) => {
         const orderDate = new Date(order.createdAt);
         return isWithinInterval(orderDate, dateRange);
       });
@@ -150,7 +159,7 @@ export default function AdminOrders() {
 
     // Search filter
     if (searchTerm) {
-      filtered = filtered.filter((order) => {
+      filtered = filtered.filter((order: any) => {
         const searchLower = searchTerm.toLowerCase();
         return (
           order.id.toLowerCase().includes(searchLower) ||
@@ -275,7 +284,7 @@ export default function AdminOrders() {
                     </TableRow>
                   ))
                 ) : filteredOrders && filteredOrders.length > 0 ? (
-                  filteredOrders.map((order) => (
+                  filteredOrders.map((order: any) => (
                     <TableRow key={order.id} data-testid={`row-order-${order.id}`}>
                       <TableCell className="font-medium" data-testid="text-order-id">
                         #{order.id.slice(0, 8)}

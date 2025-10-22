@@ -45,28 +45,23 @@ export async function POST(request: NextRequest) {
 
     console.log('✅ Authenticated user:', currentUser.id);
 
-    // Insert/Update user profile in user_profiles table
+    // Check if user profile exists in user_profiles table
     const { data: existingProfile } = await supabase
       .from('user_profiles')
       .select('*')
       .eq('user_id', currentUser.id)
       .single();
 
+    // Update or insert user profile in user_profiles table
     const profilePayload = {
       user_id: currentUser.id,
       phone_number: profileData.phoneNumber,
       whatsapp_number: profileData.whatsappNumber,
-      address: profileData.address,
-      city: profileData.city,
-      province: profileData.province,
-      postal_code: profileData.postalCode,
-      first_name: currentUser.user_metadata?.full_name?.split(' ')[0] || currentUser.email?.split('@')[0],
       profile_completed: true,
-      email_verified: true,
       updated_at: new Date().toISOString()
     };
 
-    let result;
+    let userResult;
     if (existingProfile) {
       // Update existing profile
       const { data, error } = await supabase
@@ -76,7 +71,7 @@ export async function POST(request: NextRequest) {
         .select()
         .single();
       
-      result = { data, error };
+      userResult = { data, error };
       console.log('🔄 Updated existing profile');
     } else {
       // Insert new profile
@@ -86,9 +81,69 @@ export async function POST(request: NextRequest) {
         .select()
         .single();
       
-      result = { data, error };
+      userResult = { data, error };
       console.log('✨ Created new profile');
     }
+
+    if (userResult.error) {
+      console.error('❌ Profile database error:', userResult.error);
+      return NextResponse.json(
+        { message: "Failed to save user profile", error: userResult.error.message },
+        { status: 500 }
+      );
+    }
+
+    // Handle address separately in addresses table
+    const addressPayload = {
+      user_id: currentUser.id,
+      title: 'Home',
+      full_address: profileData.address,
+      city: profileData.city,
+      province: profileData.province,
+      postal_code: profileData.postalCode,
+      is_default: true
+    };
+
+    // Check if user already has a default address
+    const { data: existingAddress } = await supabase
+      .from('addresses')
+      .select('*')
+      .eq('user_id', currentUser.id)
+      .eq('is_default', true)
+      .single();
+
+    let addressResult;
+    if (existingAddress) {
+      // Update existing default address
+      const { data, error } = await supabase
+        .from('addresses')
+        .update(addressPayload)
+        .eq('user_id', currentUser.id)
+        .eq('is_default', true)
+        .select()
+        .single();
+      
+      addressResult = { data, error };
+      console.log('🔄 Updated existing address');
+    } else {
+      // Insert new address
+      const { data, error } = await supabase
+        .from('addresses')
+        .insert(addressPayload)
+        .select()
+        .single();
+      
+      addressResult = { data, error };
+      console.log('✨ Created new address');
+    }
+
+    const result = {
+      data: {
+        profile: userResult.data,
+        address: addressResult.data
+      },
+      error: addressResult.error
+    };
 
     if (result.error) {
       console.error('❌ Database error:', result.error);
@@ -102,7 +157,8 @@ export async function POST(request: NextRequest) {
 
     return NextResponse.json({
       message: "Profile completed successfully",
-      profile: result.data,
+      profile: result.data.profile,
+      address: result.data.address,
       user: {
         id: currentUser.id,
         email: currentUser.email,

@@ -628,15 +628,51 @@ async function seedDatabase() {
     });
     console.log('✅ Created referral stats\n');
 
-    // ===== STEP 13: Create User Payment Accounts =====
-    console.log('💳 Step 13: Creating user payment accounts...');
-    await db.insert(schema.userPaymentAccounts).values({
-      userId: users[0].id,
-      accountName: 'John Doe',
-      raastId: 'john@jazzcash',
-      isDefault: true,
-    });
-    console.log('✅ Created user payment account\n');
+    // ===== STEP 13: Create Payment Requests =====
+    console.log('💰 Step 13: Creating payment requests...');
+    await db.insert(schema.paymentRequests).values([
+      {
+        userId: users[0].id,
+        type: 'withdrawal',
+        amount: '1000',
+        status: 'pending',
+        paymentMethod: 'JazzCash',
+      },
+      {
+        userId: users[1].id,
+        type: 'withdrawal',
+        amount: '500',
+        status: 'completed',
+        paymentMethod: 'EasyPaisa',
+      },
+      {
+        userId: users[2].id,
+        type: 'withdrawal',
+        amount: '750',
+        status: 'rejected',
+        paymentMethod: 'Bank Transfer',
+        rejectionReason: 'Insufficient balance verification',
+      },
+    ]);
+    console.log('✅ Created 3 payment requests\n');
+
+    // ===== STEP 14: Create User Payment Accounts =====
+    console.log('💳 Step 14: Creating user payment accounts...');
+    await db.insert(schema.userPaymentAccounts).values([
+      {
+        userId: users[0].id,
+        accountName: 'John Doe',
+        raastId: 'john@jazzcash',
+        isDefault: true,
+      },
+      {
+        userId: users[1].id,
+        accountName: 'Sarah Ahmed',
+        raastId: 'sarah@easypaisa',
+        isDefault: true,
+      },
+    ]);
+    console.log('✅ Created 2 user payment accounts\n');
 
     console.log('✅ Database seeded successfully!\n');
     console.log('═══════════════════════════════════════════════════');
@@ -654,7 +690,8 @@ async function seedDatabase() {
     console.log(`✓ 5 wallet transactions`);
     console.log(`✓ 1 partner`);
     console.log(`✓ 1 referral stats`);
-    console.log(`✓ 1 user payment account`);
+    console.log(`✓ 3 payment requests`);
+    console.log(`✓ 2 user payment accounts`);
     console.log('═══════════════════════════════════════════════════');
     console.log('\n💡 LOGIN CREDENTIALS:');
     console.log('═══════════════════════════════════════════════════');

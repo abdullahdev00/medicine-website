@@ -208,6 +208,12 @@ export const admins = pgTable("admins", {
   isActive: boolean("is_active").default(true).notNull(),
   lastLogin: timestamp("last_login"),
   createdAt: timestamp("created_at").defaultNow().notNull(),
+  role: varchar("role", { length: 50 }).default("admin").notNull(),
+  permissions: jsonb("permissions").$type<string[]>().default(sql`'[]'::jsonb`).notNull(),
+  department: varchar("department", { length: 100 }),
+  phoneNumber: varchar("phone_number", { length: 20 }),
+  avatarUrl: text("avatar_url"),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
 });
 
 export const activityLogs = pgTable("activity_logs", {
@@ -314,10 +320,16 @@ export const insertAdminSchema = createInsertSchema(admins, {
   email: z.string().email(),
   password: z.string().min(8),
   fullName: z.string().min(2),
+  role: z.enum(["admin", "super_admin", "manager"]).default("admin"),
+  permissions: z.array(z.string()).default([]),
+  department: z.string().optional(),
+  phoneNumber: z.string().optional(),
+  avatarUrl: z.string().url().optional(),
 }).omit({
   id: true,
   createdAt: true,
   lastLogin: true,
+  updatedAt: true,
 });
 
 export const insertActivityLogSchema = createInsertSchema(activityLogs).omit({

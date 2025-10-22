@@ -13,6 +13,7 @@ import { useQuery, useMutation } from "@tanstack/react-query";
 import { queryClient } from "@/lib/queryClient";
 import { useAuth } from "@/lib/providers";
 import { EmailInput } from "@/components/auth/EmailInput";
+import { PhoneInput } from "@/components/ui/phone-input";
 
 export default function EditProfile() {
   const router = useRouter();
@@ -26,23 +27,37 @@ export default function EditProfile() {
     whatsappNumber: "",
   });
 
+  // Fetch user profile data from API
+  const { data: userProfile, isLoading } = useQuery({
+    queryKey: ['userProfile', user?.id],
+    queryFn: async () => {
+      if (!user?.id) return null;
+      const res = await fetch(`/api/users/${user.id}`);
+      if (!res.ok) throw new Error('Failed to fetch user profile');
+      return res.json();
+    },
+    enabled: !!user?.id,
+  });
+
   useEffect(() => {
-    if (user) {
+    if (userProfile) {
       setFormData({
-        fullName: user.fullName || "",
-        email: user.email || "",
-        phoneNumber: (user as any).phoneNumber || "",
-        whatsappNumber: (user as any).whatsappNumber || "",
+        fullName: userProfile.fullName || "",
+        email: userProfile.email || "",
+        phoneNumber: userProfile.phoneNumber || "",
+        whatsappNumber: userProfile.whatsappNumber || "",
       });
     }
-  }, [user]);
+  }, [userProfile]);
 
   const updateProfileMutation = useMutation({
     mutationFn: async (data: typeof formData) => {
+      // Don't send email in update request (it's non-editable)
+      const { email, ...updateData } = data;
       const res = await fetch(`/api/users/${user?.id}`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(data),
+        body: JSON.stringify(updateData),
       });
       if (!res.ok) throw new Error("Failed to update profile");
       return res.json();
@@ -75,6 +90,17 @@ export default function EditProfile() {
   if (!isAuthenticated) {
     router.push("/login");
     return null;
+  }
+
+  if (isLoading) {
+    return (
+      <div className="min-h-screen bg-background flex items-center justify-center">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto mb-4"></div>
+          <p className="text-muted-foreground">Loading profile...</p>
+        </div>
+      </div>
+    );
   }
 
   return (
@@ -140,28 +166,32 @@ export default function EditProfile() {
                   <Label htmlFor="email" className="text-base font-semibold">
                     Email Address
                   </Label>
-                  <EmailInput
+                  <Input
                     id="email"
                     value={formData.email}
-                    onChange={(e: React.ChangeEvent<HTMLInputElement>) => handleChange("email", e.target.value)}
                     placeholder="Enter your email"
-                    className="rounded-full h-12 px-4"
+                    className="h-14 rounded-2xl text-base bg-muted/50"
                     data-testid="input-email"
+                    disabled
+                    readOnly
                   />
+                  <p className="text-xs text-muted-foreground">
+                    Email cannot be changed for security reasons
+                  </p>
                 </div>
 
                 <div className="space-y-2">
                   <Label htmlFor="phoneNumber" className="text-base font-semibold">
                     Phone Number
                   </Label>
-                  <Input
+                  <PhoneInput
                     id="phoneNumber"
-                    type="tel"
                     value={formData.phoneNumber}
-                    onChange={(e) => handleChange("phoneNumber", e.target.value)}
-                    placeholder="03XX-XXXXXXX"
-                    className="h-14 rounded-2xl text-base"
+                    onChange={(value) => handleChange("phoneNumber", value || "")}
+                    placeholder="3054288892"
+                    className="rounded-2xl"
                     data-testid="input-phone"
+                    defaultCountry="PK"
                   />
                 </div>
 
@@ -169,14 +199,14 @@ export default function EditProfile() {
                   <Label htmlFor="whatsappNumber" className="text-base font-semibold">
                     WhatsApp Number
                   </Label>
-                  <Input
+                  <PhoneInput
                     id="whatsappNumber"
-                    type="tel"
                     value={formData.whatsappNumber}
-                    onChange={(e) => handleChange("whatsappNumber", e.target.value)}
-                    placeholder="03XX-XXXXXXX"
-                    className="h-14 rounded-2xl text-base"
+                    onChange={(value) => handleChange("whatsappNumber", value || "")}
+                    placeholder="3054288892"
+                    className="rounded-2xl"
                     data-testid="input-whatsapp"
+                    defaultCountry="PK"
                   />
                 </div>
               </div>

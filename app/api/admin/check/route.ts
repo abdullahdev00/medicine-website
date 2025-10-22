@@ -1,61 +1,43 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getSupabaseServiceClient } from '@/lib/supabase-client';
+import { cookies } from "next/headers";
+import { db } from "@/lib/db/client";
+import { admins } from "@/shared/schema";
+import { eq } from "drizzle-orm";
 
 export async function GET(request: NextRequest) {
   try {
-    const supabase = getSupabaseServiceClient();
+    // Simple cookie check
+    const cookieStore = await cookies();
+    const adminId = cookieStore.get("admin-id")?.value;
+    const adminEmail = cookieStore.get("admin-email")?.value;
     
-    // Get authorization header
-    const authHeader = request.headers.get('authorization');
-    if (!authHeader || !authHeader.startsWith('Bearer ')) {
+    if (!adminId || !adminEmail) {
       return NextResponse.json(
-        { message: "No authorization token provided" },
+        { message: "Not authenticated" },
         { status: 401 }
       );
     }
 
-    const token = authHeader.substring(7); // Remove 'Bearer ' prefix
+    // Get admin from database
+    const result = await db.select().from(admins).where(eq(admins.id, adminId)).limit(1);
     
-    // Verify the JWT token with Supabase
-    const { data: { user }, error } = await supabase.auth.getUser(token);
-    
-    if (error || !user) {
+    if (result.length === 0 || result[0].email !== adminEmail) {
       return NextResponse.json(
-        { message: "Invalid or expired token" },
+        { message: "Invalid session" },
         { status: 401 }
       );
     }
 
-    // Check if user is an admin
-    const { data: adminUser, error: adminError } = await supabase
-      .from('admin_users')
-      .select('*')
-      .eq('user_id', user.id)
-      .eq('is_active', true)
-      .single();
-
-    if (adminError || !adminUser) {
-      return NextResponse.json(
-        { message: "Access denied. Admin privileges required." },
-        { status: 403 }
-      );
-    }
+    const admin = result[0];
+    const { password: _, ...adminWithoutPassword } = admin;
     
     return NextResponse.json({ 
       isAdmin: true,
-      user: {
-        id: user.id,
-        email: user.email,
-        role: (adminUser as any).role,
-        permissions: (adminUser as any).permissions,
-        department: (adminUser as any).department,
-        access_level: (adminUser as any).access_level,
-      }
+      user: adminWithoutPassword
     });
   } catch (error: any) {
-    console.error('Admin check error:', error);
     return NextResponse.json(
-      { message: "Internal server error" },
+      { message: error.message },
       { status: 500 }
     );
   }

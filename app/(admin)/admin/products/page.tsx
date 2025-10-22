@@ -55,6 +55,7 @@ import { z } from "zod";
 import type { Product, Category } from "@shared/schema";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
+import { ImageUpload } from "@/components/admin/ImageUpload";
 
 const variantSchema = z.object({
   name: z.string().min(1, "Variant name is required"),
@@ -66,7 +67,7 @@ const productFormSchema = z.object({
   name: z.string().min(2, "Product name must be at least 2 characters"),
   categoryId: z.string().min(1, "Category is required"),
   description: z.string().min(10, "Description must be at least 10 characters"),
-  imageUrl: z.string().url("Please enter a valid image URL"),
+  images: z.array(z.union([z.string(), z.instanceof(File)])).min(1, "At least one image is required"),
   rating: z.string().optional(),
   inStock: z.boolean().default(true),
   variants: z.array(variantSchema).min(1, "At least one variant is required"),
@@ -84,13 +85,30 @@ export default function AdminProducts() {
   const [currentImageIndex, setCurrentImageIndex] = useState(0);
   const { toast } = useToast();
 
-  const { data: products, isLoading, refetch } = useQuery<Product[]>({
+  const { data: productsResponse, isLoading, refetch } = useQuery({
     queryKey: ["/api/admin/products"],
+    queryFn: async () => {
+      const res = await fetch("/api/admin/products");
+      if (!res.ok) {
+        throw new Error('Failed to fetch products');
+      }
+      return res.json();
+    },
   });
 
-  const { data: categories } = useQuery<Category[]>({
+  const { data: categoriesResponse, isLoading: categoriesLoading, error: categoriesError } = useQuery({
     queryKey: ["/api/categories"],
+    queryFn: async () => {
+      const res = await fetch("/api/categories");
+      if (!res.ok) {
+        throw new Error('Failed to fetch categories');
+      }
+      return res.json();
+    },
   });
+
+  const products = productsResponse?.products || [];
+  const categories = categoriesResponse?.categories || [];
 
   const addForm = useForm<ProductFormValues>({
     resolver: zodResolver(productFormSchema),
@@ -98,7 +116,7 @@ export default function AdminProducts() {
       name: "",
       categoryId: "",
       description: "",
-      imageUrl: "",
+      images: [],
       rating: "0",
       inStock: true,
       variants: [{ name: "", price: "", wholesalePrice: "" }],
@@ -111,7 +129,7 @@ export default function AdminProducts() {
       name: "",
       categoryId: "",
       description: "",
-      imageUrl: "",
+      images: [],
       rating: "0",
       inStock: true,
       variants: [{ name: "", price: "", wholesalePrice: "" }],
@@ -124,7 +142,9 @@ export default function AdminProducts() {
       return await res.json();
     },
     onSuccess: () => {
+      // Force refetch and invalidate cache
       queryClient.invalidateQueries({ queryKey: ["/api/admin/products"] });
+      refetch(); // Force immediate refetch
       toast({
         title: "Success",
         description: "Product added successfully",
@@ -144,9 +164,46 @@ export default function AdminProducts() {
   const updateProductMutation = useMutation({
     mutationFn: async ({ id, data }: { id: string; data: ProductFormValues }) => {
       const res = await apiRequest("PATCH", `/api/admin/products/${id}`, data);
+      if (!res.ok) {
+        const error = await res.json();
+        throw new Error(error.message || "Failed to update product");
+      }
       return await res.json();
     },
+    onMutate: async ({ id, data }) => {
+      // Cancel any outgoing refetches
+      await queryClient.cancelQueries({ queryKey: ["/api/admin/products"] });
+      
+      // Snapshot the previous value
+      const previousProducts = queryClient.getQueryData(["/api/admin/products"]);
+      
+      // Optimistically update to the new value
+      queryClient.setQueryData(["/api/admin/products"], (old: any) => {
+        if (!old) return old;
+        return {
+          ...old,
+          products: old.products?.map((product: any) =>
+            product.id === id ? { ...product, ...data } : product
+          ),
+        };
+      });
+      
+      // Return a context object with the snapshotted value
+      return { previousProducts };
+    },
+    onError: (err, variables, context) => {
+      // If the mutation fails, use the context returned from onMutate to roll back
+      if (context?.previousProducts) {
+        queryClient.setQueryData(["/api/admin/products"], context.previousProducts);
+      }
+      toast({
+        title: "Error",
+        description: err.message || "Failed to update product",
+        variant: "destructive",
+      });
+    },
     onSuccess: () => {
+      // Invalidate and refetch
       queryClient.invalidateQueries({ queryKey: ["/api/admin/products"] });
       toast({
         title: "Success",
@@ -156,12 +213,9 @@ export default function AdminProducts() {
       setSelectedProduct(null);
       editForm.reset();
     },
-    onError: (error: any) => {
-      toast({
-        title: "Error",
-        description: error.message || "Failed to update product",
-        variant: "destructive",
-      });
+    onSettled: () => {
+      // Always refetch after error or success
+      queryClient.invalidateQueries({ queryKey: ["/api/admin/products"] });
     },
   });
 
@@ -171,7 +225,9 @@ export default function AdminProducts() {
       return await res.json();
     },
     onSuccess: () => {
+      // Force refetch and invalidate cache
       queryClient.invalidateQueries({ queryKey: ["/api/admin/products"] });
+      refetch(); // Force immediate refetch
       toast({
         title: "Success",
         description: "Product deleted successfully",
@@ -189,21 +245,81 @@ export default function AdminProducts() {
   });
 
   const getCategoryName = (categoryId: string) => {
-    return categories?.find(c => c.id === categoryId)?.name || "Unknown";
+    return categories?.find((c: any) => c.id === categoryId)?.name || "Unknown";
   };
 
-  const filteredProducts = products?.filter((product) =>
+  const filteredProducts = products.filter((product: any) =>
     product.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
     product.description.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
-  const handleAddProduct = (data: ProductFormValues) => {
-    createProductMutation.mutate(data);
+  const handleAddProduct = async (data: ProductFormValues) => {
+    try {
+      // Upload images if they are Files
+      const uploadedImages: string[] = [];
+      
+      for (const image of data.images) {
+        if (image instanceof File) {
+          // Upload file using window function from DeferredImageUpload
+          if ((window as any).__uploadProductImages) {
+            const urls = await (window as any).__uploadProductImages();
+            uploadedImages.push(...urls);
+            break; // All files are uploaded at once
+          }
+        } else {
+          uploadedImages.push(image);
+        }
+      }
+      
+      // Replace files with URLs
+      const productData = {
+        ...data,
+        images: uploadedImages
+      };
+      
+      createProductMutation.mutate(productData);
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: "Failed to upload images",
+        variant: "destructive",
+      });
+    }
   };
 
-  const handleEditProduct = (data: ProductFormValues) => {
+  const handleEditProduct = async (data: ProductFormValues) => {
     if (selectedProduct) {
-      updateProductMutation.mutate({ id: selectedProduct.id, data });
+      try {
+        // Upload images if they are Files
+        const uploadedImages: string[] = [];
+        
+        for (const image of data.images) {
+          if (image instanceof File) {
+            // Upload file using window function from ImageUpload
+            if ((window as any).__uploadProductImages) {
+              const urls = await (window as any).__uploadProductImages();
+              uploadedImages.push(...urls);
+              break; // All files are uploaded at once
+            }
+          } else {
+            uploadedImages.push(image);
+          }
+        }
+        
+        // Replace files with URLs
+        const productData = {
+          ...data,
+          images: uploadedImages
+        };
+        
+        updateProductMutation.mutate({ id: selectedProduct.id, data: productData });
+      } catch (error) {
+        toast({
+          title: "Error",
+          description: "Failed to upload images",
+          variant: "destructive",
+        });
+      }
     }
   };
 
@@ -219,7 +335,7 @@ export default function AdminProducts() {
       name: product.name,
       categoryId: product.categoryId,
       description: product.description,
-      imageUrl: Array.isArray(product.images) && product.images.length > 0 ? product.images[0] : "",
+      images: Array.isArray(product.images) ? product.images : [],
       rating: product.rating?.toString() || "0",
       inStock: product.inStock,
       variants: product.variants || [{ name: "", price: "", wholesalePrice: "" }],
@@ -319,7 +435,7 @@ export default function AdminProducts() {
                     </TableRow>
                   ))
                 ) : filteredProducts && filteredProducts.length > 0 ? (
-                  filteredProducts.map((product) => (
+                  filteredProducts.map((product: any) => (
                     <TableRow 
                       key={product.id} 
                       data-testid={`row-product-${product.id}`}
@@ -425,11 +541,17 @@ export default function AdminProducts() {
                         </SelectTrigger>
                       </FormControl>
                       <SelectContent>
-                        {categories?.map((category) => (
-                          <SelectItem key={category.id} value={category.id}>
-                            {category.name}
-                          </SelectItem>
-                        ))}
+                        {categoriesLoading ? (
+                          <SelectItem value="loading" disabled>Loading categories...</SelectItem>
+                        ) : categories.length > 0 ? (
+                          categories.map((category: any) => (
+                            <SelectItem key={category.id} value={category.id}>
+                              {category.name}
+                            </SelectItem>
+                          ))
+                        ) : (
+                          <SelectItem value="no-categories" disabled>No categories available</SelectItem>
+                        )}
                       </SelectContent>
                     </Select>
                     <FormMessage />
@@ -457,12 +579,18 @@ export default function AdminProducts() {
 
               <FormField
                 control={addForm.control}
-                name="imageUrl"
+                name="images"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Image URL</FormLabel>
+                    <FormLabel>Product Images</FormLabel>
                     <FormControl>
-                      <Input placeholder="https://example.com/image.jpg" {...field} data-testid="input-product-image" />
+                      <ImageUpload
+                        value={field.value || []}
+                        onChange={field.onChange}
+                        maxImages={5}
+                        disabled={createProductMutation.isPending}
+                        immediateUpload={false}
+                      />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
@@ -636,11 +764,17 @@ export default function AdminProducts() {
                         </SelectTrigger>
                       </FormControl>
                       <SelectContent>
-                        {categories?.map((category) => (
-                          <SelectItem key={category.id} value={category.id}>
-                            {category.name}
-                          </SelectItem>
-                        ))}
+                        {categoriesLoading ? (
+                          <SelectItem value="loading" disabled>Loading categories...</SelectItem>
+                        ) : categories.length > 0 ? (
+                          categories.map((category: any) => (
+                            <SelectItem key={category.id} value={category.id}>
+                              {category.name}
+                            </SelectItem>
+                          ))
+                        ) : (
+                          <SelectItem value="no-categories" disabled>No categories available</SelectItem>
+                        )}
                       </SelectContent>
                     </Select>
                     <FormMessage />
@@ -668,12 +802,18 @@ export default function AdminProducts() {
 
               <FormField
                 control={editForm.control}
-                name="imageUrl"
+                name="images"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Image URL</FormLabel>
+                    <FormLabel>Product Images</FormLabel>
                     <FormControl>
-                      <Input placeholder="https://example.com/image.jpg" {...field} data-testid="input-edit-product-image" />
+                      <ImageUpload
+                        value={field.value || []}
+                        onChange={field.onChange}
+                        maxImages={5}
+                        disabled={updateProductMutation.isPending}
+                        immediateUpload={false}
+                      />
                     </FormControl>
                     <FormMessage />
                   </FormItem>

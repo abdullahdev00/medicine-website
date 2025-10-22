@@ -1,24 +1,27 @@
 import { useEffect } from "react";
 import { useRouter } from "next/navigation";
-import { useAuth } from "@/lib/providers";
+import { useAdmin } from "@/lib/admin-context";
 
 export function ProtectedAdminRoute({ children }: { children: React.ReactNode }) {
-  const { user, isAuthenticated } = useAuth();
+  const { admin, isAuthenticated, isLoading } = useAdmin();
   const router = useRouter();
 
   useEffect(() => {
-    if (!isAuthenticated) {
+    if (!isLoading && !isAuthenticated) {
       router.push("/admin/login");
       return;
     }
+  }, [isAuthenticated, isLoading, router]);
 
-    if (user?.userType !== 'admin') {
-      router.push("/");
-      return;
-    }
-  }, [isAuthenticated, user, router]);
+  if (isLoading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="animate-spin rounded-full h-32 w-32 border-b-2 border-primary"></div>
+      </div>
+    );
+  }
 
-  if (!isAuthenticated || user?.userType !== 'admin') {
+  if (!isAuthenticated) {
     return null;
   }
 
