@@ -45,7 +45,10 @@ export default function AdminPayments() {
   const { data: paymentsResponse, isLoading, refetch } = useQuery({
     queryKey: ["/api/admin/payment-requests"],
     queryFn: async () => {
-      const res = await fetch("/api/admin/payment-requests");
+      const res = await fetch("/api/admin/payment-requests", {
+        credentials: 'include',
+        headers: { 'Content-Type': 'application/json' }
+      });
       if (!res.ok) throw new Error('Failed to fetch payment requests');
       return res.json();
     },
@@ -54,7 +57,10 @@ export default function AdminPayments() {
   const { data: accountsResponse } = useQuery({
     queryKey: ["/api/admin/user-payment-accounts"],
     queryFn: async () => {
-      const res = await fetch("/api/admin/user-payment-accounts");
+      const res = await fetch("/api/admin/user-payment-accounts", {
+        credentials: 'include',
+        headers: { 'Content-Type': 'application/json' }
+      });
       if (!res.ok) throw new Error('Failed to fetch payment accounts');
       return res.json();
     },

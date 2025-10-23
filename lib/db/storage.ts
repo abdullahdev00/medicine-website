@@ -19,7 +19,7 @@ import {
   type Voucher, type InsertVoucher,
   type UserVoucher, type InsertUserVoucher,
   type PartnerApplication, type InsertPartnerApplication
-} from "../shared/schema";
+} from "@/shared/schema";
 import { eq, and, desc, sql, count } from "drizzle-orm";
 import bcrypt from "bcrypt";
 

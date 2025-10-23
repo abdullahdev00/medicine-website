@@ -88,7 +88,10 @@ export default function AdminProducts() {
   const { data: productsResponse, isLoading, refetch } = useQuery({
     queryKey: ["/api/admin/products"],
     queryFn: async () => {
-      const res = await fetch("/api/admin/products");
+      const res = await fetch("/api/admin/products", {
+        credentials: 'include',
+        headers: { 'Content-Type': 'application/json' }
+      });
       if (!res.ok) {
         throw new Error('Failed to fetch products');
       }

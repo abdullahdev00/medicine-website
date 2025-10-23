@@ -30,7 +30,10 @@ export default function AdminUsers() {
   const { data: response, isLoading, refetch } = useQuery({
     queryKey: ["/api/admin/users"],
     queryFn: async () => {
-      const res = await fetch("/api/admin/users");
+      const res = await fetch("/api/admin/users", {
+        credentials: 'include',
+        headers: { 'Content-Type': 'application/json' }
+      });
       if (!res.ok) {
         throw new Error('Failed to fetch users');
       }

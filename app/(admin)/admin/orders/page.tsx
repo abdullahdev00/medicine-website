@@ -1,4 +1,5 @@
 "use client";
+import React from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import AdminPageHeader from "@/components/admin/AdminPageHeader";
 import { Card } from "@/components/ui/card";
@@ -34,20 +35,101 @@ export default function AdminOrders() {
   const [searchTerm, setSearchTerm] = useState("");
   const [dateFilter, setDateFilter] = useState<"today" | "week" | "month" | "year" | "custom">("today");
   const [selectedDate, setSelectedDate] = useState<Date | undefined>(new Date());
+  const [page, setPage] = useState(1);
+  const [allOrders, setAllOrders] = useState<any[]>([]);
   const { toast } = useToast();
 
+  // Build query parameters based on filters
+  const buildQueryParams = (pageNum: number = 1) => {
+    const params = new URLSearchParams();
+    params.set('page', pageNum.toString());
+    params.set('limit', '20');
+    
+    if (searchTerm) {
+      params.set('search', searchTerm);
+    }
+    
+    // Date filtering
+    const now = new Date();
+    let startDate: Date | null = null;
+    let endDate: Date | null = null;
+    
+    switch (dateFilter) {
+      case "today":
+        startDate = startOfDay(now);
+        endDate = endOfDay(now);
+        break;
+      case "week":
+        startDate = startOfWeek(now);
+        endDate = endOfWeek(now);
+        break;
+      case "month":
+        startDate = startOfMonth(now);
+        endDate = endOfMonth(now);
+        break;
+      case "year":
+        startDate = startOfYear(now);
+        endDate = endOfYear(now);
+        break;
+      case "custom":
+        if (selectedDate) {
+          startDate = startOfDay(selectedDate);
+          endDate = endOfDay(selectedDate);
+        }
+        break;
+    }
+    
+    if (startDate) {
+      params.set('startDate', startDate.toISOString());
+    }
+    if (endDate) {
+      params.set('endDate', endDate.toISOString());
+    }
+    
+    return params.toString();
+  };
+
+  // Fetch orders with current filters
   const { data: ordersResponse, isLoading, refetch } = useQuery({
-    queryKey: ["/api/admin/orders"],
+    queryKey: ["/api/admin/orders", dateFilter, searchTerm, selectedDate, page],
     queryFn: async () => {
-      const res = await fetch("/api/admin/orders");
+      const queryParams = buildQueryParams(page);
+      const res = await fetch(`/api/admin/orders?${queryParams}`, {
+        credentials: 'include',  
+        headers: {
+          'Content-Type': 'application/json',
+        },
+      });
       if (!res.ok) {
-        throw new Error('Failed to fetch orders');
+        console.error('Orders fetch failed:', res.status, res.statusText);
+        throw new Error(`Failed to fetch orders: ${res.status}`);
       }
       return res.json();
     },
   });
 
-  const orders = ordersResponse?.orders || [];
+  // Update allOrders when new data comes in
+  React.useEffect(() => {
+    if (ordersResponse?.orders) {
+      if (page === 1) {
+        // First page or filter change - replace all orders
+        setAllOrders(ordersResponse.orders);
+      } else {
+        // Load more - append to existing orders
+        setAllOrders(prev => [...prev, ...ordersResponse.orders]);
+      }
+    }
+  }, [ordersResponse, page]);
+
+  // Reset to page 1 when filters change
+  React.useEffect(() => {
+    setPage(1);
+    setAllOrders([]);
+  }, [dateFilter, searchTerm, selectedDate]);
+
+  const orders = allOrders;
+  const hasMorePages = ordersResponse?.pagination?.totalPages > page;
+  const totalOrders = ordersResponse?.pagination?.total || 0;
 
   const updateStatusMutation = useMutation({
     mutationFn: async ({ orderId, status }: { orderId: string; status: string }) => {
@@ -95,8 +177,13 @@ export default function AdminOrders() {
     switch (status) {
       case "pending":
         return "bg-yellow-100 text-yellow-700 dark:bg-yellow-900 dark:text-yellow-300";
-      case "in_transit":
+      case "awaiting_payment":
+        return "bg-orange-100 text-orange-700 dark:bg-orange-900 dark:text-orange-300";
+      case "processing":
         return "bg-blue-100 text-blue-700 dark:bg-blue-900 dark:text-blue-300";
+      case "shipped":
+        return "bg-purple-100 text-purple-700 dark:bg-purple-900 dark:text-purple-300";
+      case "completed":
       case "delivered":
         return "bg-green-100 text-green-700 dark:bg-green-900 dark:text-green-300";
       case "cancelled":
@@ -106,73 +193,22 @@ export default function AdminOrders() {
     }
   };
 
-  const filteredOrders = useMemo(() => {
-    if (!orders) return [];
+  // Load more function
+  const handleLoadMore = () => {
+    setPage(prev => prev + 1);
+  };
 
-    let filtered = orders;
-
-    // Date filter
-    const now = new Date();
-    let dateRange: { start: Date; end: Date } | null = null;
-
+  // Get current filter label for display
+  const getFilterLabel = () => {
     switch (dateFilter) {
-      case "today":
-        dateRange = {
-          start: startOfDay(now),
-          end: endOfDay(now),
-        };
-        break;
-      case "week":
-        dateRange = {
-          start: startOfWeek(now),
-          end: endOfWeek(now),
-        };
-        break;
-      case "month":
-        dateRange = {
-          start: startOfMonth(now),
-          end: endOfMonth(now),
-        };
-        break;
-      case "year":
-        dateRange = {
-          start: startOfYear(now),
-          end: endOfYear(now),
-        };
-        break;
-      case "custom":
-        if (selectedDate) {
-          dateRange = {
-            start: startOfDay(selectedDate),
-            end: endOfDay(selectedDate),
-          };
-        }
-        break;
+      case "today": return "Today";
+      case "week": return "This Week";
+      case "month": return "This Month";
+      case "year": return "This Year";
+      case "custom": return selectedDate ? format(selectedDate, "MMM dd, yyyy") : "Custom";
+      default: return "All";
     }
-
-    if (dateRange) {
-      filtered = filtered.filter((order: any) => {
-        const orderDate = new Date(order.createdAt);
-        return isWithinInterval(orderDate, dateRange);
-      });
-    }
-
-    // Search filter
-    if (searchTerm) {
-      filtered = filtered.filter((order: any) => {
-        const searchLower = searchTerm.toLowerCase();
-        return (
-          order.id.toLowerCase().includes(searchLower) ||
-          (Array.isArray(order.products) &&
-            order.products.some((p: any) =>
-              p.name?.toLowerCase().includes(searchLower)
-            ))
-        );
-      });
-    }
-
-    return filtered;
-  }, [orders, dateFilter, selectedDate, searchTerm]);
+  };
 
   return (
     
@@ -283,8 +319,8 @@ export default function AdminOrders() {
                       </TableCell>
                     </TableRow>
                   ))
-                ) : filteredOrders && filteredOrders.length > 0 ? (
-                  filteredOrders.map((order: any) => (
+                ) : orders && orders.length > 0 ? (
+                  orders.map((order: any) => (
                     <TableRow key={order.id} data-testid={`row-order-${order.id}`}>
                       <TableCell className="font-medium" data-testid="text-order-id">
                         #{order.id.slice(0, 8)}
@@ -317,15 +353,12 @@ export default function AdminOrders() {
                           </SelectTrigger>
                           <SelectContent>
                             <SelectItem value="pending">Pending</SelectItem>
-                            <SelectItem value="confirmed">Confirmed</SelectItem>
+                            <SelectItem value="completed">Completed</SelectItem>
                             <SelectItem value="processing">Processing</SelectItem>
                             <SelectItem value="shipped">Shipped</SelectItem>
-                            <SelectItem value="in_transit">In Transit</SelectItem>
-                            <SelectItem value="out_for_delivery">Out for Delivery</SelectItem>
+                            <SelectItem value="awaiting_payment">Awaiting Payment</SelectItem>
                             <SelectItem value="delivered">Delivered</SelectItem>
                             <SelectItem value="cancelled">Cancelled</SelectItem>
-                            <SelectItem value="returned">Returned</SelectItem>
-                            <SelectItem value="refunded">Refunded</SelectItem>
                           </SelectContent>
                         </Select>
                       </TableCell>
@@ -343,8 +376,28 @@ export default function AdminOrders() {
           </div>
         </Card>
 
-        <div className="text-sm text-gray-500 dark:text-gray-400">
-          Showing {filteredOrders?.length || 0} of {orders?.length || 0} orders
+        {/* Load More Button */}
+        {hasMorePages && (
+          <div className="flex justify-center py-6">
+            <Button 
+              onClick={handleLoadMore}
+              disabled={isLoading}
+              variant="outline"
+              size="lg"
+            >
+              {isLoading ? "Loading..." : "Load More Orders"}
+            </Button>
+          </div>
+        )}
+
+        {/* Status Display */}
+        <div className="flex justify-between items-center text-sm text-gray-500 dark:text-gray-400">
+          <span>
+            Showing {orders.length} of {totalOrders} orders ({getFilterLabel()})
+          </span>
+          {!hasMorePages && totalOrders > 0 && (
+            <span className="text-green-600">All orders loaded</span>
+          )}
         </div>
       </div>
     

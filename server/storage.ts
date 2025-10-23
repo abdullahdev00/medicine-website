@@ -22,7 +22,7 @@ import {
 import { eq, and, desc, sql, count } from "drizzle-orm";
 import bcrypt from "bcrypt";
 import { cache } from "./cache";
-import { db } from "../db";
+import { db } from "@/lib/db/client";
 
 export interface IStorage {
   getUser(id: string): Promise<User | undefined>;

@@ -35,7 +35,10 @@ export default function AdminPartners() {
   const { data: partnersResponse, isLoading, refetch } = useQuery({
     queryKey: ["/api/admin/partners"],
     queryFn: async () => {
-      const res = await fetch("/api/admin/partners");
+      const res = await fetch("/api/admin/partners", {
+        credentials: 'include',
+        headers: { 'Content-Type': 'application/json' }
+      });
       if (!res.ok) {
         throw new Error('Failed to fetch partners');
       }
