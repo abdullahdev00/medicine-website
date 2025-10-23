@@ -88,7 +88,10 @@ export async function GET(request: NextRequest) {
       .orderBy(desc(orders.createdAt))
       .limit(limit)
       .offset(offset)
-      .catch(() => []); // Return empty array if query fails
+      .catch((err) => {
+        console.error("Orders query failed:", err);
+        return [];
+      }); // Return empty array if query fails
     
     // Get total count for pagination
     const countQuery = db

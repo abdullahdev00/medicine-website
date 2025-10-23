@@ -51,25 +51,25 @@ export const wishlistItems = pgTable("wishlist_items", {
 
 export const orders = pgTable("orders", {
   id: uuid("id").primaryKey().default(sql`gen_random_uuid()`),
-  userId: uuid("user_id").references(() => users.id).notNull(),
+  userId: uuid("user_id").notNull(),  // Removed reference to non-existent users table
   products: jsonb("products").notNull().$type<Array<{
-    productId: string;
+    productId?: string;
+    id?: string;
     name: string;
     quantity: number;
-    price: string;
-    variantName: string;
+    price: string | number;
+    variantName?: string;
+    variant?: string;
   }>>(),
   totalPrice: decimal("total_price", { precision: 10, scale: 2 }).notNull(),
-  deliveryAddress: text("delivery_address").notNull(),
-  paymentMethod: text("payment_method").notNull(),
-  paymentInfo: text("payment_info"),
+  deliveryAddress: text("delivery_address"),
+  paymentMethod: varchar("payment_method"),
   paidFromWallet: decimal("paid_from_wallet", { precision: 10, scale: 2 }).default("0"),
-  usedAffiliateCode: text("used_affiliate_code"),
-  affiliateUserId: uuid("affiliate_user_id").references(() => users.id),
-  affiliateCommission: decimal("affiliate_commission", { precision: 10, scale: 2 }).default("0"),
-  status: text("status").notNull().default("pending"),
+  status: varchar("status").default("pending"),
   expectedDelivery: timestamp("expected_delivery"),
   createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+  orderNumber: varchar("order_number"),
 });
 
 export const addresses = pgTable("addresses", {
