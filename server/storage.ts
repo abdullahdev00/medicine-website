@@ -168,10 +168,16 @@ export class DatabaseStorage implements IStorage {
       return cached;
     }
     
-    const result = await db.select().from(categories);
-    console.log('DatabaseStorage: Found categories:', result.length);
-    cache.set(cacheKey, result, 10 * 60 * 1000); // Cache for 10 minutes
-    return result;
+    try {
+      const result = await db.execute(sql`SELECT * FROM categories ORDER BY name`);
+      const categoryArray = (result.rows || result || []) as Category[];
+      console.log('DatabaseStorage: Found categories:', categoryArray.length);
+      cache.set(cacheKey, categoryArray, 10 * 60 * 1000);
+      return categoryArray;
+    } catch (error) {
+      console.error('DatabaseStorage: Error fetching categories:', error);
+      return [];
+    }
   }
 
   async createCategory(category: InsertCategory): Promise<Category> {
@@ -278,7 +284,26 @@ export class DatabaseStorage implements IStorage {
   }
 
   async getWalletTransactions(userId: string): Promise<WalletTransaction[]> {
-    return await db.select().from(walletTransactions).where(eq(walletTransactions.userId, userId)).orderBy(desc(walletTransactions.createdAt));
+    try {
+      const result = await db.execute(sql`
+        SELECT 
+          id,
+          user_id AS "userId",
+          type,
+          amount,
+          description,
+          order_id AS "orderId",
+          status,
+          created_at AS "createdAt"
+        FROM wallet_transactions
+        WHERE user_id = ${userId}
+        ORDER BY created_at DESC
+      `);
+      return (result.rows || result || []) as WalletTransaction[];
+    } catch (error) {
+      console.error('DatabaseStorage: Error fetching wallet transactions:', error);
+      return [];
+    }
   }
 
   async getAddresses(userId: string): Promise<Address[]> {
