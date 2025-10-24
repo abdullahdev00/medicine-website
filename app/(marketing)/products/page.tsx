@@ -33,13 +33,16 @@ export default function ProductsPage() {
     staleTime: 5 * 60 * 1000, // 5 minutes
   });
 
-  const { data: categoriesResponse, error: categoriesError } = useQuery<{categories: Category[]}>({
+  const { data: categoriesData, error: categoriesError } = useQuery<{categories: Category[]}>({
     queryKey: ["/api/categories"],
     retry: 3,
     staleTime: 5 * 60 * 1000, // 5 minutes
   });
   
-  const categories = categoriesResponse?.categories || [];
+  // Handle both response formats: {categories: [...]} or just [...]
+  const categories = Array.isArray(categoriesData) 
+    ? categoriesData 
+    : (categoriesData?.categories || []);
 
   // Handle scroll for header hide/show
   useEffect(() => {
