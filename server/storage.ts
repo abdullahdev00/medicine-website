@@ -190,8 +190,21 @@ export class DatabaseStorage implements IStorage {
     }
     
     try {
-      const result = await db.execute(sql`SELECT * FROM products ORDER BY created_at DESC`);
-      const productArray = Array.isArray(result.rows) ? result.rows as Product[] : [];
+      const result = await db.execute(sql`
+        SELECT 
+          id,
+          name,
+          category_id AS "categoryId",
+          description,
+          images,
+          rating,
+          variants,
+          in_stock AS "inStock",
+          created_at AS "createdAt"
+        FROM products 
+        ORDER BY created_at DESC
+      `);
+      const productArray = (result.rows || result || []) as Product[];
       console.log('DatabaseStorage: Found products:', productArray.length);
       cache.set(cacheKey, productArray, 5 * 60 * 1000);
       return productArray;
