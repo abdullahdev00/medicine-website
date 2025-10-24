@@ -189,10 +189,16 @@ export class DatabaseStorage implements IStorage {
       return cached;
     }
     
-    const result = await db.select().from(products).orderBy(desc(products.createdAt));
-    console.log('DatabaseStorage: Found products:', result.length);
-    cache.set(cacheKey, result, 5 * 60 * 1000); // Cache for 5 minutes
-    return result;
+    try {
+      const result = await db.execute(sql`SELECT * FROM products ORDER BY created_at DESC`);
+      const productArray = Array.isArray(result.rows) ? result.rows as Product[] : [];
+      console.log('DatabaseStorage: Found products:', productArray.length);
+      cache.set(cacheKey, productArray, 5 * 60 * 1000);
+      return productArray;
+    } catch (error) {
+      console.error('DatabaseStorage: Error fetching products:', error);
+      return [];
+    }
   }
 
   async getProductById(id: string): Promise<Product | undefined> {
