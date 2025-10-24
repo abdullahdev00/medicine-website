@@ -8,3 +8,4 @@ vite.config.ts.*
 out
 .env
 *.log
+attached_assets
