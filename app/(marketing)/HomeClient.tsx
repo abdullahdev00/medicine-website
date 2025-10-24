@@ -181,21 +181,6 @@ export function HomeClient({ initialProducts, initialCategories }: HomeClientPro
           </Card>
         </motion.div>
 
-        <div>
-          <div className="flex items-center justify-between mb-4">
-            <h2 className="font-serif text-2xl font-semibold">Top Categories</h2>
-          </div>
-          <div className="flex gap-3 overflow-x-auto">
-            {categories.map((category) => (
-              <CategoryCard
-                key={category.id}
-                name={category.name}
-                icon={category.icon}
-                onClick={() => router.push(`/products?category=${category.name}`)}
-              />
-            ))}
-          </div>
-        </div>
 
         <div>
           <div className="flex items-center justify-between mb-4">

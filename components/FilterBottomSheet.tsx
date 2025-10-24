@@ -77,7 +77,7 @@ export function FilterBottomSheet({
               transition={{ delay: 0.1 }}
             >
               <h3 className="text-lg font-semibold mb-4">Categories</h3>
-              <div className="flex flex-wrap gap-3">
+              <div className="flex gap-3 overflow-x-auto scrollbar-hide pb-2" style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}>
                 {categories.map((category) => {
                   const isSelected = selectedCategories.includes(category.id);
                   return (
@@ -85,7 +85,7 @@ export function FilterBottomSheet({
                       key={category.id}
                       onClick={() => handleCategoryToggle(category.id)}
                       className={`
-                        px-6 py-3 rounded-full font-medium transition-all duration-300
+                        px-6 py-3 rounded-full font-medium transition-all duration-300 whitespace-nowrap flex-shrink-0
                         ${
                           isSelected
                             ? "bg-gradient-to-r from-primary to-primary/80 text-white shadow-lg scale-105"

@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { createClient } from '@supabase/supabase-js';
 import { z } from "zod";
 
-// Initialize Supabase client
+// Initialize Supabase client - using direct client for API routes
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
   process.env.SUPABASE_SERVICE_ROLE_KEY!
@@ -27,6 +27,7 @@ const insertProductSchema = z.object({
 
 export async function GET(request: NextRequest) {
   try {
+    console.log('🔍 Products API: GET request received');
     const searchParams = request.nextUrl.searchParams;
     const categoryId = searchParams.get('categoryId');
     
@@ -42,15 +43,15 @@ export async function GET(request: NextRequest) {
     const { data: products, error } = await query;
     
     if (error) {
-      console.error('Get products error:', error);
-      return NextResponse.json(
-        { message: "Failed to fetch products" },
-        { status: 500 }
-      );
+      console.error('🚨 Products API: Database error:', error);
+      // Return empty array instead of error to prevent UI crash
+      return NextResponse.json([]);
     }
     
+    console.log('✅ Products API: Found', products?.length || 0, 'products');
+    
     // Transform to match frontend expectations
-    const transformedProducts = products?.map(product => ({
+    const transformedProducts = products?.map((product: any) => ({
       id: product.id,
       name: product.name,
       description: product.description,

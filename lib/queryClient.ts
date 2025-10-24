@@ -29,6 +29,7 @@ export const getQueryFn: <T>(options: {
 }) => QueryFunction<T> =
   ({ on401: unauthorizedBehavior }) =>
   async ({ queryKey }) => {
+    console.log('🔍 React Query: Fetching', queryKey.join("/"));
     const res = await fetch(queryKey.join("/") as string, {
       credentials: "include",
     });
@@ -38,7 +39,9 @@ export const getQueryFn: <T>(options: {
     }
 
     await throwIfResNotOk(res);
-    return await res.json();
+    const data = await res.json();
+    console.log('✅ React Query: Received data for', queryKey.join("/"), data?.length || 'N/A', 'items');
+    return data;
   };
 
 export const queryClient = new QueryClient({

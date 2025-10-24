@@ -45,6 +45,7 @@ const nextConfig = {
     webpackMemoryOptimizations: true,
     cpus: 4,
     optimizePackageImports: ['lucide-react', 'recharts', '@radix-ui/react-icons'],
+    optimizeCss: true,
   },
   
   compiler: {

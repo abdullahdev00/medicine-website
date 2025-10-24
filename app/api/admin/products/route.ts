@@ -72,24 +72,103 @@ export async function GET(request: NextRequest) {
       ? query.where(and(...conditions))
       : query;
     
-    // Execute query with pagination
-    const allProducts = await finalQuery
-      .orderBy(desc(products.createdAt))
-      .limit(limit)
-      .offset(offset)
-      .catch(() => []); // Return empty array if table doesn't exist or query fails
+    // Try Drizzle first, fallback to Supabase
+    let allProducts: any[] = [];
+    let totalResult: { count: number } = { count: 0 };
     
-    // Get total count for pagination
-    const countQuery = db
-      .select({ count: sql<number>`count(*)::int` })
-      .from(products);
-    
-    if (conditions.length > 0) {
-      countQuery.where(and(...conditions));
+    try {
+      // Execute query with pagination
+      allProducts = await finalQuery
+        .orderBy(desc(products.createdAt))
+        .limit(limit)
+        .offset(offset);
+      
+      // Get total count for pagination
+      const countQuery = db
+        .select({ count: sql<number>`count(*)::int` })
+        .from(products);
+      
+      if (conditions.length > 0) {
+        countQuery.where(and(...conditions));
+      }
+      
+      const totalResultArray = await countQuery;
+      totalResult = totalResultArray?.[0] || { count: 0 };
+    } catch (drizzleError: any) {
+      console.log('Drizzle failed, using Supabase fallback:', drizzleError?.message || 'Unknown error');
+      
+      // Fallback to Supabase
+      try {
+        const supabaseAdmin = createClient(
+          process.env.NEXT_PUBLIC_SUPABASE_URL!,
+          process.env.SUPABASE_SERVICE_ROLE_KEY!
+        );
+        
+        // Build Supabase query
+        let supabaseQuery = supabaseAdmin
+          .from('products')
+          .select(`
+            id,
+            name,
+            description,
+            category_id,
+            images,
+            rating,
+            variants,
+            in_stock,
+            created_at,
+            categories!inner(name)
+          `)
+          .order('created_at', { ascending: false })
+          .range(offset, offset + limit - 1);
+        
+        // Apply filters for Supabase
+        if (search) {
+          supabaseQuery = supabaseQuery.or(`name.ilike.%${search}%,description.ilike.%${search}%`);
+        }
+        
+        if (categoryId) {
+          supabaseQuery = supabaseQuery.eq('category_id', categoryId);
+        }
+        
+        if (inStock === "true") {
+          supabaseQuery = supabaseQuery.eq('in_stock', true);
+        }
+        
+        const { data: supabaseProducts, error } = await supabaseQuery;
+        
+        if (error) {
+          console.error('Supabase query error:', error);
+          allProducts = [];
+        } else {
+          // Transform Supabase response to match Drizzle format
+          allProducts = supabaseProducts?.map((product: any) => ({
+            id: product.id,
+            name: product.name,
+            description: product.description,
+            categoryId: product.category_id,
+            categoryName: product.categories?.name || 'Unknown',
+            images: product.images || [],
+            rating: product.rating,
+            variants: product.variants || [],
+            inStock: product.in_stock,
+            createdAt: product.created_at,
+            soldCount: 0 // Default for now
+          })) || [];
+        }
+        
+        // Get total count from Supabase
+        const { count } = await supabaseAdmin
+          .from('products')
+          .select('*', { count: 'exact', head: true });
+        
+        totalResult = { count: count || 0 };
+      } catch (supabaseError: any) {
+        console.error('Both Drizzle and Supabase failed:', supabaseError);
+        allProducts = [];
+        totalResult = { count: 0 };
+      }
     }
-    
-    const totalResultArray = await countQuery.catch(() => []);
-    const totalResult = totalResultArray?.[0];
     
     return NextResponse.json({
       products: allProducts.map(product => ({
@@ -142,8 +221,9 @@ export async function POST(request: NextRequest) {
     }
     
     // Create product with generated ID - use camelCase for Drizzle schema
+    const productId = uuidv4();
     const newProduct = {
-      id: uuidv4(),
+      id: productId,
       name: productData.name,
       description: productData.description || '',
       categoryId: productData.categoryId, // Drizzle schema uses camelCase
@@ -154,9 +234,8 @@ export async function POST(request: NextRequest) {
       createdAt: new Date(),
     };
     
-    // For Supabase direct insert, use snake_case
+    // For Supabase direct insert, use snake_case (without ID to let Supabase generate it)
     const supabaseProduct = {
-      id: newProduct.id,
       name: newProduct.name,
       description: newProduct.description,
       category_id: newProduct.categoryId, // Convert to snake_case for Supabase
@@ -164,65 +243,33 @@ export async function POST(request: NextRequest) {
       rating: newProduct.rating,
       variants: newProduct.variants,
       in_stock: newProduct.inStock, // Convert to snake_case for Supabase
-      created_at: newProduct.createdAt,
     };
     
-    // Try Drizzle first, then fallback to Supabase
+    // Use only Supabase for now to avoid double insertion
     let insertedProduct;
     
     try {
-      // Try Drizzle ORM
-      const result = await db
-        .insert(products)
-        .values(newProduct)
-        .returning();
-      insertedProduct = result[0];
-    } catch (dbError: any) {
-      console.error("Drizzle insert failed, trying Supabase:", dbError.message);
+      // Use direct Supabase client with service role key for admin operations
+      const supabaseAdmin = createClient(
+        process.env.NEXT_PUBLIC_SUPABASE_URL!,
+        process.env.SUPABASE_SERVICE_ROLE_KEY!
+      );
       
-      // Fallback to Supabase client
-      try {
-        // Create Supabase client with service role key for admin operations
-        const supabaseAdmin = createClient(
-          process.env.NEXT_PUBLIC_SUPABASE_URL!,
-          process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
-        );
-        
-        const { data, error } = await supabaseAdmin
-          .from('products')
-          .insert(supabaseProduct) // Use snake_case version for Supabase
-          .select()
-          .single();
-        
-        if (error) {
-          console.error("Supabase insert error:", error);
-          throw error;
-        }
-        
-        insertedProduct = data;
-      } catch (supabaseError: any) {
-        console.error("Both Drizzle and Supabase failed:", supabaseError);
-        
-        // Return specific error messages
-        if (supabaseError.code === '23503') {
-          return NextResponse.json({ 
-            message: "Invalid category ID. Please select a valid category.",
-            error: supabaseError.message 
-          }, { status: 400 });
-        }
-        
-        if (supabaseError.code === '42P01') {
-          return NextResponse.json({ 
-            message: "Database table 'products' not found. Please run migrations.",
-            error: supabaseError.message 
-          }, { status: 500 });
-        }
-        
-        return NextResponse.json({ 
-          message: "Database operation failed",
-          error: supabaseError.message || dbError.message
-        }, { status: 500 });
+      const { data, error } = await supabaseAdmin
+        .from('products')
+        .insert(supabaseProduct) // Use snake_case version for Supabase
+        .select()
+        .single();
+      
+      if (error) {
+        console.error("Supabase insert error:", error);
+        throw error;
       }
+      
+      insertedProduct = data;
+    } catch (supabaseError: any) {
+      console.error("Product insertion failed:", supabaseError);
+      throw supabaseError;
     }
     
     if (!insertedProduct) {

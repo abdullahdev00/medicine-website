@@ -4,13 +4,15 @@ import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
-import { ArrowLeft, Languages, Download } from "lucide-react";
+import { ArrowLeft, Languages, Download, Sun, Moon, Monitor } from "lucide-react";
 import { motion } from "framer-motion";
 import { useToast } from "@/hooks/use-toast";
+import { useTheme } from "next-themes";
 
 export default function SettingsPage() {
   const router = useRouter();
   const { toast } = useToast();
+  const { theme, setTheme } = useTheme();
   const [language, setLanguage] = useState<"en" | "ur">("en");
 
   useEffect(() => {
@@ -28,6 +30,16 @@ export default function SettingsPage() {
     toast({
       title: lang === "en" ? "Language Updated" : "زبان تبدیل ہو گئی",
       description: lang === "en" ? "Language changed to English" : "زبان اردو میں تبدیل ہو گئی",
+    });
+  };
+
+  const handleThemeChange = (newTheme: "light" | "dark" | "system") => {
+    setTheme(newTheme);
+    toast({
+      title: language === "en" ? "Theme Updated" : "تھیم تبدیل ہو گیا",
+      description: language === "en" 
+        ? `Theme changed to ${newTheme === "system" ? "system default" : newTheme}` 
+        : `تھیم ${newTheme === "system" ? "سسٹم ڈیفالٹ" : newTheme === "light" ? "روشن" : "تاریک"} میں تبدیل ہو گیا`,
     });
   };
 
@@ -117,6 +129,72 @@ export default function SettingsPage() {
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.2 }}
+        >
+          <Card className="shadow-lg rounded-3xl border-none">
+            <CardContent className="p-6 space-y-4">
+              <div className="flex items-center gap-3 mb-4">
+                <div className="w-12 h-12 rounded-full bg-purple-500/10 flex items-center justify-center">
+                  {theme === "light" ? (
+                    <Sun className="w-6 h-6 text-purple-500" />
+                  ) : theme === "dark" ? (
+                    <Moon className="w-6 h-6 text-purple-500" />
+                  ) : (
+                    <Monitor className="w-6 h-6 text-purple-500" />
+                  )}
+                </div>
+                <div>
+                  <h3 className="font-semibold text-lg">
+                    {language === "en" ? "Theme" : "تھیم"}
+                  </h3>
+                  <p className="text-sm text-muted-foreground">
+                    {language === "en" ? "Choose your preferred theme" : "اپنا پسندیدہ تھیم منتخب کریں"}
+                  </p>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-3 gap-3">
+                <Button
+                  variant={theme === "light" ? "default" : "outline"}
+                  className="h-14 rounded-full font-semibold flex flex-col gap-1 py-2"
+                  onClick={() => handleThemeChange("light")}
+                  data-testid="button-theme-light"
+                >
+                  <Sun className="w-5 h-5" />
+                  <span className="text-xs">
+                    {language === "en" ? "Light" : "روشن"}
+                  </span>
+                </Button>
+                <Button
+                  variant={theme === "dark" ? "default" : "outline"}
+                  className="h-14 rounded-full font-semibold flex flex-col gap-1 py-2"
+                  onClick={() => handleThemeChange("dark")}
+                  data-testid="button-theme-dark"
+                >
+                  <Moon className="w-5 h-5" />
+                  <span className="text-xs">
+                    {language === "en" ? "Dark" : "تاریک"}
+                  </span>
+                </Button>
+                <Button
+                  variant={theme === "system" ? "default" : "outline"}
+                  className="h-14 rounded-full font-semibold flex flex-col gap-1 py-2"
+                  onClick={() => handleThemeChange("system")}
+                  data-testid="button-theme-system"
+                >
+                  <Monitor className="w-5 h-5" />
+                  <span className="text-xs">
+                    {language === "en" ? "System" : "سسٹم"}
+                  </span>
+                </Button>
+              </div>
+            </CardContent>
+          </Card>
+        </motion.div>
+
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.3 }}
         >
           <Card className="shadow-lg rounded-3xl border-none">
             <CardContent className="p-6 space-y-4">

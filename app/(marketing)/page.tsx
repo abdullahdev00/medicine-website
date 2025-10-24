@@ -17,10 +17,13 @@ export default async function HomePage() {
       price: product.variants && product.variants.length > 0 
         ? product.variants[0].price 
         : "0",
-      images: product.images.map(img => img === '' || img.includes('placeholder') 
-        ? '/images/placeholder.svg' 
-        : img
-      ),
+      images: Array.isArray(product.images) 
+        ? product.images.map(img => 
+            typeof img === 'string' && (img === '' || img.includes('placeholder'))
+              ? '/images/placeholder.svg' 
+              : img
+          )
+        : ['/images/placeholder.svg'],
     })) as Product[];
 
     return <HomeClient initialProducts={productsWithPrice} initialCategories={categories} />;

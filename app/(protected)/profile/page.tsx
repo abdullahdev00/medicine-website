@@ -75,16 +75,6 @@ export default function ProfilePage() {
 
   const menuItems = [
     {
-      id: "settings",
-      title: "Settings",
-      description: "App preferences & install",
-      icon: Settings,
-      route: "/settings",
-      testId: "button-settings",
-      color: "from-blue-500/20 to-blue-500/10",
-      iconColor: "text-blue-500",
-    },
-    {
       id: "personal-info",
       title: "Personal Information",
       description: "Update your personal details",
@@ -173,6 +163,16 @@ export default function ProfilePage() {
       testId: "button-become-partner",
       color: "from-primary/30 to-primary/20",
       iconColor: "text-primary",
+    },
+    {
+      id: "settings",
+      title: "Settings",
+      description: "App preferences & install",
+      icon: Settings,
+      route: "/settings",
+      testId: "button-settings",
+      color: "from-blue-500/20 to-blue-500/10",
+      iconColor: "text-blue-500",
     },
   ];
 

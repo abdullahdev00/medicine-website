@@ -4,39 +4,8 @@ import { useState, useCallback, useRef, useEffect } from "react";
 import { Upload, X, Image as ImageIcon, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
-import { createClient } from "@supabase/supabase-js";
+import { getSupabaseClient } from "@/lib/supabase-client";
 import { useToast } from "@/hooks/use-toast";
-
-// Create Supabase client with auth context
-// This will use the session from localStorage if available
-const getSupabaseClient = () => {
-  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
-  const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!;
-  
-  // Try to get auth token from localStorage (Supabase stores it there)
-  if (typeof window !== 'undefined') {
-    const sessionData = localStorage.getItem('sb-voqvjtmrewlnjrryjeha-auth-token');
-    if (sessionData) {
-      try {
-        const session = JSON.parse(sessionData);
-        if (session?.access_token) {
-          return createClient(supabaseUrl, supabaseAnonKey, {
-            global: {
-              headers: {
-                Authorization: `Bearer ${session.access_token}`
-              }
-            }
-          });
-        }
-      } catch (e) {
-        console.error('Failed to parse session:', e);
-      }
-    }
-  }
-  
-  // Fallback to regular client
-  return createClient(supabaseUrl, supabaseAnonKey);
-};
 
 interface ImageUploadProps {
   value: (string | File)[];

@@ -258,29 +258,28 @@ export default function AdminProducts() {
 
   const handleAddProduct = async (data: ProductFormValues) => {
     try {
-      // Upload images if they are Files
-      const uploadedImages: string[] = [];
+      // Check if we have files to upload
+      const hasFiles = data.images.some(img => img instanceof File);
       
-      for (const image of data.images) {
-        if (image instanceof File) {
-          // Upload file using window function from DeferredImageUpload
-          if ((window as any).__uploadProductImages) {
-            const urls = await (window as any).__uploadProductImages();
-            uploadedImages.push(...urls);
-            break; // All files are uploaded at once
-          }
+      if (hasFiles) {
+        // Upload images using window function from ImageUpload
+        if ((window as any).__uploadProductImages) {
+          const uploadedUrls = await (window as any).__uploadProductImages();
+          
+          // Replace all images with uploaded URLs
+          const productData = {
+            ...data,
+            images: uploadedUrls
+          };
+          
+          createProductMutation.mutate(productData);
         } else {
-          uploadedImages.push(image);
+          throw new Error("Image upload function not available");
         }
+      } else {
+        // No files to upload, use existing URLs
+        createProductMutation.mutate(data);
       }
-      
-      // Replace files with URLs
-      const productData = {
-        ...data,
-        images: uploadedImages
-      };
-      
-      createProductMutation.mutate(productData);
     } catch (error) {
       toast({
         title: "Error",
@@ -293,29 +292,28 @@ export default function AdminProducts() {
   const handleEditProduct = async (data: ProductFormValues) => {
     if (selectedProduct) {
       try {
-        // Upload images if they are Files
-        const uploadedImages: string[] = [];
+        // Check if we have files to upload
+        const hasFiles = data.images.some(img => img instanceof File);
         
-        for (const image of data.images) {
-          if (image instanceof File) {
-            // Upload file using window function from ImageUpload
-            if ((window as any).__uploadProductImages) {
-              const urls = await (window as any).__uploadProductImages();
-              uploadedImages.push(...urls);
-              break; // All files are uploaded at once
-            }
+        if (hasFiles) {
+          // Upload images using window function from ImageUpload
+          if ((window as any).__uploadProductImages) {
+            const uploadedUrls = await (window as any).__uploadProductImages();
+            
+            // Replace all images with uploaded URLs
+            const productData = {
+              ...data,
+              images: uploadedUrls
+            };
+            
+            updateProductMutation.mutate({ id: selectedProduct.id, data: productData });
           } else {
-            uploadedImages.push(image);
+            throw new Error("Image upload function not available");
           }
+        } else {
+          // No files to upload, use existing URLs
+          updateProductMutation.mutate({ id: selectedProduct.id, data });
         }
-        
-        // Replace files with URLs
-        const productData = {
-          ...data,
-          images: uploadedImages
-        };
-        
-        updateProductMutation.mutate({ id: selectedProduct.id, data: productData });
       } catch (error) {
         toast({
           title: "Error",
@@ -446,11 +444,17 @@ export default function AdminProducts() {
                       onClick={() => openViewDialog(product)}
                     >
                       <TableCell>
-                        <img 
-                          src={product.images && product.images.length > 0 ? product.images[0] : ""} 
-                          alt={product.name}
-                          className="w-12 h-12 object-cover rounded border border-gray-200 dark:border-gray-700"
-                        />
+                        {product.images && product.images.length > 0 ? (
+                          <img 
+                            src={product.images[0]} 
+                            alt={product.name}
+                            className="w-12 h-12 object-cover rounded border border-gray-200 dark:border-gray-700"
+                          />
+                        ) : (
+                          <div className="w-12 h-12 bg-gray-100 dark:bg-gray-800 rounded border border-gray-200 dark:border-gray-700 flex items-center justify-center">
+                            <span className="text-xs text-gray-400">No Image</span>
+                          </div>
+                        )}
                       </TableCell>
                       <TableCell className="font-medium text-gray-900 dark:text-gray-100" data-testid="text-product-name">
                         {product.name}

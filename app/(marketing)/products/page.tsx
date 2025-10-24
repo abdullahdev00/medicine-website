@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useRouter } from "next/navigation";
 import { useQuery } from "@tanstack/react-query";
 import { Card } from "@/components/ui/card";
@@ -21,14 +21,55 @@ export default function ProductsPage() {
   const [minRating, setMinRating] = useState(0);
   const [showInStock, setShowInStock] = useState(false);
   const [sortBy, setSortBy] = useState("default");
+  
+  // Header scroll state
+  const [headerVisible, setHeaderVisible] = useState(true);
+  const lastScrollY = useRef(0);
+  const scrollThreshold = 10; // Minimum scroll distance to trigger hide/show
 
-  const { data: products = [], isLoading: productsLoading } = useQuery<Product[]>({
+  const { data: products = [], isLoading: productsLoading, error: productsError } = useQuery<Product[]>({
     queryKey: ["/api/products"],
+    retry: 3,
+    staleTime: 5 * 60 * 1000, // 5 minutes
   });
 
-  const { data: categories = [] } = useQuery<Category[]>({
+  const { data: categoriesResponse, error: categoriesError } = useQuery<{categories: Category[]}>({
     queryKey: ["/api/categories"],
+    retry: 3,
+    staleTime: 5 * 60 * 1000, // 5 minutes
   });
+  
+  const categories = categoriesResponse?.categories || [];
+
+  // Handle scroll for header hide/show
+  useEffect(() => {
+    const handleScroll = () => {
+      const currentScrollY = window.scrollY;
+      
+      // Don't hide header if we're at the top
+      if (currentScrollY < scrollThreshold) {
+        setHeaderVisible(true);
+        lastScrollY.current = currentScrollY;
+        return;
+      }
+      
+      // Check scroll direction
+      const scrollingDown = currentScrollY > lastScrollY.current;
+      const scrollDifference = Math.abs(currentScrollY - lastScrollY.current);
+      
+      // Only update if we've scrolled enough to avoid jittery behavior
+      if (scrollDifference > scrollThreshold) {
+        setHeaderVisible(!scrollingDown);
+        lastScrollY.current = currentScrollY;
+      }
+    };
+
+    // Add scroll listener
+    window.addEventListener('scroll', handleScroll, { passive: true });
+    
+    // Cleanup
+    return () => window.removeEventListener('scroll', handleScroll);
+  }, [scrollThreshold]);
 
   const filteredProducts = products.filter((p) => {
     if (selectedCategories.length > 0 && !selectedCategories.includes(p.categoryId)) {
@@ -70,7 +111,11 @@ export default function ProductsPage() {
 
   return (
     <div className="min-h-screen bg-background pb-24">
-      <div className="sticky top-0 bg-background/95 backdrop-blur-sm border-b z-40 shadow-sm">
+      <div 
+        className={`sticky top-0 bg-background/95 backdrop-blur-sm border-b z-40 shadow-sm transition-transform duration-300 ease-in-out ${
+          headerVisible ? 'translate-y-0' : '-translate-y-full'
+        }`}
+      >
         <div className="max-w-7xl mx-auto px-4 py-4">
           <div className="flex items-center justify-between">
             <CircularButton
@@ -91,6 +136,13 @@ export default function ProductsPage() {
       </div>
 
       <div className="max-w-7xl mx-auto px-4 py-6">
+        {productsError && (
+          <div className="bg-red-50 border border-red-200 rounded-lg p-4 mb-6">
+            <p className="text-red-800 font-medium">Error loading products:</p>
+            <p className="text-red-600 text-sm">{productsError.message}</p>
+          </div>
+        )}
+        
         {productsLoading ? (
           <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
             {[...Array(8)].map((_, i) => (
