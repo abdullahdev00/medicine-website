@@ -30,32 +30,6 @@ export default function SignupPage() {
     password: "",
   });
 
-  // Email validation function
-  const checkEmailExists = async (email: string) => {
-    if (!email || !email.includes('@')) return;
-    
-    setIsCheckingEmail(true);
-    try {
-      const response = await fetch('/api/users/check-email', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email }),
-      });
-      
-      const data = await response.json();
-      
-      if (data.exists) {
-        setErrors(prev => ({ ...prev, email: "Email already exists" }));
-      } else {
-        setErrors(prev => ({ ...prev, email: "" }));
-      }
-    } catch (error) {
-      console.warn('Email check failed:', error);
-    } finally {
-      setIsCheckingEmail(false);
-    }
-  };
-
   // Input change handler
   const handleInputChange = (field: string, value: string) => {
     setSignupData(prev => ({ ...prev, [field]: value }));
@@ -63,13 +37,6 @@ export default function SignupPage() {
     // Clear error when user starts typing
     if (errors[field as keyof typeof errors]) {
       setErrors(prev => ({ ...prev, [field]: "" }));
-    }
-  };
-
-  // Email blur handler - check existence only when user leaves field
-  const handleEmailBlur = () => {
-    if (signupData.email && signupData.email.includes('@')) {
-      checkEmailExists(signupData.email);
     }
   };
 
@@ -106,7 +73,7 @@ export default function SignupPage() {
     e.preventDefault();
     e.stopPropagation();
     
-    if (validateForm() && !errors.email) {
+    if (validateForm()) {
       processSignup();
     }
     return false;
@@ -127,7 +94,7 @@ export default function SignupPage() {
     setIsLoading(true);
     
     try {
-      // Supabase signup with email verification
+      // Backend API signup (creates user in Supabase Auth + profile data)
       const result = await signUp(signupData.email, signupData.password, signupData.fullName);
       
       // If no result or error in result, handle it
@@ -135,25 +102,46 @@ export default function SignupPage() {
         throw new Error('No response from signup');
       }
       
+      console.log('Signup successful:', result);
+      
       // Store signup data in sessionStorage for next steps
       sessionStorage.setItem('signupData', JSON.stringify(signupData));
       
-      // Show toast
-      toast({
-        title: "Verification Code Sent!",
-        description: "Please check your email for the 6-digit verification code.",
-      });
-      
-      // Redirect to verify-email page (now outside auth folder to avoid protection)
-      const redirectUrl = `/verify-email?email=${encodeURIComponent(signupData.email)}`;
-      
-      // Try multiple redirect methods to ensure it works
-      try {
-        // Method 1: Use replace for forced redirect
-        window.location.replace(redirectUrl);
-      } catch (e) {
-        // Method 2: Fallback to href if replace fails
-        window.location.href = redirectUrl;
+      // Check if verification is required
+      if (result.requiresVerification) {
+        // Show OTP verification toast
+        toast({
+          title: "Verification Code Sent!",
+          description: "Please check your email for the 6-digit verification code.",
+        });
+        
+        // Redirect to verification page
+        const redirectUrl = `/verify-email?email=${encodeURIComponent(signupData.email)}`;
+        
+        // Small delay to show the toast
+        setTimeout(() => {
+          try {
+            window.location.replace(redirectUrl);
+          } catch (e) {
+            window.location.href = redirectUrl;
+          }
+        }, 1000);
+      } else {
+        // If no verification required, show success and redirect to login
+        toast({
+          title: "Account Created!",
+          description: "You can now login with your credentials.",
+        });
+        
+        const redirectUrl = `/login?email=${encodeURIComponent(signupData.email)}`;
+        
+        setTimeout(() => {
+          try {
+            window.location.replace(redirectUrl);
+          } catch (e) {
+            window.location.href = redirectUrl;
+          }
+        }, 1000);
       }
       
       // Keep loading state to prevent double submission
@@ -226,15 +214,9 @@ export default function SignupPage() {
                     required
                     value={signupData.email}
                     onChange={(e: React.ChangeEvent<HTMLInputElement>) => handleInputChange("email", e.target.value)}
-                    onBlur={handleEmailBlur}
                     className={`rounded-full h-14 px-6 ${errors.email ? "border-red-500" : ""}`}
                     data-testid="input-signup-email"
                   />
-                  {isCheckingEmail && (
-                    <div className="absolute right-4 top-1/2 transform -translate-y-1/2">
-                      <Loader2 className="w-4 h-4 animate-spin text-muted-foreground" />
-                    </div>
-                  )}
                 </div>
                 {errors.email && (
                   <p className="text-sm text-red-500">{errors.email}</p>

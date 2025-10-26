@@ -23,6 +23,13 @@ import { eq, and, desc, sql, count } from "drizzle-orm";
 import bcrypt from "bcrypt";
 import { cache } from "./cache";
 import { db } from "@/lib/db/client";
+import { createClient } from '@supabase/supabase-js';
+
+// Initialize Supabase client
+const supabase = createClient(
+  process.env.NEXT_PUBLIC_SUPABASE_URL!,
+  process.env.SUPABASE_SERVICE_ROLE_KEY!
+);
 
 export interface IStorage {
   getUser(id: string): Promise<User | undefined>;
@@ -103,56 +110,198 @@ export interface IStorage {
 
 export class DatabaseStorage implements IStorage {
   async getUser(id: string): Promise<User | undefined> {
-    console.log('DatabaseStorage: Getting user by ID from Supabase:', id);
-    const result = await db.select().from(users).where(eq(users.id, id)).limit(1);
-    console.log('DatabaseStorage: User found:', !!result[0]);
-    return result[0];
+    console.log('DatabaseStorage: Getting user by ID from Supabase Auth:', id);
+    try {
+      // Get user from auth.users and user_profiles
+      const { data: authUser, error } = await supabase.auth.admin.getUserById(id);
+      if (error || !authUser.user) {
+        console.log('DatabaseStorage: User not found in auth');
+        return undefined;
+      }
+
+      // Get additional profile data
+      const profileResult = await db.execute(sql`
+        SELECT * FROM user_profiles WHERE user_id = ${id}
+      `);
+      const profile = (profileResult as unknown as any[])[0];
+
+      // Combine auth user with profile data
+      const user = {
+        id: authUser.user.id,
+        fullName: profile?.full_name || authUser.user.user_metadata?.full_name || '',
+        email: authUser.user.email!,
+        password: '', // Don't expose password
+        phoneNumber: profile?.phone_number,
+        whatsappNumber: profile?.whatsapp_number,
+        address: profile?.address,
+        city: profile?.city,
+        province: profile?.province,
+        postalCode: profile?.postal_code,
+        affiliateCode: profile?.affiliate_code || '',
+        referredBy: profile?.referred_by,
+        walletBalance: profile?.wallet_balance || '0.00',
+        totalEarnings: profile?.total_earnings || '0.00',
+        pendingEarnings: profile?.pending_earnings || '0.00',
+        isPartner: profile?.is_partner || false,
+        createdAt: new Date(authUser.user.created_at),
+      };
+      
+      console.log('DatabaseStorage: User found:', !!user);
+      return user as User;
+    } catch (error) {
+      console.error('DatabaseStorage: Error getting user:', error);
+      return undefined;
+    }
   }
 
   async getUserByEmail(email: string): Promise<User | undefined> {
     try {
-      console.log('DatabaseStorage: Getting user by email:', email);
-      const result = await db.select().from(users).where(eq(users.email, email)).limit(1);
-      console.log('DatabaseStorage: User found:', !!result[0]);
-      return result[0];
+      console.log('DatabaseStorage: Getting user by email from Supabase Auth:', email);
+      
+      // Get user from Supabase Auth
+      const { data: users, error } = await supabase.auth.admin.listUsers();
+      if (error) {
+        console.error('DatabaseStorage: Error listing users:', error);
+        return undefined;
+      }
+
+      const authUser = users.users.find(u => u.email === email);
+      if (!authUser) {
+        console.log('DatabaseStorage: User not found in auth');
+        return undefined;
+      }
+
+      // Get profile data
+      const profileResult = await db.execute(sql`
+        SELECT * FROM user_profiles WHERE user_id = ${authUser.id}
+      `);
+      const profile = (profileResult as unknown as any[])[0];
+
+      const user = {
+        id: authUser.id,
+        fullName: profile?.full_name || authUser.user_metadata?.full_name || '',
+        email: authUser.email!,
+        password: '', // Don't expose password
+        phoneNumber: profile?.phone_number,
+        whatsappNumber: profile?.whatsapp_number,
+        address: profile?.address,
+        city: profile?.city,
+        province: profile?.province,
+        postalCode: profile?.postal_code,
+        affiliateCode: profile?.affiliate_code || '',
+        referredBy: profile?.referred_by,
+        walletBalance: profile?.wallet_balance || '0.00',
+        totalEarnings: profile?.total_earnings || '0.00',
+        pendingEarnings: profile?.pending_earnings || '0.00',
+        isPartner: profile?.is_partner || false,
+        createdAt: new Date(authUser.created_at),
+      };
+      
+      console.log('DatabaseStorage: User found:', !!user);
+      return user as User;
     } catch (error) {
       console.error('DatabaseStorage: Error getting user by email:', error);
-      throw new Error(`Failed to get user by email: ${error instanceof Error ? error.message : 'Unknown error'}`);
+      return undefined;
     }
   }
 
   async createUser(insertUser: InsertUser): Promise<User> {
     try {
-      console.log('DatabaseStorage: Creating user:', insertUser.email);
+      console.log('DatabaseStorage: Creating user with Supabase Auth:', insertUser.email);
       
+      // Step 1: Create user in Supabase Auth with OTP verification
+      const { data: authData, error: authError } = await supabase.auth.signUp({
+        email: insertUser.email,
+        password: insertUser.password,
+        options: {
+          data: {
+            full_name: insertUser.fullName,
+            phone_number: insertUser.phoneNumber || ''
+          }
+        }
+      });
+
+      if (authError) {
+        console.error('DatabaseStorage: Error creating auth user:', authError);
+        throw new Error(`Failed to create auth user: ${authError?.message}`);
+      }
+      
+      if (!authData.user) {
+        throw new Error('No user returned from signup');
+      }
+
+      console.log('DatabaseStorage: Auth user created successfully:', authData.user.id);
+
+      // Step 2: Generate affiliate code after auth user is created
       let affiliateCode: string;
       let isUnique = false;
       
       while (!isUnique) {
         affiliateCode = Math.floor(100000 + Math.random() * 900000).toString();
-        const existing = await db.select().from(users).where(eq(users.affiliateCode, affiliateCode)).limit(1);
-        if (existing.length === 0) {
+        try {
+          const existing = await db.execute(sql`
+            SELECT * FROM affiliates WHERE affiliate_code = ${affiliateCode}
+          `);
+          if ((existing as unknown as any[]).length === 0) {
+            isUnique = true;
+          }
+        } catch (e) {
+          // If table doesn't exist or query fails, assume code is unique
           isUnique = true;
         }
       }
 
+      // Step 3: Create profile data (with error handling)
+      try {
+        // Only insert if we have at least user_id
+        await db.execute(sql`
+          INSERT INTO user_profiles (
+            user_id, profile_completed, created_at, updated_at
+          ) VALUES (
+            ${authData.user.id}, false, NOW(), NOW()
+          )
+          ON CONFLICT (user_id) DO NOTHING
+        `);
+        console.log('DatabaseStorage: User profile created');
+      } catch (profileError) {
+        console.warn('DatabaseStorage: Profile creation failed, but auth user exists:', profileError);
+      }
+
+      // Step 4: Create affiliate record (with error handling)
+      try {
+        await db.execute(sql`
+          INSERT INTO affiliates (user_id, affiliate_code, wallet_balance, total_earnings, pending_earnings, is_active)
+          VALUES (${authData.user.id}, ${affiliateCode!}, 0.00, 0.00, 0.00, true)
+        `);
+        console.log('DatabaseStorage: Affiliate record created');
+      } catch (affiliateError) {
+        console.warn('DatabaseStorage: Affiliate creation failed, but auth user exists:', affiliateError);
+      }
+
       const user = {
-        ...insertUser,
+        id: authData.user.id,
+        fullName: insertUser.fullName,
+        email: insertUser.email,
+        password: '', // Don't return password
+        phoneNumber: insertUser.phoneNumber || '',
+        whatsappNumber: insertUser.whatsappNumber || '',
+        address: insertUser.address || '',
+        city: insertUser.city || '',
+        province: insertUser.province || '',
+        postalCode: insertUser.postalCode || '',
         affiliateCode: affiliateCode!,
-        walletBalance: "0.00",
-        totalEarnings: "0.00",
-        pendingEarnings: "0.00",
+        referredBy: insertUser.referredBy || '',
+        walletBalance: '0.00',
+        totalEarnings: '0.00',
+        pendingEarnings: '0.00',
         isPartner: false,
+        userType: 'user' as const,
         createdAt: new Date(),
-        updatedAt: new Date(),
+        updatedAt: new Date()
       };
 
-      const hashedPassword = await bcrypt.hash(user.password, 10);
-      user.password = hashedPassword;
-
-      const result = await db.insert(users).values(user).returning();
-      console.log('DatabaseStorage: User created successfully:', result[0].id);
-      return result[0];
+      console.log('DatabaseStorage: User creation completed:', authData.user.id);
+      return user as User;
     } catch (error) {
       console.error('DatabaseStorage: Error creating user:', error);
       throw new Error(`Failed to create user: ${error instanceof Error ? error.message : 'Unknown error'}`);
@@ -170,7 +319,7 @@ export class DatabaseStorage implements IStorage {
     
     try {
       const result = await db.execute(sql`SELECT * FROM categories ORDER BY name`);
-      const categoryArray = (result.rows || result || []) as Category[];
+      const categoryArray = (result as unknown as Category[]) || [];
       console.log('DatabaseStorage: Found categories:', categoryArray.length);
       cache.set(cacheKey, categoryArray, 10 * 60 * 1000);
       return categoryArray;
@@ -210,7 +359,7 @@ export class DatabaseStorage implements IStorage {
         FROM products 
         ORDER BY created_at DESC
       `);
-      const productArray = (result.rows || result || []) as Product[];
+      const productArray = (result as unknown as Product[]) || [];
       console.log('DatabaseStorage: Found products:', productArray.length);
       cache.set(cacheKey, productArray, 5 * 60 * 1000);
       return productArray;
@@ -299,7 +448,7 @@ export class DatabaseStorage implements IStorage {
         WHERE user_id = ${userId}
         ORDER BY created_at DESC
       `);
-      return (result.rows || result || []) as WalletTransaction[];
+      return (result as unknown as WalletTransaction[]) || [];
     } catch (error) {
       console.error('DatabaseStorage: Error fetching wallet transactions:', error);
       return [];

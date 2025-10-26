@@ -29,29 +29,38 @@ export enum UserRole {
   PARTNER = 'partner'
 }
 
-// Client-side auth helper functions (no database access)
+// Client-side auth helper functions (using backend API)
 export const signUp = async (email: string, password: string, fullName: string) => {
   // Validate email domain
   if (!validateEmail(email)) {
     throw new Error('Only Gmail and Outlook emails are allowed');
   }
 
-  // Use regular signUp method with password, but disable email redirect
-  const { data, error } = await supabase.auth.signUp({
-    email,
-    password,
-    options: {
-      data: {
-        full_name: fullName,
-        role: UserRole.USER
+  try {
+    // Use backend API instead of direct Supabase client
+    const response = await fetch('/api/auth/register', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
       },
-      // Don't redirect, we'll handle OTP manually
-      emailRedirectTo: undefined
-    }
-  });
+      body: JSON.stringify({
+        fullName,
+        email,
+        password,
+      }),
+    });
 
-  if (error) throw error;
-  return data;
+    const data = await response.json();
+
+    if (!response.ok) {
+      throw new Error(data.message || 'Registration failed');
+    }
+
+    return data;
+  } catch (error) {
+    console.error('Signup error:', error);
+    throw error;
+  }
 };
 
 // OTP Verification function

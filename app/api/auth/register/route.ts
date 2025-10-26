@@ -8,6 +8,7 @@ export async function POST(request: NextRequest) {
     const body = await request.json();
     const validatedData = insertUserSchema.parse(body);
     
+    // Check if user already exists
     const existingUser = await storage.getUserByEmail(validatedData.email);
     if (existingUser) {
       return NextResponse.json(
@@ -16,11 +17,19 @@ export async function POST(request: NextRequest) {
       );
     }
     
+    // Create user with Supabase Auth (will send OTP email)
     const user = await storage.createUser(validatedData);
     const { password, ...userWithoutPassword } = user;
     
-    return NextResponse.json(userWithoutPassword, { status: 201 });
+    return NextResponse.json({
+      ...userWithoutPassword,
+      message: "Verification code sent to your email!",
+      requiresVerification: true,
+      isConfirmed: false
+    }, { status: 201 });
   } catch (error: any) {
+    console.error('Register API error:', error);
+    
     if (error instanceof z.ZodError) {
       return NextResponse.json(
         { message: "Validation error", errors: error.errors },

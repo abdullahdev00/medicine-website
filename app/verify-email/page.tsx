@@ -68,8 +68,20 @@ function VerifyEmailContent() {
     setIsVerifying(true);
     
     try {
-      // Verify OTP with Supabase
-      const { user, session } = await verifyOTP(email, otp);
+      // Verify OTP with backend API
+      const response = await fetch('/api/auth/verify-otp', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email, otp })
+      });
+      
+      const data = await response.json();
+      
+      if (!response.ok) {
+        throw new Error(data.message || 'Verification failed');
+      }
+      
+      const { user, session } = data;
       
       // Log session info for debugging
       console.log('🔐 OTP Verification Response:', { 
@@ -102,12 +114,19 @@ function VerifyEmailContent() {
         });
       }
       
-      // Store user in localStorage and update auth context after verification
+      // Store user data temporarily for profile completion
       if (user) {
+        sessionStorage.setItem('pendingUser', JSON.stringify({
+          id: user.id,
+          email: user.email,
+          fullName: user.fullName || user.user_metadata?.full_name || user.email,
+          userType: "user"
+        }));
+        
         const userData = {
           id: user.id,
           email: user.email,
-          fullName: user.user_metadata?.full_name || user.email,
+          fullName: user.fullName || user.user_metadata?.full_name || user.email,
           userType: "user"
         };
         
@@ -169,9 +188,9 @@ function VerifyEmailContent() {
           // Small delay to ensure storage is propagated
           await new Promise(resolve => setTimeout(resolve, 500));
           
-          // Now redirect to complete-profile page
-          console.log('✅ Redirecting to complete profile page...');
-          router.push('/complete-profile');
+          // Redirect to complete-profile page with user ID
+          const redirectUrl = `/complete-profile?userId=${user.id}&email=${user.email}`;
+          router.push(redirectUrl);
         };
         
         // Execute redirect with proper storage check
