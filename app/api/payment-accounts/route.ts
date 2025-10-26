@@ -24,7 +24,20 @@ export async function GET(request: NextRequest) {
       );
     }
     
-    return NextResponse.json(accounts || []);
+    // Transform snake_case to camelCase for frontend
+    const transformedAccounts = (accounts || []).map(account => ({
+      id: account.id,
+      method: account.method,
+      accountName: account.account_name,
+      accountNumber: account.account_number,
+      bankName: account.bank_name,
+      additionalInfo: account.additional_info,
+      isActive: account.is_active,
+      createdAt: account.created_at,
+      updatedAt: account.updated_at
+    }));
+    
+    return NextResponse.json(transformedAccounts);
   } catch (error: any) {
     console.error('Get payment accounts error:', error);
     return NextResponse.json(

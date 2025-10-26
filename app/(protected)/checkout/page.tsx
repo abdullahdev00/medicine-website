@@ -516,9 +516,14 @@ export default function Checkout() {
                                   <p className="font-semibold text-sm">{account.method}</p>
                                   <div className="flex items-center gap-2 mt-1">
                                     <p className="text-xs text-muted-foreground">{account.accountName}</p>
-                                    <span className="text-xs">•</span>
-                                    <p className="text-xs font-mono">{account.accountNumber}</p>
+                                    {account.bankName && (
+                                      <>
+                                        <span className="text-xs">•</span>
+                                        <p className="text-xs text-muted-foreground">{account.bankName}</p>
+                                      </>
+                                    )}
                                   </div>
+                                  <p className="text-xs font-mono mt-1 text-primary">{account.accountNumber}</p>
                                 </Label>
                               </div>
                               <Button
@@ -527,7 +532,7 @@ export default function Checkout() {
                                 size="sm"
                                 onClick={(e) => {
                                   e.stopPropagation();
-                                  copyToClipboard(account.accountNumber, account.id);
+                                  copyToClipboard(account.accountNumber || '', account.id);
                                 }}
                                 data-testid={`button-copy-${account.id}`}
                               >
@@ -557,6 +562,14 @@ export default function Checkout() {
                           </div>
                         ))}
                       </RadioGroup>
+                      
+                      {selectedPaymentAccount?.additionalInfo?.instructions && (
+                        <div className="mt-3 p-3 bg-amber-50 dark:bg-amber-950/20 border border-amber-200 dark:border-amber-800 rounded-lg">
+                          <p className="text-xs text-amber-800 dark:text-amber-200">
+                            <span className="font-semibold">Instructions:</span> {selectedPaymentAccount.additionalInfo.instructions}
+                          </p>
+                        </div>
+                      )}
                     </div>
 
                     {needsPaymentRequest && (
