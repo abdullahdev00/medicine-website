@@ -8,12 +8,15 @@ import { ArrowLeft, Languages, Download, Sun, Moon, Monitor } from "lucide-react
 import { motion } from "framer-motion";
 import { useToast } from "@/hooks/use-toast";
 import { useTheme } from "next-themes";
+import { isPWAInstalled, detectPlatform, checkInstallPromptAvailability } from "@/lib/pwa-utils";
 
 export default function SettingsPage() {
   const router = useRouter();
   const { toast } = useToast();
   const { theme, setTheme } = useTheme();
   const [language, setLanguage] = useState<"en" | "ur">("en");
+  const [pwaInstalled, setPwaInstalled] = useState(false);
+  const [deferredPrompt, setDeferredPrompt] = useState<any>(null);
 
   useEffect(() => {
     if (typeof window !== "undefined") {
@@ -21,6 +24,51 @@ export default function SettingsPage() {
       if (savedLanguage) {
         setLanguage(savedLanguage);
       }
+      
+      // Check PWA installation status with prompt availability
+      const checkPWAStatus = async () => {
+        // First check if install prompt is available
+        await checkInstallPromptAvailability();
+        // Then check installation status
+        const installed = isPWAInstalled();
+        console.log('Settings: Initial PWA status:', installed);
+        setPwaInstalled(installed);
+      };
+      
+      checkPWAStatus();
+      
+      // Listen for beforeinstallprompt event
+      const handleBeforeInstallPrompt = (e: Event) => {
+        e.preventDefault();
+        setDeferredPrompt(e);
+      };
+      
+      // Listen for app installed event
+      const handleAppInstalled = () => {
+        console.log('Settings: App installed event');
+        setPwaInstalled(true);
+        setDeferredPrompt(null);
+      };
+      
+      // Check install status periodically and sync with browser
+      const checkInstallStatus = async () => {
+        // Re-check prompt availability periodically
+        await checkInstallPromptAvailability();
+        const currentStatus = isPWAInstalled();
+        console.log('Settings: PWA status check:', currentStatus);
+        setPwaInstalled(currentStatus);
+      };
+      
+      const interval = setInterval(checkInstallStatus, 1500);
+      
+      window.addEventListener('beforeinstallprompt', handleBeforeInstallPrompt);
+      window.addEventListener('appinstalled', handleAppInstalled);
+      
+      return () => {
+        window.removeEventListener('beforeinstallprompt', handleBeforeInstallPrompt);
+        window.removeEventListener('appinstalled', handleAppInstalled);
+        clearInterval(interval);
+      };
     }
   }, []);
 
@@ -28,31 +76,62 @@ export default function SettingsPage() {
     setLanguage(lang);
     localStorage.setItem("app-language", lang);
     toast({
-      title: lang === "en" ? "Language Updated" : "زبان تبدیل ہو گئی",
-      description: lang === "en" ? "Language changed to English" : "زبان اردو میں تبدیل ہو گئی",
+      title: "Language Updated",
+      description: `Language changed to ${lang === "en" ? "English" : "Roman Urdu"}`,
     });
   };
 
   const handleThemeChange = (newTheme: "light" | "dark" | "system") => {
     setTheme(newTheme);
     toast({
-      title: language === "en" ? "Theme Updated" : "تھیم تبدیل ہو گیا",
-      description: language === "en" 
-        ? `Theme changed to ${newTheme === "system" ? "system default" : newTheme}` 
-        : `تھیم ${newTheme === "system" ? "سسٹم ڈیفالٹ" : newTheme === "light" ? "روشن" : "تاریک"} میں تبدیل ہو گیا`,
+      title: "Theme Updated",
+      description: `Theme changed to ${newTheme === "system" ? "system default" : newTheme}`,
     });
   };
 
-  const handleInstallApp = () => {
-    const event = new CustomEvent("pwa-install-requested");
-    window.dispatchEvent(event);
-    
-    toast({
-      title: language === "en" ? "Install Prompt" : "انسٹال کریں",
-      description: language === "en" 
-        ? "If install is available, the dialog will appear" 
-        : "اگر انسٹال دستیاب ہے تو ڈائیلاگ ظاہر ہوگا",
-    });
+  const handleInstallApp = async () => {
+    if (pwaInstalled) {
+      toast({
+        title: "Already Installed",
+        description: "The app is already installed on your device",
+      });
+      return;
+    }
+
+    if (deferredPrompt) {
+      try {
+        await deferredPrompt.prompt();
+        const { outcome } = await deferredPrompt.userChoice;
+        
+        if (outcome === 'accepted') {
+          toast({
+            title: "Installing...",
+            description: "App is being installed",
+          });
+        }
+        
+        setDeferredPrompt(null);
+      } catch (error) {
+        console.error('Install failed:', error);
+      }
+    } else {
+      // For iOS or when no prompt is available
+      const platform = detectPlatform();
+      if (platform === 'ios') {
+        toast({
+          title: "Install on iOS",
+          description: "Tap Share button → Add to Home Screen",
+        });
+      } else {
+        const event = new CustomEvent("pwa-install-requested");
+        window.dispatchEvent(event);
+        
+        toast({
+          title: "Install Prompt",
+          description: "If install is available, the dialog will appear",
+        });
+      }
+    }
   };
 
   return (
@@ -71,10 +150,10 @@ export default function SettingsPage() {
             </Button>
             <div>
               <h1 className="font-serif text-2xl font-bold">
-                {language === "en" ? "Settings" : "ترتیبات"}
+                Settings
               </h1>
               <p className="text-sm text-muted-foreground mt-1">
-                {language === "en" ? "Manage your app preferences" : "اپنی ایپ کی ترجیحات کا انتظام کریں"}
+                Manage your app preferences
               </p>
             </div>
           </div>
@@ -95,10 +174,10 @@ export default function SettingsPage() {
                 </div>
                 <div>
                   <h3 className="font-semibold text-lg">
-                    {language === "en" ? "Language" : "زبان"}
+                    Language
                   </h3>
                   <p className="text-sm text-muted-foreground">
-                    {language === "en" ? "Choose your preferred language" : "اپنی پسندیدہ زبان منتخب کریں"}
+                    Choose your preferred language
                   </p>
                 </div>
               </div>
@@ -118,7 +197,7 @@ export default function SettingsPage() {
                   onClick={() => handleLanguageChange("ur")}
                   data-testid="button-language-urdu"
                 >
-                  اردو
+                  Roman Urdu
                 </Button>
               </div>
             </CardContent>
@@ -144,10 +223,10 @@ export default function SettingsPage() {
                 </div>
                 <div>
                   <h3 className="font-semibold text-lg">
-                    {language === "en" ? "Theme" : "تھیم"}
+                    Theme
                   </h3>
                   <p className="text-sm text-muted-foreground">
-                    {language === "en" ? "Choose your preferred theme" : "اپنا پسندیدہ تھیم منتخب کریں"}
+                    Choose your preferred theme
                   </p>
                 </div>
               </div>
@@ -161,7 +240,7 @@ export default function SettingsPage() {
                 >
                   <Sun className="w-5 h-5" />
                   <span className="text-xs">
-                    {language === "en" ? "Light" : "روشن"}
+                    Light
                   </span>
                 </Button>
                 <Button
@@ -172,7 +251,7 @@ export default function SettingsPage() {
                 >
                   <Moon className="w-5 h-5" />
                   <span className="text-xs">
-                    {language === "en" ? "Dark" : "تاریک"}
+                    Dark
                   </span>
                 </Button>
                 <Button
@@ -183,7 +262,7 @@ export default function SettingsPage() {
                 >
                   <Monitor className="w-5 h-5" />
                   <span className="text-xs">
-                    {language === "en" ? "System" : "سسٹم"}
+                    System
                   </span>
                 </Button>
               </div>
@@ -204,30 +283,33 @@ export default function SettingsPage() {
                 </div>
                 <div>
                   <h3 className="font-semibold text-lg">
-                    {language === "en" ? "Install App" : "ایپ انسٹال کریں"}
+                    Install App
                   </h3>
                   <p className="text-sm text-muted-foreground">
-                    {language === "en" 
-                      ? "Install MediSwift on your device" 
-                      : "MediSwift کو اپنے آلے پر انسٹال کریں"}
+                    Install MediSwift on your device
                   </p>
                 </div>
               </div>
 
               <Button
-                className="w-full h-14 rounded-full font-semibold bg-gradient-to-r from-emerald-500 to-teal-600 hover:from-emerald-600 hover:to-teal-700"
+                className={`w-full h-14 rounded-full font-semibold ${
+                  pwaInstalled 
+                    ? 'bg-green-500 hover:bg-green-600' 
+                    : 'bg-gradient-to-r from-emerald-500 to-teal-600 hover:from-emerald-600 hover:to-teal-700'
+                }`}
                 onClick={handleInstallApp}
                 data-testid="button-install-app"
               >
                 <Download className="w-5 h-5 mr-2" />
-                {language === "en" ? "Install MediSwift App" : "MediSwift ایپ انسٹال کریں"}
+                {pwaInstalled 
+                  ? "App Installed"
+                  : "Install MediSwift App"
+                }
               </Button>
 
               <div className="bg-accent/50 rounded-2xl p-4">
                 <p className="text-sm text-muted-foreground">
-                  {language === "en" 
-                    ? "Installing the app gives you faster access, offline support, and a better experience." 
-                    : "ایپ انسٹال کرنے سے آپ کو تیز رفتار رسائی، آف لائن سپورٹ، اور بہتر تجربہ ملتا ہے۔"}
+                  Installing the app gives you faster access, offline support, and a better experience.
                 </p>
               </div>
             </CardContent>

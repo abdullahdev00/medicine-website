@@ -24,6 +24,7 @@ import bcrypt from "bcrypt";
 import { cache } from "./cache";
 import { db } from "@/lib/db/client";
 import { createClient } from '@supabase/supabase-js';
+import { any } from "zod";
 
 // Initialize Supabase client
 const supabase = createClient(
@@ -128,7 +129,7 @@ export class DatabaseStorage implements IStorage {
       // Combine auth user with profile data
       const user = {
         id: authUser.user.id,
-        fullName: profile?.full_name || authUser.user.user_metadata?.full_name || '',
+  fullName: profile?.full_name || (authUser.user as any).raw_user_meta_data?.full_name || authUser.user.user_metadata?.full_name || '',
         email: authUser.user.email!,
         password: '', // Don't expose password
         phoneNumber: profile?.phone_number,
@@ -179,7 +180,7 @@ export class DatabaseStorage implements IStorage {
 
       const user = {
         id: authUser.id,
-        fullName: profile?.full_name || authUser.user_metadata?.full_name || '',
+        fullName: profile?.full_name || (authUser as any).raw_user_meta_data?.full_name || authUser.user_metadata?.full_name || '',
         email: authUser.email!,
         password: '', // Don't expose password
         phoneNumber: profile?.phone_number,
@@ -441,8 +442,7 @@ export class DatabaseStorage implements IStorage {
           type,
           amount,
           description,
-          order_id AS "orderId",
-          status,
+          reference_id AS "orderId",
           created_at AS "createdAt"
         FROM wallet_transactions
         WHERE user_id = ${userId}
@@ -451,6 +451,7 @@ export class DatabaseStorage implements IStorage {
       return (result as unknown as WalletTransaction[]) || [];
     } catch (error) {
       console.error('DatabaseStorage: Error fetching wallet transactions:', error);
+      // Return empty array instead of throwing error
       return [];
     }
   }

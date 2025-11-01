@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from '@supabase/supabase-js';
 import { z } from "zod";
+import { handleApiError, validateRequiredFields } from "@/lib/api-error-handler";
 
 // Initialize Supabase client
 const supabase = createClient(
@@ -47,11 +48,7 @@ export async function GET(request: NextRequest) {
     
     return NextResponse.json(accounts || []);
   } catch (error: any) {
-    console.error('Get user payment accounts error:', error);
-    return NextResponse.json(
-      { message: error.message || "Failed to fetch user payment accounts" },
-      { status: 500 }
-    );
+    return handleApiError(error);
   }
 }
 
@@ -59,13 +56,42 @@ export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
     
-    // Transform frontend data to database format
+    // Validate required fields first
+    if (!body.userId) {
+      return NextResponse.json(
+        { message: "userId is required" },
+        { status: 400 }
+      );
+    }
+    
+    if (!body.accountName && !body.account_name) {
+      return NextResponse.json(
+        { message: "accountName is required" },
+        { status: 400 }
+      );
+    }
+    
+    if (!body.accountNumber && !body.account_number) {
+      return NextResponse.json(
+        { message: "accountNumber is required" },
+        { status: 400 }
+      );
+    }
+    
+    if (!body.method) {
+      return NextResponse.json(
+        { message: "method is required" },
+        { status: 400 }
+      );
+    }
+    
+    // Transform frontend data to database format with fallbacks
     const accountData = {
       user_id: body.userId,
-      account_name: body.accountName,
-      account_number: body.accountNumber,
+      account_name: body.accountName || body.account_name,
+      account_number: body.accountNumber || body.account_number,
       method: body.method,
-      is_default: body.isDefault || false,
+      is_default: body.isDefault || body.is_default || false,
     };
     
     const validatedData = insertUserPaymentAccountSchema.parse(accountData);
@@ -95,18 +121,6 @@ export async function POST(request: NextRequest) {
     
     return NextResponse.json(account, { status: 201 });
   } catch (error: any) {
-    console.error('Create user payment account error:', error);
-    
-    if (error instanceof z.ZodError) {
-      return NextResponse.json(
-        { message: "Validation error", errors: error.errors },
-        { status: 400 }
-      );
-    }
-    
-    return NextResponse.json(
-      { message: error.message || "Failed to create user payment account" },
-      { status: 500 }
-    );
+    return handleApiError(error);
   }
 }

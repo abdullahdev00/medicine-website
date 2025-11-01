@@ -41,6 +41,7 @@ export default function EditProfile() {
 
   useEffect(() => {
     if (userProfile) {
+      console.log('Setting form data from profile:', userProfile);
       setFormData({
         fullName: userProfile.fullName || "",
         email: userProfile.email || "",
@@ -52,14 +53,27 @@ export default function EditProfile() {
 
   const updateProfileMutation = useMutation({
     mutationFn: async (data: typeof formData) => {
+      // Validate required fields
+      if (!data.fullName.trim()) {
+        throw new Error("Full name is required");
+      }
+      
       // Don't send email in update request (it's non-editable)
       const { email, ...updateData } = data;
+      
+      console.log('Updating profile with data:', updateData);
+      
       const res = await fetch(`/api/users/${user?.id}`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(updateData),
       });
-      if (!res.ok) throw new Error("Failed to update profile");
+      
+      if (!res.ok) {
+        const errorData = await res.json();
+        throw new Error(errorData.message || "Failed to update profile");
+      }
+      
       return res.json();
     },
     onSuccess: (updatedUser) => {

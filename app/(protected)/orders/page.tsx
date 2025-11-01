@@ -9,6 +9,7 @@ import { ArrowLeft, Package } from "lucide-react";
 import { motion } from "framer-motion";
 import { useQuery } from "@tanstack/react-query";
 import { format } from "date-fns";
+import { ProtectedRoute } from "@/components/ProtectedRoute";
 
 export default function MyOrders() {
   const router = useRouter();
@@ -17,6 +18,9 @@ export default function MyOrders() {
   const { data: orders = [], isLoading } = useQuery({
     queryKey: ["/api/orders", user?.id],
     enabled: !!user,
+    staleTime: 0, // Always refetch to get latest orders
+    refetchOnWindowFocus: true, // Refetch when user comes back to page
+    refetchOnMount: true, // Always refetch on component mount
     queryFn: async () => {
       const res = await fetch(`/api/orders?userId=${user?.id}`);
       if (!res.ok) return [];
@@ -49,48 +53,49 @@ export default function MyOrders() {
   }
 
   return (
-    <div className="min-h-screen bg-background pb-8">
-      <div className="bg-gradient-to-br from-chart-2/10 via-chart-2/5 to-accent/10 border-b">
-        <div className="max-w-7xl mx-auto px-6 py-6">
-          <div className="flex items-center gap-4">
-            <Button
-              variant="ghost"
-              size="icon"
-              className="rounded-full w-12 h-12"
-              onClick={() => router.push("/profile")}
-              data-testid="button-back"
-            >
-              <ArrowLeft className="w-6 h-6" />
-            </Button>
-            <div>
-              <h1 className="font-serif text-2xl font-bold">My Orders</h1>
-              <p className="text-sm text-muted-foreground mt-1">
-                Track your order history
-              </p>
+    <ProtectedRoute>
+      <div className="min-h-screen bg-background pb-24">
+        <div className="bg-gradient-to-br from-chart-2/10 via-chart-2/5 to-accent/10 border-b">
+          <div className="max-w-7xl mx-auto px-6 py-6">
+            <div className="flex items-center gap-4">
+              <Button
+                variant="ghost"
+                size="icon"
+                className="rounded-full w-12 h-12"
+                onClick={() => router.push("/profile")}
+                data-testid="button-back"
+              >
+                <ArrowLeft className="w-6 h-6" />
+              </Button>
+              <div>
+                <h1 className="font-serif text-2xl font-bold">My Orders</h1>
+                <p className="text-sm text-muted-foreground mt-1">
+                  Track your order history
+                </p>
+              </div>
             </div>
           </div>
         </div>
-      </div>
 
-      <div className="max-w-7xl mx-auto px-6 py-8">
-        {orders.length === 0 ? (
-          <div className="flex flex-col items-center justify-center py-20">
-            <div className="w-24 h-24 rounded-full bg-chart-2/10 flex items-center justify-center mb-6">
-              <Package className="w-12 h-12 text-chart-2" />
+        <div className="max-w-7xl mx-auto px-6 py-8">
+          {orders.length === 0 ? (
+            <div className="flex flex-col items-center justify-center py-20">
+              <div className="w-24 h-24 rounded-full bg-chart-2/10 flex items-center justify-center mb-6">
+                <Package className="w-12 h-12 text-chart-2" />
+              </div>
+              <h3 className="text-xl font-bold mb-2">No Orders Yet</h3>
+              <p className="text-muted-foreground mb-6 text-center max-w-md">
+                You haven't placed any orders yet. Start shopping to see your order history here.
+              </p>
+              <Button
+                onClick={() => router.push("/")}
+                size="lg"
+                className="rounded-full"
+                data-testid="button-start-shopping"
+              >
+                Start Shopping
+              </Button>
             </div>
-            <h3 className="text-xl font-bold mb-2">No Orders Yet</h3>
-            <p className="text-muted-foreground mb-6 text-center max-w-md">
-              You haven't placed any orders yet. Start shopping to see your order history here.
-            </p>
-            <Button
-              onClick={() => router.push("/")}
-              size="lg"
-              className="rounded-full"
-              data-testid="button-start-shopping"
-            >
-              Start Shopping
-            </Button>
-          </div>
         ) : (
           <div className="space-y-5">
             {orders.map((order: any, index: number) => (
@@ -162,6 +167,7 @@ export default function MyOrders() {
           </div>
         )}
       </div>
-    </div>
+      </div>
+    </ProtectedRoute>
   );
 }

@@ -1,8 +1,11 @@
+'use client';
+
 import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { X, Download, Smartphone, Zap, WifiOff, Languages } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
+import { isPWAInstalled, detectPlatform, checkInstallPromptAvailability } from "@/lib/pwa-utils";
 
 interface BeforeInstallPromptEvent extends Event {
   prompt: () => Promise<void>;
@@ -16,11 +19,27 @@ export function PWAInstallPrompt() {
   const [isInstalling, setIsInstalling] = useState(false);
 
   useEffect(() => {
-    // Check if user already dismissed the prompt
-    const dismissed = localStorage.getItem("pwa-install-dismissed");
-    const installed = localStorage.getItem("pwa-installed");
+    // Check PWA status with prompt availability
+    const initializePWACheck = async () => {
+      await checkInstallPromptAvailability();
+      
+      if (isPWAInstalled()) {
+        console.log('PWA: Already installed, not showing prompt');
+        return;
+      }
+      
+      console.log('PWA: Not installed, proceeding with setup');
+    };
     
-    if (dismissed === "true" || installed === "true") {
+    initializePWACheck();
+
+    // Check last dismissal time
+    const lastDismissed = localStorage.getItem("pwa-last-dismissed");
+    const now = Date.now();
+    const fiveMinutes = 5 * 60 * 1000; // 5 minutes in milliseconds
+    
+    // If dismissed recently (within 5 minutes), don't show
+    if (lastDismissed && (now - parseInt(lastDismissed)) < fiveMinutes) {
       return;
     }
 
@@ -28,51 +47,105 @@ export function PWAInstallPrompt() {
     const handleBeforeInstallPrompt = (e: Event) => {
       e.preventDefault();
       setDeferredPrompt(e as BeforeInstallPromptEvent);
-      
-      // Show prompt after 5 seconds of user interaction
-      setTimeout(() => {
-        setShowPrompt(true);
-      }, 5000);
+      console.log('PWA: Install prompt available');
     };
 
     // Listen for app installed event
     const handleAppInstalled = () => {
-      localStorage.setItem("pwa-installed", "true");
+      console.log('PWA: App installed event fired');
       setShowPrompt(false);
       setDeferredPrompt(null);
+      // Don't manually set localStorage, let isPWAInstalled() handle it
     };
 
     // Listen for manual install request from settings
     const handleManualInstallRequest = () => {
-      if (deferredPrompt) {
+      if (deferredPrompt || detectPlatform() === 'ios') {
         setShowPrompt(true);
       }
     };
+
+    // Check install status periodically and sync with browser
+    const checkInstallStatus = async () => {
+      await checkInstallPromptAvailability();
+      const currentlyInstalled = isPWAInstalled();
+      console.log('PWA: Periodic check - installed:', currentlyInstalled);
+      
+      if (currentlyInstalled) {
+        setShowPrompt(false);
+        setDeferredPrompt(null);
+      }
+    };
+
+    // Show prompt after 5 seconds if conditions are met
+    const showPromptTimer = setTimeout(() => {
+      console.log('PWA: Checking conditions after 5 seconds');
+      console.log('PWA: isPWAInstalled():', isPWAInstalled());
+      console.log('PWA: deferredPrompt:', !!deferredPrompt);
+      console.log('PWA: platform:', detectPlatform());
+      
+      if (!isPWAInstalled()) {
+        if (deferredPrompt || detectPlatform() === 'ios') {
+          setShowPrompt(true);
+          console.log('PWA: Showing install prompt');
+        } else {
+          console.log('PWA: No deferredPrompt available yet, will show when available');
+          // For desktop browsers, show anyway after a delay
+          setTimeout(() => {
+            if (!isPWAInstalled() && !showPrompt) {
+              setShowPrompt(true);
+              console.log('PWA: Showing prompt anyway (desktop fallback)');
+            }
+          }, 2000);
+        }
+      }
+    }, 5000);
+
+    const installCheckInterval = setInterval(checkInstallStatus, 2000);
 
     window.addEventListener("beforeinstallprompt", handleBeforeInstallPrompt);
     window.addEventListener("appinstalled", handleAppInstalled);
     window.addEventListener("pwa-install-requested", handleManualInstallRequest);
 
     return () => {
+      clearTimeout(showPromptTimer);
+      clearInterval(installCheckInterval);
       window.removeEventListener("beforeinstallprompt", handleBeforeInstallPrompt);
       window.removeEventListener("appinstalled", handleAppInstalled);
       window.removeEventListener("pwa-install-requested", handleManualInstallRequest);
     };
-  }, [deferredPrompt]);
+  }, []);
 
   const handleInstallClick = async () => {
-    if (!deferredPrompt) return;
+    const platform = detectPlatform();
+    
+    if (platform === 'ios') {
+      // For iOS, just show instructions and dismiss
+      setShowPrompt(false);
+      localStorage.setItem("pwa-last-dismissed", Date.now().toString());
+      return;
+    }
+    
+    if (!deferredPrompt) {
+      // If no deferredPrompt, just dismiss and let user use browser button
+      setShowPrompt(false);
+      localStorage.setItem("pwa-last-dismissed", Date.now().toString());
+      return;
+    }
 
     setIsInstalling(true);
     
-    // Show native install prompt
-    await deferredPrompt.prompt();
-    
-    // Wait for user choice
-    const { outcome } = await deferredPrompt.userChoice;
-    
-    if (outcome === "accepted") {
-      localStorage.setItem("pwa-installed", "true");
+    try {
+      // Show native install prompt
+      await deferredPrompt.prompt();
+      
+      // Wait for user choice
+      const { outcome } = await deferredPrompt.userChoice;
+      
+      console.log('PWA: User choice:', outcome);
+      // Don't manually set localStorage, let browser state detection handle it
+    } catch (error) {
+      console.error('Install failed:', error);
     }
     
     setIsInstalling(false);
@@ -81,41 +154,46 @@ export function PWAInstallPrompt() {
   };
 
   const handleDismiss = () => {
-    localStorage.setItem("pwa-install-dismissed", "true");
+    // Store current timestamp for 5-minute cooldown
+    localStorage.setItem("pwa-last-dismissed", Date.now().toString());
     setShowPrompt(false);
   };
 
   const content = {
     en: {
-      title: "Install MediSwift App",
-      subtitle: "Get the best experience with our mobile app",
+      title: "Install App",
+      subtitle: "Get better experience",
       benefits: [
-        { icon: Zap, text: "Faster & Smoother Experience" },
+        { icon: Zap, text: "Faster & Smooth" },
         { icon: WifiOff, text: "Works Offline" },
-        { icon: Smartphone, text: "Easy Access from Home Screen" },
+        { icon: Smartphone, text: "Easy Access" },
       ],
-      installButton: isInstalling ? "Installing..." : "Install Now",
-      laterButton: "Maybe Later",
+      installButton: isInstalling ? "Installing..." : (detectPlatform() === 'ios' ? "Add to Home" : (deferredPrompt ? "Install" : "Install")),
+      laterButton: "Later",
     },
     ur: {
-      title: "MediSwift App Install Karein",
-      subtitle: "Hamari mobile app ke saath behtar tajurba hasil karein",
+      title: "App Install",
+      subtitle: "Better experience hasil karein",
       benefits: [
-        { icon: Zap, text: "Tez aur Smooth Experience" },
-        { icon: WifiOff, text: "Offline Kaam Karta Hai" },
-        { icon: Smartphone, text: "Home Screen Se Aasan Access" },
+        { icon: Zap, text: "Fast & Smooth" },
+        { icon: WifiOff, text: "Offline Works" },
+        { icon: Smartphone, text: "Easy Access" },
       ],
-      installButton: isInstalling ? "Install Ho Raha Hai..." : "Abhi Install Karein",
-      laterButton: "Baad Mein",
+      installButton: isInstalling ? "Installing..." : (detectPlatform() === 'ios' ? "Home Screen Add" : (deferredPrompt ? "Install" : "Install")),
+      laterButton: "Later",
     },
   };
 
   const currentContent = content[language];
 
-  // Don't show if no install prompt available or already dismissed
-  if (!deferredPrompt || !showPrompt) {
+  // Don't show if PWA is already installed or prompt not active
+  if (isPWAInstalled() || !showPrompt) {
     return null;
   }
+
+  // Show for iOS always, and for desktop even without deferredPrompt
+  const platform = detectPlatform();
+  console.log('PWA: Render check - platform:', platform, 'deferredPrompt:', !!deferredPrompt, 'showPrompt:', showPrompt);
 
   return (
     <AnimatePresence>
@@ -130,13 +208,23 @@ export function PWAInstallPrompt() {
             onClick={handleDismiss}
           />
 
-          {/* Install Prompt Card */}
+          {/* Install Prompt Card - Centered */}
           <motion.div
             initial={{ opacity: 0, y: 50, scale: 0.9 }}
             animate={{ opacity: 1, y: 0, scale: 1 }}
             exit={{ opacity: 0, y: 50, scale: 0.9 }}
             transition={{ type: "spring", damping: 25, stiffness: 300 }}
             className="fixed inset-0 z-[60] flex items-center justify-center p-4 pointer-events-none"
+            style={{ 
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              position: 'fixed',
+              top: 0,
+              left: 0,
+              right: 0,
+              bottom: 0
+            }}
           >
             <div className="w-full max-w-md pointer-events-auto">
               <Card className="p-6 shadow-2xl border-2 border-primary/20 rounded-3xl bg-background/95 backdrop-blur-lg">

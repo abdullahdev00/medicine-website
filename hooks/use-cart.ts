@@ -87,13 +87,7 @@ export function useCart() {
           };
           return [...old, newItem];
         }
-      });
-
-      // Show immediate success toast
-      toast({
-        title: "Added to cart",
-        description: "Item has been added to your cart successfully.",
-      });
+      })
 
       // Return a context object with the snapshotted value
       return { previousCartItems };

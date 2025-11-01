@@ -14,6 +14,7 @@ import { useAuth } from "@/lib/providers";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { motion } from "framer-motion";
+import { ProtectedRoute } from "@/components/ProtectedRoute";
 
 export default function ProfilePage() {
   const router = useRouter();
@@ -40,7 +41,8 @@ export default function ProfilePage() {
       const res = await apiRequest("POST", "/api/user-payment-accounts", {
         userId: user?.id,
         accountName,
-        raastId,
+        accountNumber: raastId,
+        method: "Bank Transfer",
         isDefault: userPaymentAccounts.length === 0,
       });
       return res.json();
@@ -177,7 +179,8 @@ export default function ProfilePage() {
   ];
 
   return (
-    <div className="min-h-screen bg-background pb-24">
+    <ProtectedRoute>
+      <div className="min-h-screen bg-background pb-24">
       <div className="bg-gradient-to-br from-primary/10 via-primary/5 to-accent/10">
         <div className="max-w-7xl mx-auto px-6 py-12">
           <motion.div
@@ -327,6 +330,7 @@ export default function ProfilePage() {
           </div>
         </SheetContent>
       </Sheet>
-    </div>
+      </div>
+    </ProtectedRoute>
   );
 }

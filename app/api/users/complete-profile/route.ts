@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from '@supabase/supabase-js';
+import { handleApiError, validateRequiredFields } from "@/lib/api-error-handler";
 
 // Initialize Supabase client for server-side operations
 const supabase = createClient(
@@ -167,10 +168,6 @@ export async function POST(request: NextRequest) {
     });
 
   } catch (error: any) {
-    console.error('❌ Complete profile API error:', error);
-    return NextResponse.json(
-      { message: "Failed to complete profile", error: error.message },
-      { status: 500 }
-    );
+    return handleApiError(error);
   }
 }

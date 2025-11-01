@@ -7,11 +7,14 @@ import { Card, CardContent } from "@/components/ui/card";
 import { CheckCircle2, Package } from "lucide-react";
 import { motion } from "framer-motion";
 import { useQuery } from "@tanstack/react-query";
+import { queryClient } from "@/lib/queryClient";
+import { useAuth } from "@/lib/providers";
 import type { Order } from "@shared/schema";
 
 export default function OrderSuccess() {
   const router = useRouter();
   const searchParams = useSearchParams();
+  const { user } = useAuth();
   const [orderId, setOrderId] = useState<string>("");
 
   useEffect(() => {
@@ -111,7 +114,11 @@ export default function OrderSuccess() {
             <div className="pt-2 space-y-3">
               <Button
                 className="w-full rounded-full h-14 text-base font-semibold shadow-lg"
-                onClick={() => router.push("/orders")}
+                onClick={() => {
+                  // Invalidate orders cache to ensure fresh data
+                  queryClient.invalidateQueries({ queryKey: ["/api/orders", user?.id] });
+                  router.push("/orders");
+                }}
                 data-testid="button-view-orders"
               >
                 View My Orders

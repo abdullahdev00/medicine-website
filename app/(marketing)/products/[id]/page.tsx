@@ -17,7 +17,7 @@ import type { Product } from "@shared/schema";
 
 export default function ProductDetailPage() {
   const params = useParams();
-  const id = params?.id as string;
+  const idOrSlug = params?.id as string;
   const router = useRouter();
   const { toast } = useToast();
   const { user, isAuthenticated } = useAuth();
@@ -27,8 +27,8 @@ export default function ProductDetailPage() {
   const [currentImageIndex, setCurrentImageIndex] = useState(0);
 
   const { data: product, isLoading } = useQuery<Product>({
-    queryKey: ["/api/products", id],
-    enabled: !!id,
+    queryKey: ["/api/products", idOrSlug],
+    enabled: !!idOrSlug,
   });
 
   const { data: wishlistItems = [] } = useQuery<any[]>({
@@ -79,7 +79,7 @@ export default function ProductDetailPage() {
 
   const handleAddToCart = () => {
     if (!product?.variants?.[selectedPackage]) return;
-    addToCart(id, product.variants[selectedPackage], quantity);
+    addToCart(product.id, product.variants[selectedPackage], quantity);
   };
 
   const handleToggleWishlist = (e: React.MouseEvent) => {
@@ -95,11 +95,13 @@ export default function ProductDetailPage() {
       return;
     }
 
-    const wishlistItem = wishlistItems.find((item) => item.productId === id);
+    if (!product) return;
+
+    const wishlistItem = wishlistItems.find((item) => item.productId === product.id);
     if (wishlistItem) {
       removeFromWishlistMutation.mutate(wishlistItem.id);
     } else {
-      addToWishlistMutation.mutate(id as string);
+      addToWishlistMutation.mutate(product.id);
     }
   };
 
@@ -131,7 +133,7 @@ export default function ProductDetailPage() {
 
   const rating = parseFloat(product.rating || "0");
   const images = product.images || ["https://images.unsplash.com/photo-1584308666744-24d5c474f2ae?w=400"];
-  const isWishlisted = wishlistItems.some((item) => item.productId === id);
+  const isWishlisted = wishlistItems.some((item) => item.productId === product?.id);
   
   const unitPrice = product.variants && product.variants[selectedPackage] 
     ? parseFloat(product.variants[selectedPackage].price)
@@ -141,7 +143,7 @@ export default function ProductDetailPage() {
   return (
     <div className="min-h-screen bg-background pb-24">
       <div className="relative">
-        <div className="aspect-square relative overflow-hidden rounded-b-3xl">
+        <div className="h-64 sm:h-80 relative overflow-hidden rounded-b-3xl">
           <img
             src={images[currentImageIndex]}
             alt={product.name}
@@ -177,39 +179,35 @@ export default function ProductDetailPage() {
             </div>
           )}
         </div>
-
-        <div className="absolute -bottom-6 left-4 right-4">
-          <Card className="p-4 rounded-3xl shadow-xl bg-card">
-            <div className="space-y-1">
-              <h1 className="font-serif text-2xl font-bold" data-testid="text-product-name">
-                {product.name}
-              </h1>
-              
-              <div className="flex items-center gap-2">
-                <div className="flex items-center gap-1">
-                  {[...Array(5)].map((_, i) => (
-                    <Star
-                      key={i}
-                      className={`w-3 h-3 ${
-                        i < Math.floor(rating)
-                          ? "fill-yellow-400 text-yellow-400"
-                          : "fill-muted text-muted"
-                      }`}
-                    />
-                  ))}
-                </div>
-                <span className="text-sm text-muted-foreground">({rating} rating)</span>
-              </div>
-            </div>
-          </Card>
-        </div>
       </div>
 
-      <div className="px-4 pt-12 space-y-6">
-        <div className="flex items-baseline gap-2">
-          <p className="font-serif text-4xl font-bold text-primary" data-testid="text-price">
-            {unitPrice.toFixed(0)}
-          </p>
+      <div className="px-4 pt-6 space-y-6">
+        <div className="space-y-3">
+          <h1 className="font-serif text-2xl font-bold" data-testid="text-product-name">
+            {product.name}
+          </h1>
+          
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <div className="flex items-center gap-1">
+                {[...Array(5)].map((_, i) => (
+                  <Star
+                    key={i}
+                    className={`w-4 h-4 ${
+                      i < Math.floor(rating)
+                        ? "fill-yellow-400 text-yellow-400"
+                        : "fill-muted text-muted"
+                    }`}
+                  />
+                ))}
+              </div>
+              <span className="text-sm text-muted-foreground">({rating} rating)</span>
+            </div>
+            
+            <p className="font-serif text-3xl font-bold text-primary" data-testid="text-price">
+              Rs {unitPrice.toFixed(0)}
+            </p>
+          </div>
         </div>
 
         {product.variants && product.variants.length > 0 && (

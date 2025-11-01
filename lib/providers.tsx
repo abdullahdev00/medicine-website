@@ -21,32 +21,32 @@ function AuthProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [isInitialized, setIsInitialized] = useState(false);
+  const [isHydrated, setIsHydrated] = useState(false);
 
   // Check localStorage on mount and when storage changes
   useEffect(() => {
     const checkAuth = () => {
       if (typeof window !== 'undefined') {
+        setIsHydrated(true);
         const stored = localStorage.getItem('user');
         const isLoggedIn = localStorage.getItem('isLoggedIn');
         
         if (stored && isLoggedIn === 'true') {
-          const userData = JSON.parse(stored);
-          if (!user || user.id !== userData.id) {
-            console.log('🔄 User session restored:', userData);
-            setUser(userData);
-          }
-        } else if (user) {
-          // Don't clear user immediately - localStorage might be loading
-          console.log('⚠️ No localStorage data found, but user exists in state - keeping user');
-          // Only clear user if we're sure localStorage is empty after a longer delay
-          setTimeout(() => {
-            const recheck = localStorage.getItem('user');
-            const recheckLogin = localStorage.getItem('isLoggedIn');
-            if (!recheck || recheckLogin !== 'true') {
-              console.log('⚠️ No valid session found after recheck, clearing user');
-              setUser(null);
+          try {
+            const userData = JSON.parse(stored);
+            if (!user || user.id !== userData.id) {
+              console.log('🔄 User session restored:', userData);
+              setUser(userData);
             }
-          }, 1000); // Increased delay to 1 second
+          } catch (error) {
+            console.error('Error parsing stored user data:', error);
+            localStorage.removeItem('user');
+            localStorage.removeItem('isLoggedIn');
+          }
+        } else if (user && isHydrated) {
+          // Only clear user after hydration is complete
+          console.log('⚠️ No valid session found, clearing user');
+          setUser(null);
         }
       }
     };
@@ -54,11 +54,13 @@ function AuthProvider({ children }: { children: React.ReactNode }) {
     // Check on mount
     checkAuth();
     
-    // Mark as initialized after first check
-    setTimeout(() => {
+    // Mark as initialized after hydration
+    const initTimer = setTimeout(() => {
       setIsInitialized(true);
       setIsLoading(false);
-    }, 500);
+    }, isHydrated ? 100 : 1000); // Faster if already hydrated
+
+    return () => clearTimeout(initTimer);
 
     // Listen for storage changes (e.g., login in another tab)
     const handleStorageChange = (e: StorageEvent) => {
@@ -106,8 +108,8 @@ function AuthProvider({ children }: { children: React.ReactNode }) {
     }
   };
 
-  const isAuthenticated = !!user;
-  const isAdmin = !!(user && (user as any).userType === 'admin');
+  const isAuthenticated = !!user && isInitialized;
+  const isAdmin = !!(user && (user as any).userType === 'admin' && isInitialized);
 
   return (
     <AuthContext.Provider value={{ user, login, logout, updateUser, isAuthenticated, isAdmin }}>
