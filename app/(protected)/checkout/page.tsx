@@ -12,6 +12,7 @@ import { useQuery, useMutation } from "@tanstack/react-query";
 import { useCart } from "@/hooks/use-cart";
 import { queryClient } from "@/lib/queryClient";
 import { Label } from "@/components/ui/label";
+import { Skeleton } from "@/components/ui/skeleton";
 import { motion, AnimatePresence } from "framer-motion";
 import { createClient } from '@supabase/supabase-js';
 
@@ -38,7 +39,7 @@ export default function Checkout() {
   const [copiedId, setCopiedId] = useState<string | null>(null);
   const { cartItems } = useCart();
 
-  const { data: addresses = [] } = useQuery<any[]>({
+  const { data: addresses = [], isLoading: isLoadingAddresses } = useQuery<any[]>({
     queryKey: ["/api/addresses", user?.id],
     enabled: !!user,
     queryFn: async () => {
@@ -396,7 +397,23 @@ export default function Checkout() {
               )}
             </CardHeader>
             <CardContent className="space-y-3">
-              {addresses.length === 0 ? (
+              {isLoadingAddresses ? (
+                <div className="space-y-3">
+                  {[1, 2].map((i) => (
+                    <div key={i} className="flex items-start space-x-3 p-4 rounded-2xl border-2 border-border">
+                      <Skeleton className="w-4 h-4 rounded-full mt-1" />
+                      <div className="flex-1 space-y-2">
+                        <div className="flex items-center gap-2">
+                          <Skeleton className="h-5 w-24" />
+                          <Skeleton className="h-4 w-12 rounded-full" />
+                        </div>
+                        <Skeleton className="h-4 w-full" />
+                        <Skeleton className="h-4 w-3/4" />
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              ) : addresses.length === 0 ? (
                 <div className="text-center py-8">
                   <p className="text-muted-foreground mb-4">No saved addresses</p>
                   <Button

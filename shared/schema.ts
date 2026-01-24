@@ -1,5 +1,5 @@
 import { sql } from "drizzle-orm";
-import { pgTable, text, varchar, decimal, integer, timestamp, jsonb, uuid, boolean } from "drizzle-orm/pg-core";
+import { pgTable, text, varchar, decimal, integer, timestamp, jsonb, uuid, boolean, unique } from "drizzle-orm/pg-core";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
 
@@ -47,7 +47,10 @@ export const wishlistItems = pgTable("wishlist_items", {
   userId: uuid("user_id").references(() => users.id).notNull(),
   productId: uuid("product_id").references(() => products.id).notNull(),
   createdAt: timestamp("created_at").defaultNow().notNull(),
-});
+}, (table) => ({
+  // Unique constraint to prevent duplicate wishlist items for same user-product combination
+  uniqueUserProduct: unique("unique_user_product").on(table.userId, table.productId),
+}));
 
 export const orders = pgTable("orders", {
   id: uuid("id").primaryKey().default(sql`gen_random_uuid()`),

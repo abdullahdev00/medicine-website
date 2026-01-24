@@ -90,6 +90,11 @@ export function HomeClient({ initialProducts, initialCategories }: HomeClientPro
       return;
     }
 
+    // Prevent multiple clicks while mutation is pending
+    if (addToWishlistMutation.isPending || removeFromWishlistMutation.isPending) {
+      return;
+    }
+
     const wishlistItem = wishlistItems.find((item) => item.productId === productId);
     if (wishlistItem) {
       removeFromWishlistMutation.mutate(wishlistItem.id);
@@ -213,6 +218,7 @@ export function HomeClient({ initialProducts, initialCategories }: HomeClientPro
                     onToggleWishlist={() => handleToggleWishlist(product.id)}
                     onAddToCart={() => handleAddToCart(product.id)}
                     isWishlisted={isWishlisted}
+                    isWishlistLoading={addToWishlistMutation.isPending || removeFromWishlistMutation.isPending}
                   />
                 </div>
               );

@@ -13,6 +13,8 @@ interface AuthContextType {
   updateUser: (updates: any) => void;
   isAuthenticated: boolean;
   isAdmin: boolean;
+  isLoading: boolean;
+  isInitialized: boolean;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -22,56 +24,79 @@ function AuthProvider({ children }: { children: React.ReactNode }) {
   const [isLoading, setIsLoading] = useState(true);
   const [isInitialized, setIsInitialized] = useState(false);
   const [isHydrated, setIsHydrated] = useState(false);
+  const [authChecked, setAuthChecked] = useState(false);
 
-  // Check localStorage on mount and when storage changes
+  // Fast auth check on mount
   useEffect(() => {
-    const checkAuth = () => {
-      if (typeof window !== 'undefined') {
-        setIsHydrated(true);
+    const initializeAuth = async () => {
+      if (typeof window === 'undefined') return;
+      
+      console.log('🚀 Auth: Starting initialization');
+      setIsHydrated(true);
+      
+      try {
+        // Immediate localStorage check
+        const stored = localStorage.getItem('user');
+        const isLoggedIn = localStorage.getItem('isLoggedIn');
+        
+        if (stored && isLoggedIn === 'true') {
+          const userData = JSON.parse(stored);
+          console.log('✅ Auth: Session restored from localStorage:', userData.email);
+          setUser(userData);
+          setAuthChecked(true);
+          setIsInitialized(true);
+          setIsLoading(false);
+          return;
+        }
+        
+        // No valid session found
+        console.log('❌ Auth: No valid session found');
+        setUser(null);
+        setAuthChecked(true);
+        setIsInitialized(true);
+        setIsLoading(false);
+        
+      } catch (error) {
+        console.error('❌ Auth: Error during initialization:', error);
+        localStorage.removeItem('user');
+        localStorage.removeItem('isLoggedIn');
+        setUser(null);
+        setAuthChecked(true);
+        setIsInitialized(true);
+        setIsLoading(false);
+      }
+    };
+
+    initializeAuth();
+  }, []);
+
+  // Listen for storage changes
+  useEffect(() => {
+    if (!isHydrated) return;
+    
+    const handleStorageChange = (e: StorageEvent) => {
+      if (e.key === 'user' || e.key === 'isLoggedIn') {
+        console.log('🔄 Auth: Storage changed, re-checking auth');
         const stored = localStorage.getItem('user');
         const isLoggedIn = localStorage.getItem('isLoggedIn');
         
         if (stored && isLoggedIn === 'true') {
           try {
             const userData = JSON.parse(stored);
-            if (!user || user.id !== userData.id) {
-              console.log('🔄 User session restored:', userData);
-              setUser(userData);
-            }
+            setUser(userData);
           } catch (error) {
             console.error('Error parsing stored user data:', error);
-            localStorage.removeItem('user');
-            localStorage.removeItem('isLoggedIn');
+            setUser(null);
           }
-        } else if (user && isHydrated) {
-          // Only clear user after hydration is complete
-          console.log('⚠️ No valid session found, clearing user');
+        } else {
           setUser(null);
         }
       }
     };
 
-    // Check on mount
-    checkAuth();
-    
-    // Mark as initialized after hydration
-    const initTimer = setTimeout(() => {
-      setIsInitialized(true);
-      setIsLoading(false);
-    }, isHydrated ? 100 : 1000); // Faster if already hydrated
-
-    return () => clearTimeout(initTimer);
-
-    // Listen for storage changes (e.g., login in another tab)
-    const handleStorageChange = (e: StorageEvent) => {
-      if (e.key === 'user' || e.key === 'isLoggedIn') {
-        checkAuth();
-      }
-    };
-
     window.addEventListener('storage', handleStorageChange);
     return () => window.removeEventListener('storage', handleStorageChange);
-  }, [user]);
+  }, [isHydrated]);
 
   const login = (userData: User) => {
     console.log('🔐 Login function called with:', userData);
@@ -108,11 +133,11 @@ function AuthProvider({ children }: { children: React.ReactNode }) {
     }
   };
 
-  const isAuthenticated = !!user && isInitialized;
-  const isAdmin = !!(user && (user as any).userType === 'admin' && isInitialized);
+  const isAuthenticated = !!user && isInitialized && authChecked;
+  const isAdmin = !!(user && (user as any).userType === 'admin' && isInitialized && authChecked);
 
   return (
-    <AuthContext.Provider value={{ user, login, logout, updateUser, isAuthenticated, isAdmin }}>
+    <AuthContext.Provider value={{ user, login, logout, updateUser, isAuthenticated, isAdmin, isLoading, isInitialized }}>
       {children}
     </AuthContext.Provider>
   );

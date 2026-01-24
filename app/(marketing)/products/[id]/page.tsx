@@ -97,6 +97,11 @@ export default function ProductDetailPage() {
 
     if (!product) return;
 
+    // Prevent multiple clicks while mutation is pending
+    if (addToWishlistMutation.isPending || removeFromWishlistMutation.isPending) {
+      return;
+    }
+
     const wishlistItem = wishlistItems.find((item) => item.productId === product.id);
     if (wishlistItem) {
       removeFromWishlistMutation.mutate(wishlistItem.id);

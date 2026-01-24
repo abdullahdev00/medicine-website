@@ -375,7 +375,7 @@ export class DatabaseStorage implements IStorage {
     const cached = cache.get<Product>(cacheKey);
     if (cached) return cached;
     
-    const result = await db.select().from(products).where(eq(products.id, id)).limit(1);
+    const result = await db.select().from(products).where(eq(products.id, id)).limit(1).catch(() => []);
     if (result.length === 0) return undefined;
     const product = result[0];
     cache.set(cacheKey, product, 5 * 60 * 1000); // Cache for 5 minutes
@@ -383,29 +383,42 @@ export class DatabaseStorage implements IStorage {
   }
 
   async getProductsByCategory(categoryId: string): Promise<Product[]> {
-    return await db.select().from(products).where(eq(products.categoryId, categoryId));
+    return await db.select().from(products).where(eq(products.categoryId, categoryId)).catch(() => []);
   }
 
   async createProduct(product: InsertProduct): Promise<Product> {
-    const result = await db.insert(products).values(product).returning();
+    const result = await db.insert(products).values(product).returning().catch(() => []);
     cache.invalidate('products:all'); // Invalidate cache when creating
     return result[0];
   }
 
   async getWishlistItems(userId: string): Promise<WishlistItem[]> {
     console.log('DatabaseStorage: Getting wishlist items for user from Supabase:', userId);
-    const result = await db.select().from(wishlistItems).where(eq(wishlistItems.userId, userId));
+    const result = await db.select().from(wishlistItems).where(eq(wishlistItems.userId, userId)).catch(() => []);
     console.log('DatabaseStorage: Found wishlist items:', result.length);
     return result;
   }
 
   async addToWishlist(item: InsertWishlistItem): Promise<WishlistItem> {
-    const result = await db.insert(wishlistItems).values(item).returning();
+    // First check if item already exists
+    const existing = await db.select()
+      .from(wishlistItems)
+      .where(and(eq(wishlistItems.userId, item.userId), eq(wishlistItems.productId, item.productId)))
+      .limit(1)
+      .catch(() => []);
+    
+    if (existing.length > 0) {
+      console.log('DatabaseStorage: Wishlist item already exists, returning existing item');
+      return existing[0];
+    }
+    
+    // Insert new item if it doesn't exist
+    const result = await db.insert(wishlistItems).values(item).returning().catch(() => []);
     return result[0];
   }
 
   async removeFromWishlist(id: string): Promise<void> {
-    await db.delete(wishlistItems).where(eq(wishlistItems.id, id));
+    await db.delete(wishlistItems).where(eq(wishlistItems.id, id)).catch(() => {});
   }
 
   async getOrders(userId: string): Promise<Order[]> {

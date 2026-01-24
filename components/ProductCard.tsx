@@ -13,9 +13,10 @@ interface ProductCardProps {
   onAddToCart?: () => void;
   onToggleWishlist?: () => void;
   isWishlisted?: boolean;
+  isWishlistLoading?: boolean;
 }
 
-export function ProductCard({ product, onAddToCart, onToggleWishlist, isWishlisted }: ProductCardProps) {
+export function ProductCard({ product, onAddToCart, onToggleWishlist, isWishlisted, isWishlistLoading }: ProductCardProps) {
   const [showSuccess, setShowSuccess] = useState(false);
   const { addToCart, isAddingToCart } = useCart();
   
@@ -76,6 +77,7 @@ export function ProductCard({ product, onAddToCart, onToggleWishlist, isWishlist
               onToggleWishlist?.();
             }}
             testId={`button-wishlist-${product.id}`}
+            isLoading={isWishlistLoading}
           />
           {!product.inStock && (
             <div className="absolute inset-0 bg-background/80 flex items-center justify-center">
